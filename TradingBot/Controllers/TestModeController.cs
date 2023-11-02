@@ -25,7 +25,7 @@ namespace TradingBot.Controllers
         /// <response code="400">Bad request</response>
         /// <response code="401">Unauthorized</response>
         [HttpGet()]
-        public IActionResult IsTheTestModeOn()
+        public IActionResult IsTestModeOn()
         {
             //return Ok(true);
             throw new NotImplementedException();

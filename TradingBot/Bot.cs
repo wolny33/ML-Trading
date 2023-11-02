@@ -1,20 +1,23 @@
-﻿namespace TradingBot
+﻿using Alpaca.Markets;
+using Microsoft.AspNetCore.Routing.Constraints;
+
+namespace TradingBot
 {
     public class Bot
     {
-        private float PredictPrice()
+        private float PredictPrice(string symbol)
         {
             throw new NotImplementedException();
         }
-        private void GetNextMoveFromStrategy()
+        private List<OrderDetails> GetNextMoveFromStrategy()
         {
             throw new NotImplementedException();
         }
-        private bool PlaceBuyOrder()
-        {
-            throw new NotImplementedException();
+        private void MakeNextMoveFromStrategy()
+        { 
+            throw new NotImplementedException(); 
         }
-        private bool PlaceSellOrder()
+        private bool PlaceOrder(OrderDetails orderDetails)
         {
             throw new NotImplementedException();
         }
