@@ -29,11 +29,20 @@ app.UseSwaggerUI();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>()
+        .CreateDbContextAsync();
+    await context.Database.MigrateAsync();
+}
+
 app.Run();
 
 void ConfigureServices(IServiceCollection services, IConfiguration config)
 {
     services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(config.GetConnectionString("Data")));
+    services.AddSingleton<IAlpacaClientFactory, AlpacaClientFactory>();
     services.AddScoped<IMarketDataSource, MarketDataSource>();
     services.AddScoped<IPricePredictor, PricePredictor>();
     services.AddScoped<IStrategy, Strategy>();
