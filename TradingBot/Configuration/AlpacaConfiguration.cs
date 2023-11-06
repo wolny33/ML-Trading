@@ -6,9 +6,9 @@ public sealed class AlpacaConfiguration
 {
     public const string SectionName = "AlpacaApi";
 
-    [Required] 
+    [Required]
     public required string Key { get; init; }
 
-    [Required] 
+    [Required]
     public required string Secret { get; init; }
 }

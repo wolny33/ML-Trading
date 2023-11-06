@@ -1,11 +1,13 @@
 using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using TradingBot.Configuration;
+using TradingBot.Database;
 using TradingBot.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 ConfigureConfiguration(builder.Services, builder.Configuration);
-ConfigureServices(builder.Services);
+ConfigureServices(builder.Services, builder.Configuration);
 
 builder.Services.AddControllers();
 
@@ -29,8 +31,9 @@ app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
-void ConfigureServices(IServiceCollection services)
+void ConfigureServices(IServiceCollection services, IConfiguration config)
 {
+    services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(config.GetConnectionString("Data")));
     services.AddScoped<IMarketDataSource, MarketDataSource>();
     services.AddScoped<IPricePredictor, PricePredictor>();
     services.AddScoped<IStrategy, Strategy>();
