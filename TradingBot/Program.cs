@@ -1,21 +1,11 @@
 using System.Reflection;
-using Alpaca.Markets;
-using Environments = Alpaca.Markets.Environments;
+using TradingBot.Configuration;
+using TradingBot.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var alpacaClient = Environments.Paper
-    .GetAlpacaTradingClient(
-        new SecretKey(
-            builder.Configuration["AlpacaApi:Key"] ?? throw new InvalidOperationException("Alpaca API key is missing"),
-            builder.Configuration["AlpacaApi:Secret"] ??
-            throw new InvalidOperationException("Alpaca API secret is missing")
-        ));
-
-var alpacaAccount = await alpacaClient.GetAccountAsync();
-Console.WriteLine(alpacaAccount.ToString());
-
-// Add services to the container.
+ConfigureConfiguration(builder.Services, builder.Configuration);
+ConfigureServices(builder.Services);
 
 builder.Services.AddControllers();
 
@@ -38,3 +28,16 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
+
+void ConfigureServices(IServiceCollection services)
+{
+    services.AddScoped<IMarketDataSource, MarketDataSource>();
+    services.AddScoped<IPricePredictor, PricePredictor>();
+    services.AddScoped<IStrategy, Strategy>();
+    services.AddScoped<IActionExecutor, ActionExecutor>();
+}
+
+void ConfigureConfiguration(IServiceCollection services, IConfiguration config)
+{
+    services.Configure<AlpacaConfiguration>(config.GetSection(AlpacaConfiguration.SectionName));
+}
