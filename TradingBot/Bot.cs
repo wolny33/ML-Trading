@@ -1,41 +1,46 @@
 ﻿using Alpaca.Markets;
-using Microsoft.AspNetCore.Routing.Constraints;
-using TradingBot.Entities;
 
-namespace TradingBot
+namespace TradingBot;
+
+public sealed class Bot
 {
-    public class Bot
+    private readonly IAlpacaTradingClient _client;
+
+    public Bot(IAlpacaTradingClient client)
     {
-        IAlpacaTradingClient _client;
-        public Bot(IAlpacaTradingClient client)
+        _client = client;
+    }
+
+    private float PredictPrice(string symbol)
+    {
+        throw new NotImplementedException();
+    }
+
+    private List<OrderDetails> GetNextMoveFromStrategy()
+    {
+        throw new NotImplementedException();
+    }
+
+    private void MakeNextMoveFromStrategy()
+    {
+        throw new NotImplementedException();
+    }
+
+    private async Task<bool> PlaceOrder(OrderDetails orderDetails)
+    {
+        if (orderDetails.OrderType == OrderType.Sell)
         {
-            _client = client;
+            var order = await _client.PostOrderAsync(
+                LimitOrder.Sell(orderDetails.Symbol, OrderQuantity.FromInt64(orderDetails.Quantity),
+                    orderDetails.LimitPrice).WithDuration(orderDetails.InForce));
         }
-        private float PredictPrice(string symbol)
+        else
         {
-            throw new NotImplementedException();
+            var order = await _client.PostOrderAsync(
+                LimitOrder.Buy(orderDetails.Symbol, OrderQuantity.FromInt64(orderDetails.Quantity),
+                    orderDetails.LimitPrice).WithDuration(orderDetails.InForce));
         }
-        private List<OrderDetails> GetNextMoveFromStrategy()
-        {
-            throw new NotImplementedException();
-        }
-        private void MakeNextMoveFromStrategy()
-        { 
-            throw new NotImplementedException(); 
-        }
-        private async Task<bool> PlaceOrder(OrderDetails orderDetails)
-        {
-            if (orderDetails.orderType == OrderType.Sell)
-            {
-                var order = await _client.PostOrderAsync(
-                    LimitOrder.Sell(orderDetails.symbol, OrderQuantity.FromInt64(orderDetails.quantity), orderDetails.limitPrice).WithDuration(orderDetails.timeInForce));
-            }
-            else
-            {
-                var order = await _client.PostOrderAsync(
-                    LimitOrder.Buy(orderDetails.symbol, OrderQuantity.FromInt64(orderDetails.quantity), orderDetails.limitPrice).WithDuration(orderDetails.timeInForce));
-            }
-            throw new NotImplementedException();
-        }
+
+        throw new NotImplementedException();
     }
 }

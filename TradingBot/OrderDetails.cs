@@ -1,18 +1,18 @@
 ﻿using Alpaca.Markets;
 
-namespace TradingBot
+namespace TradingBot;
+
+public enum OrderType
 {
-    public enum OrderType
-    {
-        Sell,
-        Buy
-    }
-    public struct OrderDetails
-    {
-        public decimal limitPrice;
-        public int quantity;
-        public string symbol;
-        public TimeInForce timeInForce;
-        public OrderType orderType;
-    }
+    Sell,
+    Buy
+}
+
+public sealed class OrderDetails
+{
+    public required decimal LimitPrice { get; init; }
+    public required int Quantity { get; init; }
+    public required string Symbol { get; init; }
+    public required TimeInForce InForce { get; init; }
+    public required OrderType OrderType { get; init; }
 }
