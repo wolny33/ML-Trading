@@ -1,5 +1,8 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using TradingBot;
 using TradingBot.Configuration;
 using TradingBot.Database;
 using TradingBot.Services;
@@ -9,6 +12,17 @@ var builder = WebApplication.CreateBuilder(args);
 ConfigureConfiguration(builder.Services, builder.Configuration);
 ConfigureServices(builder.Services, builder.Configuration);
 
+builder.Services.AddAuthentication(BasicAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(BasicAuthenticationHandler.SchemeName, null);
+builder.Services.AddAuthorization(options =>
+{
+    options.DefaultPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 builder.Services.AddControllers();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -27,6 +41,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
@@ -47,6 +62,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddScoped<IPricePredictor, PricePredictor>();
     services.AddScoped<IStrategy, Strategy>();
     services.AddScoped<IActionExecutor, ActionExecutor>();
+
+    services.AddScoped<CredentialsCommand>();
 }
 
 void ConfigureConfiguration(IServiceCollection services, IConfiguration config)
