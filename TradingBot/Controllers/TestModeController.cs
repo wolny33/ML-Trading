@@ -27,7 +27,6 @@ public sealed class TestModeController : ControllerBase
     [HttpGet]
     public IActionResult IsTestModeOn()
     {
-        //return Ok(true);
-        throw new NotImplementedException();
+        return Ok();
     }
 }
