@@ -36,10 +36,17 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
             factory.CreateMarketDataClient().Returns(_dataClientSubstitute);
             services.AddSingleton(factory);
 
-            services.RemoveAll<IDbContextFactory<AppDbContext>>();
-            services.RemoveAll<AppDbContext>();
+            RemoveDatabaseServices(services);
             services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(_connection));
         });
+    }
+
+    private static void RemoveDatabaseServices(IServiceCollection services)
+    {
+        services.RemoveAll<DbContextOptions<AppDbContext>>();
+        services.RemoveAll<DbContextOptions>();
+        services.RemoveAll<IDbContextFactory<AppDbContext>>();
+        services.RemoveAll<AppDbContext>();
     }
 
     protected virtual void SetUpAlpacaSubstitutes(IAlpacaDataClient dataClient, IAlpacaTradingClient tradingClient)
