@@ -11,8 +11,8 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20231110140256_Credentials")]
-    partial class Credentials
+    [Migration("20231118121926_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -35,6 +35,9 @@ namespace TradingBot.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
+
+                    b.Property<long>("CreationTimestamp")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("InForce")
                         .HasColumnType("INTEGER");

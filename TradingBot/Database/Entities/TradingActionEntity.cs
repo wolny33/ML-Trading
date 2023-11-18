@@ -9,6 +9,7 @@ public sealed class TradingActionEntity
     [Key]
     public required Guid Id { get; init; }
 
+    public required long CreationTimestamp { get; init; }
     public required double? Price { get; init; }
     public required double Quantity { get; init; }
     public required string Symbol { get; init; }

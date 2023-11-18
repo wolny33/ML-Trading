@@ -33,6 +33,9 @@ namespace TradingBot.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<long>("CreationTimestamp")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("InForce")
                         .HasColumnType("INTEGER");
 
