@@ -214,9 +214,6 @@ const Home = () => {
     return(
         <div className="mx-auto items-center justify-center h-screen" style={{ marginTop: '100px', marginBottom: "200px" }}>
         <div className="container p-8 bg-gray-100 rounded-xl" style={{marginBottom: "50px" }}>
-          {/* <h1 className="text-4xl font-bold text-gray-800 mb-6 text-center">
-                Autonomic Trading Bot
-          </h1> */}
           <div className="mb-8">
             <div className="bg-white p-6 rounded-xl shadow-lg">
             <h2 className="text-2xl font-semibold text-gray-700 mb-4 text-center">
@@ -236,7 +233,6 @@ const Home = () => {
               USD 10,000.00
             </h3>
           </div>
-
 
           <div className="bg-white p-6 rounded-xl shadow-lg overflow-x-auto mt-4">
                 <h3 className="text-2xl font-semibold text-gray-700 mb-4 text-center">
