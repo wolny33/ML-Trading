@@ -16,6 +16,7 @@ public sealed record TradingSymbol(string Value);
 public sealed class TradingAction
 {
     public required Guid Id { get; init; }
+    public required DateTimeOffset CreatedAt { get; init; }
     public required decimal? Price { get; init; }
     public required decimal Quantity { get; init; }
     public required TradingSymbol Symbol { get; init; }
@@ -27,6 +28,7 @@ public sealed class TradingAction
         return new TradingAction
         {
             Id = entity.Id,
+            CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(entity.CreationTimestamp),
             Price = entity.Price is not null ? (decimal)entity.Price : null,
             Quantity = (decimal)entity.Quantity,
             Symbol = new TradingSymbol(entity.Symbol),
@@ -40,6 +42,7 @@ public sealed class TradingAction
         return new TradingActionEntity
         {
             Id = Id,
+            CreationTimestamp = CreatedAt.ToUnixTimeMilliseconds(),
             Price = Price is not null ? (double)Price : null,
             Quantity = (double)Quantity,
             Symbol = Symbol.Value,
