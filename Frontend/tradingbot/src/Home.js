@@ -3,15 +3,61 @@ import { useState, useEffect } from "react";
 import { useMemo } from 'react';
 import { MaterialReactTable, useMaterialReactTable } from 'material-react-table';
 import { Box, Typography } from '@mui/material';
+import axios from './API/axios';
+import { useNavigate } from 'react-router-dom';
+
+const TEST_MODE_URL = '/test-mode';
+const LOGIN_URL = '/login';
+const INVESTMENT_URL = '/investment';
 
 const Home = () => {
+  const navigate = useNavigate();
 
+  const [userName, setUserName] = useState('');
+  const [pwd, setPwd] = useState(''); 
   const [tradingAcionsData, setTradingAcionsData] = useState([]);
   const [isTestModeOn, setIsTestModeOn] = useState(true);
   const [isInvestmentOn, setIsInvestmentOn] = useState(true);
   const [showStrategyOptions, setshowStrategyOptions] = useState(true);
 
   useEffect(() => {
+    setUserName(localStorage.getItem("userName"));
+    setPwd(localStorage.getItem("pwd"));
+
+    axios.get(TEST_MODE_URL,
+      {
+        auth: {
+            username: userName,
+            password: pwd
+        }
+      }
+    ).then(result => {
+      setIsTestModeOn(result.data);
+    }).catch(err => {
+      if(!err?.response || err.response?.status === 401) {
+        //logout();
+      } else if(err.response?.status === 400) {
+        setIsTestModeOn(false);
+      }
+    });
+
+    axios.get(INVESTMENT_URL,
+      {
+        auth: {
+            username: userName,
+            password: pwd
+        }
+      }
+    ).then(result => {
+      setIsInvestmentOn(result.data);
+    }).catch(err => {
+      if(!err?.response || err.response?.status === 401) {
+        //logout();
+      } else if(err.response?.status === 404) {
+        setIsInvestmentOn(false);
+      }
+    });
+
     setTradingAcionsData(  [{
       date: '2022-03-13',
       actionType: 'BUY',
@@ -120,12 +166,63 @@ const Home = () => {
   ]);
   }, []);
 
-  const handleSwitchTestModeClick = () => {
-    setIsTestModeOn(!isTestModeOn);
+  const logout = async () => {
+    localStorage.clear();
+    navigate(LOGIN_URL);
+  };
+
+  const handleSwitchTestModeClick = async (e) => {
+    let message = "Are you sure you want to trun on the test mode?";
+    if(isTestModeOn){
+      message = "Are you sure you want to trun off the test mode?";
+    }
+    const result = window.confirm(message);
+    if(result){
+      // try{
+      //   await axios.put(TEST_MODE_URL, "", //to check
+      //     {
+      //       auth: {
+      //           username: userName,
+      //           password: pwd
+      //       }
+      //     }
+      //   );
+        setIsTestModeOn(!isTestModeOn);
+      // }catch(err){
+      //   if(!err?.response || err.response?.status === 401 ) {
+      //     //logout();
+      //   } else if(err.response?.status === 400) {
+      //     window.alert("Switching test mode failed, please try again...");
+      //   }
+      // }
+    }
   }
 
-  const handleSwitchInvestmentClick = () => {
-    setIsInvestmentOn(!isInvestmentOn);
+  const handleSwitchInvestmentClick = async (e) => {
+    let message = "Are you sure you want to trun on the investment?";
+    if(isInvestmentOn){
+      message = "Are you sure you want to trun off the investment?";
+    }
+    const result = window.confirm(message);
+    if(result){
+      // try{
+      //   await axios.put(INVESTMENT_URL, "", //to check
+      //     {
+      //       auth: {
+      //           username: userName,
+      //           password: pwd
+      //       }
+      //     }
+      //   );
+      setIsInvestmentOn(!isInvestmentOn);
+      // }catch(err){
+      //   if(!err?.response || err.response?.status === 401 ) {
+      //     //logout();
+      //   } else if(err.response?.status === 400) {
+      //     window.alert("Switching investment failed, please try again...");
+      //   }
+      // }
+    }
   }
 
   const handleStrategyOptionstClick = () => {
