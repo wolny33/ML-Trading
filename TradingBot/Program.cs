@@ -2,6 +2,8 @@ using System.Reflection;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using TradingBot.Configuration;
 using TradingBot.Database;
 using TradingBot.Services;
@@ -22,12 +24,7 @@ public sealed class Program
 
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen(c =>
-        {
-            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-            c.IncludeXmlComments(xmlPath);
-        });
+        builder.Services.AddSwaggerGen(ConfigureSwagger);
 
         var app = builder.Build();
 
@@ -43,6 +40,38 @@ public sealed class Program
         await ApplyMigrationsAsync(app.Services);
 
         await app.RunAsync();
+    }
+
+    private static void ConfigureSwagger(SwaggerGenOptions c)
+    {
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
+
+        var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        c.IncludeXmlComments(xmlPath);
+
+        c.AddSecurityDefinition("basic", new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "basic",
+            In = ParameterLocation.Header,
+            Description = "Basic Authorization header."
+        });
+
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme, Id = "basic"
+                    }
+                },
+                Array.Empty<string>()
+            }
+        });
     }
 
     private static void ConfigureAuth(IServiceCollection services)
