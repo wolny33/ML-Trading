@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using TradingBot.Dto;
 
 namespace TradingBot.Controllers;
 
-[Route("api/test-mode")]
 [ApiController]
+[Route("api/test-mode")]
 public sealed class TestModeController : ControllerBase
 {
     /// <summary>
@@ -13,20 +14,30 @@ public sealed class TestModeController : ControllerBase
     /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpPut]
-    public IActionResult TurnTestModeOnOff()
+    [ProducesResponseType(typeof(TestModeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public TestModeResponse TurnTestModeOnOff(TestModeRequest request)
     {
-        throw new NotImplementedException();
+        return new TestModeResponse
+        {
+            Enabled = request.Enable
+        };
     }
 
     /// <summary>
     ///     Returns information if the test mode is on or off.
     /// </summary>
     /// <response code="200">OK</response>
-    /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpGet]
-    public IActionResult IsTestModeOn()
+    [ProducesResponseType(typeof(TestModeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public TestModeResponse IsTestModeOn()
     {
-        return Ok();
+        return new TestModeResponse
+        {
+            Enabled = true
+        };
     }
 }

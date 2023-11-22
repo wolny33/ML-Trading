@@ -1,5 +1,6 @@
 ﻿using Alpaca.Markets;
 using TradingBot.Database.Entities;
+using TradingBot.Dto;
 
 namespace TradingBot.Models;
 
@@ -52,6 +53,20 @@ public sealed class TradingAction
             {
                 TradingActionId = Id
             }
+        };
+    }
+
+    public TradingActionResponse ToResponse()
+    {
+        return new TradingActionResponse
+        {
+            Id = Id,
+            CreatedAt = CreatedAt,
+            Price = Price,
+            Quantity = Quantity,
+            Symbol = Symbol.Value,
+            InForce = InForce.ToString(),
+            OrderType = OrderType.ToString()
         };
     }
 }

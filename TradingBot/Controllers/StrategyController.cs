@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using TradingBot.Dto;
 
 namespace TradingBot.Controllers;
 
@@ -10,12 +11,16 @@ public sealed class StrategyController : ControllerBase
     ///     Gets the strategy parameters.
     /// </summary>
     /// <response code="200">OK</response>
-    /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpGet]
-    public IActionResult GetStrategyParameters()
+    [ProducesResponseType(typeof(StrategySettingsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public StrategySettingsResponse GetStrategyParameters()
     {
-        throw new NotImplementedException();
+        return new StrategySettingsResponse
+        {
+            ImportantProperty = "value"
+        };
     }
 
     /// <summary>
@@ -25,8 +30,14 @@ public sealed class StrategyController : ControllerBase
     /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpPut]
-    public IActionResult ChangeStrategyParameters()
+    [ProducesResponseType(typeof(StrategySettingsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public StrategySettingsResponse ChangeStrategyParameters(StrategySettingsRequest request)
     {
-        throw new NotImplementedException();
+        return new StrategySettingsResponse
+        {
+            ImportantProperty = request.ImportantProperty
+        };
     }
 }

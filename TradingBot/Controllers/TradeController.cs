@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using TradingBot.Dto;
 
 namespace TradingBot.Controllers;
 
@@ -13,22 +14,30 @@ public sealed class TradeController : Controller
     /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpPut]
-    public IActionResult StartStopTheInvestment()
+    [ProducesResponseType(typeof(InvestmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public InvestmentResponse StartStopTheInvestment(InvestmentRequest request)
     {
-        //return Ok();
-        throw new NotImplementedException();
+        return new InvestmentResponse
+        {
+            Enabled = request.Enable
+        };
     }
 
     /// <summary>
     ///     Returns information if the investment is started or stopped.
     /// </summary>
     /// <response code="200">OK</response>
-    /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpGet]
-    public IActionResult IsTheInvestmentOn()
+    [ProducesResponseType(typeof(InvestmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public InvestmentResponse IsTheInvestmentOn()
     {
-        //return Ok(false);
-        throw new NotImplementedException();
+        return new InvestmentResponse
+        {
+            Enabled = false
+        };
     }
 }
