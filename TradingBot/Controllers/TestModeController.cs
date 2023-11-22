@@ -15,7 +15,7 @@ public sealed class TestModeController : ControllerBase
     /// <response code="401">Unauthorized</response>
     [HttpPut]
     [ProducesResponseType(typeof(TestModeResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public TestModeResponse TurnTestModeOnOff(TestModeRequest request)
     {

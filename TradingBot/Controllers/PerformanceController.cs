@@ -52,9 +52,12 @@ public sealed class PerformanceController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<TradingActionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IReadOnlyList<TradingActionResponse> GetTradeActions(TradingActionRequest request)
+    public IReadOnlyList<TradingActionResponse> GetTradeActions([FromQuery] TradingActionRequest request)
     {
-        return CreateTradingActions(request.Start ?? DateTimeOffset.Now - TimeSpan.FromDays(10),
+        var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? DateTimeOffset.Now;
+        var start = request.Start ?? end - TimeSpan.FromDays(10);
+
+        return CreateTradingActions(start,
             request.End ?? DateTimeOffset.Now).Select(a => a.ToResponse()).ToList();
     }
 
@@ -70,6 +73,7 @@ public sealed class PerformanceController : ControllerBase
     [ProducesResponseType(typeof(TradingActionDetailsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public TradingActionDetailsResponse GetTradeActionDetails([Required] Guid id)
     {
         return new TradingActionDetailsResponse
