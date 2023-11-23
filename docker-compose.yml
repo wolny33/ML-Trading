@@ -1,0 +1,19 @@
+﻿version: '3.8'
+
+services:
+  backend:
+    build:
+      context: TradingBot
+    ports:
+      - "5000:5000"
+    # Uncomment to persist SQLite data
+    #volumes:
+    #  - ./Data:/app/Data
+
+  frontend:
+    build:
+      context: Frontend/tradingbot
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
