@@ -17,3 +17,10 @@ services:
       - "3000:80"
     depends_on:
       - backend
+        
+  predictor:
+    build:
+      context: PredictionModel
+    ports:
+      # TODO: Remove after integration with backend
+      - "8000:8000"
