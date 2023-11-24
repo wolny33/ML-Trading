@@ -1,0 +1,22 @@
+{
+  "open": {
+    "min": -1,
+    "max": 2
+  },
+  "close": {
+    "min": -1,
+    "max": 2
+  },
+  "high": {
+    "min": -1,
+    "max": 2
+  },
+  "low": {
+    "min": -1,
+    "max": 2
+  },
+  "volume": {
+    "min": -1,
+    "max": 2
+  }
+}

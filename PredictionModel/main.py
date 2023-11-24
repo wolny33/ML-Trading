@@ -1,30 +1,14 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from keras.models import load_model
-import numpy as np
 from datetime import datetime
+import numpy as np
+from fastapi import FastAPI, HTTPException
+from keras.models import load_model
+from dto import DailyData, PredictResponse, PredictRequest
+from scaler import ScalerCollection
+
 
 app = FastAPI()
-model = load_model('model.h5')
-
-
-class DailyData(BaseModel):
-    open: float
-    close: float
-    high: float
-    low: float
-    volume: float
-    date: str
-
-
-class PredictRequest(BaseModel):
-    data: list[DailyData]
-
-
-class PredictResponse(BaseModel):
-    close: list[float]
-    high: list[float]
-    low: list[float]
+model = load_model("model.h5")
+scalers = ScalerCollection.load("config.json")
 
 
 @app.post("/predict", response_model=PredictResponse)
@@ -32,12 +16,18 @@ def predict(request: PredictRequest) -> PredictResponse:
     try:
         input_data = np.vstack([get_features_vector(v) for v in request.data])
 
-        # TODO: scale...
+        input_data[:, 0] = scalers.open_scaler.scale(input_data[:, 0])
+        input_data[:, 1] = scalers.close_scaler.scale(input_data[:, 1])
+        input_data[:, 2] = scalers.high_scaler.scale(input_data[:, 2])
+        input_data[:, 3] = scalers.low_scaler.scale(input_data[:, 3])
+        input_data[:, 4] = scalers.volume_scaler.scale(input_data[:, 4])
 
         reshaped = np.reshape(input_data, (1, 10, 8))
         prediction = np.reshape(model.predict(reshaped), (-1, 3))
 
-        # TODO: descale...
+        prediction[:, 0] = scalers.close_scaler.descale(prediction[:, 0])
+        prediction[:, 1] = scalers.high_scaler.descale(prediction[:, 1])
+        prediction[:, 2] = scalers.low_scaler.descale(prediction[:, 2])
 
         close = [v for v in prediction[:, 0]]
         high = [v for v in prediction[:, 1]]
