@@ -1,8 +1,11 @@
-﻿namespace TradingBot.Services;
+﻿using TradingBot.Models;
+
+namespace TradingBot.Services;
 
 public interface IMarketDataSource
 {
-    public Task GetAllPricesAsync(DateTimeOffset start, DateTimeOffset end);
+    public Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetAllPricesAsync(DateOnly start,
+        DateOnly end);
 }
 
 public sealed class MarketDataSource : IMarketDataSource
@@ -14,8 +17,10 @@ public sealed class MarketDataSource : IMarketDataSource
         _clientFactory = clientFactory;
     }
 
-    public async Task GetAllPricesAsync(DateTimeOffset start, DateTimeOffset end)
+    public async Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetAllPricesAsync(DateOnly start,
+        DateOnly end)
     {
-        await Task.FromException(new NotImplementedException());
+        return await Task.FromException<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>>(
+            new NotImplementedException());
     }
 }

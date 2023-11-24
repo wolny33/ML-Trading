@@ -2,5 +2,5 @@
 
 public sealed class Prediction
 {
-    public required IReadOnlyList<DailyPriceInfo> Prices { get; init; }
+    public required IReadOnlyList<DailyPricePrediction> Prices { get; init; }
 }
