@@ -3,7 +3,7 @@ import axios from './API/axios';
 import { useNavigate } from 'react-router-dom'
 import { BounceLoader } from "react-spinners";
 
-const LOGIN_URL = '/performance';
+const LOGIN_URL = '/investment';
 const HOME_URL = '/home';
 
 const Login = () => {
@@ -32,7 +32,7 @@ const Login = () => {
         setErrMsg('');
         try{
             setIsLoading(true);
-            const response = await axios.get('',
+            await axios.get(LOGIN_URL,
                 {
                     auth: {
                         username: userName,

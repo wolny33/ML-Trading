@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 const TEST_MODE_URL = '/test-mode';
 const LOGIN_URL = '/login';
 const INVESTMENT_URL = '/investment';
+const PERFORMANCE_URL = '/performance';
+const TRADE_ACTIONS_URL = '/trade-actions';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -21,22 +23,24 @@ const Home = () => {
   const [showStrategyOptions, setshowStrategyOptions] = useState(true);
 
   useEffect(() => {
+    const storedUserName = localStorage.getItem("userName");
+    const storedPwd = localStorage.getItem("pwd");
     setUserName(localStorage.getItem("userName"));
     setPwd(localStorage.getItem("pwd"));
 
     axios.get(TEST_MODE_URL,
       {
         auth: {
-            username: userName,
-            password: pwd
+            username: storedUserName,
+            password: storedPwd
         }
       }
     ).then(result => {
-      setIsTestModeOn(result.data);
+      setIsTestModeOn(result.data.enabled);
     }).catch(err => {
       if(!err?.response || err.response?.status === 401) {
-        //logout();
-      } else if(err.response?.status === 400) {
+        logout();
+      } else {
         setIsTestModeOn(false);
       }
     });
@@ -44,184 +48,123 @@ const Home = () => {
     axios.get(INVESTMENT_URL,
       {
         auth: {
-            username: userName,
-            password: pwd
+            username: storedUserName,
+            password: storedPwd
         }
       }
     ).then(result => {
-      setIsInvestmentOn(result.data);
+      setIsInvestmentOn(result.data.enabled);
     }).catch(err => {
       if(!err?.response || err.response?.status === 401) {
-        //logout();
-      } else if(err.response?.status === 404) {
+        logout();
+      } else {
         setIsInvestmentOn(false);
       }
     });
 
-    setTradingAcionsData(  [{
-      date: '2022-03-13',
-      actionType: 'BUY',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'BUY',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'BUY',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'BUY',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-    {
-      date: '2022-03-13',
-      actionType: 'SELL',
-      symbol: 'AAPL',
-      price: 100,
-      quantity: 2
-    },
-  ]);
+    axios.get(PERFORMANCE_URL + TRADE_ACTIONS_URL,
+      {
+        auth: {
+            username: storedUserName,
+            password: storedPwd
+        }
+      }
+    ).then(result => {
+      setTradingAcionsData(result.data);
+    }).catch(err => {
+      if(!err?.response || err.response?.status === 401) {
+        logout();
+      } else {
+        setTradingAcionsData(null);
+      }
+    });
   }, []);
 
-  const logout = async () => {
+  const getTradeActionDetails = async () => {
+    try{
+      await axios.put(TEST_MODE_URL, "", //to check
+        {
+          auth: {
+              username: userName,
+              password: pwd
+          }
+        }
+      );
+    }catch(err){
+      if(!err?.response || err.response?.status === 401 ) {
+        //logout();
+      } else if(err.response?.status === 400) {
+        //logout();
+      }
+    }
+  }
+
+  const logout = () => {
     localStorage.clear();
     navigate(LOGIN_URL);
   };
 
-  const handleSwitchTestModeClick = async (e) => {
+  const handleSwitchTestModeClick = async () => {
     let message = "Are you sure you want to trun on the test mode?";
     if(isTestModeOn){
       message = "Are you sure you want to trun off the test mode?";
     }
     const result = window.confirm(message);
     if(result){
-      // try{
-      //   await axios.put(TEST_MODE_URL, "", //to check
-      //     {
-      //       auth: {
-      //           username: userName,
-      //           password: pwd
-      //       }
-      //     }
-      //   );
-        setIsTestModeOn(!isTestModeOn);
-      // }catch(err){
-      //   if(!err?.response || err.response?.status === 401 ) {
-      //     //logout();
-      //   } else if(err.response?.status === 400) {
-      //     window.alert("Switching test mode failed, please try again...");
-      //   }
-      // }
+      try{
+        const response = await axios.put(TEST_MODE_URL,
+          {
+            "enable": !isTestModeOn
+          },
+          {
+            auth: {
+                username: userName,
+                password: pwd
+            }
+          }
+        );
+        setIsTestModeOn(response.data.enabled);
+      }catch(err){
+        if(err.response?.status === 400) {
+          window.alert("Switching test mode failed, please try again...");
+        } else {
+          logout();
+        }
+      }
     }
   }
 
-  const handleSwitchInvestmentClick = async (e) => {
+  const handleSwitchInvestmentClick = async () => {
     let message = "Are you sure you want to trun on the investment?";
     if(isInvestmentOn){
       message = "Are you sure you want to trun off the investment?";
     }
     const result = window.confirm(message);
     if(result){
-      // try{
-      //   await axios.put(INVESTMENT_URL, "", //to check
-      //     {
-      //       auth: {
-      //           username: userName,
-      //           password: pwd
-      //       }
-      //     }
-      //   );
-      setIsInvestmentOn(!isInvestmentOn);
-      // }catch(err){
-      //   if(!err?.response || err.response?.status === 401 ) {
-      //     //logout();
-      //   } else if(err.response?.status === 400) {
-      //     window.alert("Switching investment failed, please try again...");
-      //   }
-      // }
+      try{
+        const response = await axios.put(INVESTMENT_URL,
+          {
+            "enable": !isInvestmentOn
+          },
+          {
+            auth: {
+                username: userName,
+                password: pwd
+            },
+            headers: { 
+              'Content-Type': 'application/json',
+            },
+            withCredentials: false
+          }
+        );
+        setIsInvestmentOn(response.data.enabled);
+      }catch(err){
+        if(err.response?.status === 400) {
+          window.alert("Switching investment failed, please try again...");
+        } else {
+          logout();
+        }
+      }
     }
   }
 
@@ -231,16 +174,16 @@ const Home = () => {
 
   const columns = useMemo( () => [
       {
-        id: 'date',
+        accessorKey: 'createdAt',
         header: 'Date',
-        accessorFn: (originalRow) => new Date(originalRow.date),
+        accessorFn: (originalRow) => new Date(originalRow.createdAt),
         filterVariant: 'date-range',
         muiFilterDatePickerProps: '',
         Cell: ({ cell }) => cell.getValue().toLocaleDateString(),
       },
       {
-        accessorKey: 'actionType',
-        header: 'Action Type',
+        accessorKey: 'orderType',
+        header: 'Order Type',
         size: 200,
         filterVariant: 'multi-select',
         filterSelectOptions: ["BUY", "SELL"],
@@ -262,8 +205,8 @@ const Home = () => {
         filterFn: 'betweenInclusive',
         muiFilterSliderProps: {
           min: 0,
-          max: 10000,
-          step: 100,
+          max: 1000,
+          step: 10,
           valueLabelFormat: (value) =>
             value.toLocaleString('en-US', {
               style: 'currency',
@@ -337,51 +280,6 @@ const Home = () => {
                 </h3>
           <MaterialReactTable table={table} />
           </div>
-          {/* <div>
-            <div className="bg-white p-6 rounded-xl shadow-lg overflow-x-auto">
-                <h3 className="text-2xl font-semibold text-gray-700 mb-4 text-center">
-                    Trading history
-                </h3>
-              <table className="mx-auto">
-                <thead>
-                  <tr className="bg-gray-200">
-                    <th className="text-center py-2 px-4">Date</th>
-                    <th className="text-center py-2 px-4">Order Type</th>
-                    <th className="text-center py-2 px-4">Symbol</th>
-                    <th className="text-center py-2 px-4">Price [$]</th>
-                    <th className="text-center py-2 px-4">Quantity</th>
-                    <th className="text-center py-2 px-4"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="even:bg-gray-200 even:rounded-xl">
-                    <td className="text-center py-2 px-4 font-semibold">13 Mar 2022</td>
-                    <td className="text-center py-2 px-4 font-semibold">BUY</td>
-                    <td className="text-center py-2 px-4 font-semibold">AAPL</td>
-                    <td className="text-center py-2 px-4 font-semibold">100</td>
-                    <td className="text-center py-2 px-4 font-semibold">23</td>
-                    <td className="text-center py-2 px-4 font-semibold">
-                      <button className="text-center bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded">
-                        Details
-                      </button>
-                    </td>
-                  </tr>
-                  <tr className="even:bg-gray-200 even:rounded-xl">
-                    <td className="text-center py-2 px-4 font-semibold">13 Mar 2022</td>
-                    <td className="text-center py-2 px-4 font-semibold">BUY</td>
-                    <td className="text-center py-2 px-4 font-semibold">AAPL</td>
-                    <td className="text-center py-2 px-4 font-semibold">100</td>
-                    <td className="text-center py-2 px-4 font-semibold">23</td>
-                    <td className="text-center py-2 px-4 font-semibold">
-                      <button className="text-center bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded">
-                        Details
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div> */}
             <div>
             {showStrategyOptions ? (
               <button className="text-center bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleStrategyOptionstClick}>
