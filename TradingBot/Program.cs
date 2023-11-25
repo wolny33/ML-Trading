@@ -23,9 +23,11 @@ public sealed class Program
 
         builder.Services.AddControllers();
 
-        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(ConfigureSwagger);
+
+        builder.Services.AddHealthChecks().AddSqlite(GetConnectionString(builder.Configuration), name: "sqlite",
+            timeout: TimeSpan.FromSeconds(10));
 
         var app = builder.Build();
 
@@ -37,10 +39,17 @@ public sealed class Program
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
+        app.MapHealthChecks("/health");
 
         await ApplyMigrationsAsync(app.Services);
 
         await app.RunAsync();
+    }
+
+    private static string GetConnectionString(IConfiguration config)
+    {
+        return config.GetConnectionString("Data") ?? throw new InvalidOperationException(
+            "Configuration does not contain required connection string: section 'ConnectionStrings:Data'");
     }
 
     private static void ConfigureSwagger(SwaggerGenOptions c)
@@ -105,7 +114,7 @@ public sealed class Program
 
     private static void ConfigureServices(IServiceCollection services, IConfiguration config)
     {
-        services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(config.GetConnectionString("Data")));
+        services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(GetConnectionString(config)));
         services.AddSingleton<IFlurlClientFactory, PerBaseUrlFlurlClientFactory>();
 
         services.AddSingleton<IAlpacaClientFactory, AlpacaClientFactory>();
