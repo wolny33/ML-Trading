@@ -53,7 +53,7 @@ def scale_input(input_data: np.ndarray, scaler_collection: ScalerCollection) -> 
 
 def descale_output(output: np.ndarray, scaler_collection: ScalerCollection) -> np.ndarray:
     result = output.copy()
-    result[:, 0] = scaler_collection.close_scaler.scale(result[:, 0])
-    result[:, 1] = scaler_collection.high_scaler.scale(result[:, 1])
-    result[:, 2] = scaler_collection.low_scaler.scale(result[:, 2])
+    result[:, 0] = scaler_collection.close_scaler.descale(result[:, 0])
+    result[:, 1] = scaler_collection.high_scaler.descale(result[:, 1])
+    result[:, 2] = scaler_collection.low_scaler.descale(result[:, 2])
     return result
