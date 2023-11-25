@@ -5,6 +5,8 @@ import { MaterialReactTable, useMaterialReactTable } from 'material-react-table'
 import { Box, Typography } from '@mui/material';
 import axios from './API/axios';
 import { useNavigate } from 'react-router-dom';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, LinearScale, CategoryScale, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 
 const TEST_MODE_URL = '/test-mode';
 const LOGIN_URL = '/login';
@@ -13,7 +15,10 @@ const PERFORMANCE_URL = '/performance';
 const TRADE_ACTIONS_URL = '/trade-actions';
 const STRATEGY_URL = '/strategy';
 
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
+
 const Home = () => {
+
   const navigate = useNavigate();
 
   const [userName, setUserName] = useState('');
@@ -27,6 +32,8 @@ const Home = () => {
 
   const [editingStrategyParameters, setEditingStrategyParameters] = useState(false);
   const [newImportantProperty, setNewImportantProperty] = useState('');
+
+  const [maxChartValue, setMaxChartValue] = useState(0);
 
   useEffect(() => {
     const storedUserName = localStorage.getItem("userName");
@@ -112,6 +119,7 @@ const Home = () => {
       }
     ).then(result => {
       setPerformanceData(result.data);
+      setMaxChartValue(Math.max(...result.data.map((row) => Math.abs(row.return))));
     }).catch(err => {
       if(!err?.response || err.response?.status === 401) {
         logout();
@@ -249,6 +257,30 @@ const Home = () => {
     setEditingStrategyParameters(false);
   }
 
+  const chartData = {
+    labels: performanceData.map((data) => new Date(data.time).toISOString().split('T')[0]),
+    datasets: [
+      {
+        label: 'Returns',
+        data: performanceData.map((data) => data.return),
+        fill: false,
+        borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1,
+      },
+    ],
+  };
+
+  const options = {
+    scales: {
+      y: {
+        type: 'linear',
+        beginAtZero: false,
+        min: -maxChartValue *6/5,
+        max: maxChartValue *6/5,
+      },
+    },
+  };
+
   const columns = useMemo( () => [
       {
         accessorKey: 'createdAt',
@@ -337,8 +369,7 @@ const Home = () => {
                 Returns chart
             </h2>
               <div className="h-64 bg-gray-200 rounded-xl flex items-center justify-center">
-                {/* Placeholder for chart */}
-                <p className="text-center">Chart Placeholder</p>
+                <Line data={chartData} options={options} />
               </div>
             </div>
           </div>
