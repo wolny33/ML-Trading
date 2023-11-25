@@ -24,3 +24,9 @@ services:
     ports:
       # TODO: Remove after integration with backend
       - "8000:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+      start_period: 10s

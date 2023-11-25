@@ -2,7 +2,7 @@ from datetime import datetime
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from keras.models import load_model
-from dto import DailyData, PredictResponse, PredictRequest, DailyPrediction
+from dto import DailyData, PredictResponse, PredictRequest, DailyPrediction, HealthResponse
 from scaler import ScalerCollection
 
 
@@ -25,6 +25,11 @@ def predict(request: PredictRequest) -> PredictResponse:
         return PredictResponse(predictions=[DailyPrediction(close=v[0], high=v[1], low=v[2]) for v in prediction])
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(status="healthy")
 
 
 def get_features_vector(data: DailyData) -> np.ndarray:

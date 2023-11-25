@@ -28,3 +28,7 @@ class DailyPrediction(BaseModel):
 
 class PredictResponse(BaseModel):
     predictions: list[DailyPrediction]
+
+
+class HealthResponse(BaseModel):
+    status: str
