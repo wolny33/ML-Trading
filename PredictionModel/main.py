@@ -34,7 +34,7 @@ def get_features_vector(data: DailyData) -> np.ndarray:
         data.close,
         data.high,
         data.low,
-        data.volume,
+        np.log(data.volume),
         date.weekday() / 6,
         np.sin(2 * np.pi * date.timetuple().tm_yday / 366),
         np.cos(2 * np.pi * date.timetuple().tm_yday / 366)
