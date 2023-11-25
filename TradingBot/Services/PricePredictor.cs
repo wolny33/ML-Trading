@@ -42,27 +42,33 @@ public sealed class PricePredictor : IPricePredictor
         var request = CreatePredictorRequest(data);
 
         using var client = new FlurlClient("http://predictor:8000");
-        var response = await client.Request("predict").PostJsonAsync(request);
+        var response = await client.Request("predict").AllowAnyHttpStatus().PostJsonAsync(request);
+        if (response.StatusCode != StatusCodes.Status200OK)
+            throw new Exception($"Call failed with {response.StatusCode}: {await response.GetStringAsync()}");
+
         var predictorOutput = await response.GetJsonAsync<PredictorResponse>();
 
         return CreatePredictionFromPredictorOutput(predictorOutput, data[^1]);
     }
 
-    private static IReadOnlyList<SingleDayRequest> CreatePredictorRequest(IReadOnlyList<DailyTradingData> data)
+    private static PredictorRequest CreatePredictorRequest(IReadOnlyList<DailyTradingData> data)
     {
-        return data.Skip(1).Select((current, index) =>
+        return new PredictorRequest
         {
-            var previous = data[index];
-            return new SingleDayRequest
+            Data = data.Skip(1).Select((current, index) =>
             {
-                Date = current.Date.ToString("s"),
-                Open = RelativeChange(previous.Open, current.Open),
-                Close = RelativeChange(previous.Close, current.Close),
-                High = RelativeChange(previous.High, current.High),
-                Low = RelativeChange(previous.Low, current.Low),
-                Volume = RelativeChange(previous.Volume, current.Volume)
-            };
-        }).ToList();
+                var previous = data[index];
+                return new SingleDayRequest
+                {
+                    Date = current.Date.ToString("O"),
+                    Open = RelativeChange(previous.Open, current.Open),
+                    Close = RelativeChange(previous.Close, current.Close),
+                    High = RelativeChange(previous.High, current.High),
+                    Low = RelativeChange(previous.Low, current.Low),
+                    Volume = RelativeChange(previous.Volume, current.Volume)
+                };
+            }).ToList()
+        };
     }
 
     private static Prediction CreatePredictionFromPredictorOutput(PredictorResponse response,
@@ -88,6 +94,12 @@ public sealed class PricePredictor : IPricePredictor
     private static double RelativeChange(double previous, double now)
     {
         return (now - previous) / previous;
+    }
+
+    private sealed class PredictorRequest
+    {
+        [JsonProperty("data")]
+        public required IReadOnlyList<SingleDayRequest> Data { get; init; }
     }
 
     private sealed class SingleDayRequest

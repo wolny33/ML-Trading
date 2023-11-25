@@ -1,0 +1,94 @@
+﻿POST http://localhost:5000/temporary/predict
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Type: application/json
+
+[
+  {
+    "date": "2023-11-10",
+    "open": 98.23,
+    "close": 99.50,
+    "high": 101.04,
+    "low": 97.00,
+    "volume": 150000
+  },
+  {
+    "date": "2023-11-13",
+    "open": 99.50,
+    "close": 100.46,
+    "high": 102.01,
+    "low": 99.23,
+    "volume": 140000
+  },
+  {
+    "date": "2023-11-14",
+    "open": 100.50,
+    "close": 100.02,
+    "high": 101.34,
+    "low": 99.10,
+    "volume": 130000
+  },
+  {
+    "date": "2023-11-15",
+    "open": 100.02,
+    "close": 96.67,
+    "high": 101.00,
+    "low": 96.60,
+    "volume": 100000
+  },
+  {
+    "date": "2023-11-16",
+    "open": 96.67,
+    "close": 98.79,
+    "high": 99.00,
+    "low": 96.54,
+    "volume": 110000
+  },
+  {
+    "date": "2023-11-17",
+    "open": 98.79,
+    "close": 99.10,
+    "high": 99.23,
+    "low": 97.00,
+    "volume": 130000
+  },
+  {
+    "date": "2023-11-20",
+    "open": 99.10,
+    "close": 99.12,
+    "high": 99.90,
+    "low": 99.00,
+    "volume": 120000
+  },
+  {
+    "date": "2023-11-21",
+    "open": 99.12,
+    "close": 97.22,
+    "high": 99.50,
+    "low": 97.00,
+    "volume": 120000
+  },
+  {
+    "date": "2023-11-22",
+    "open": 97.22,
+    "close": 97.30,
+    "high": 98.00,
+    "low": 96.70,
+    "volume": 110000
+  },
+  {
+    "date": "2023-11-23",
+    "open": 97.30,
+    "close": 99.02,
+    "high": 100.00,
+    "low": 97.00,
+    "volume": 130000
+  },
+  {
+    "date": "2023-11-24",
+    "open": 99.02,
+    "close": 99.98,
+    "high": 102.76,
+    "low": 98.87,
+    "volume": 120000
+  }
+]
