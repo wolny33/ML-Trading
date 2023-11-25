@@ -1,4 +1,4 @@
-﻿POST http://localhost:5000/temporary/predict
+﻿POST http://localhost:5000/manual-tests/predict
 Authorization: Basic YWRtaW46cGFzc3dvcmQ=
 Content-Type: application/json
 

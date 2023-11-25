@@ -1,4 +1,5 @@
 ﻿using Flurl.Http;
+using Flurl.Http.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Newtonsoft.Json;
 using TradingBot.Models;
@@ -8,17 +9,21 @@ namespace TradingBot.Services;
 public interface IPricePredictor
 {
     public Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync();
+
+    public Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data);
 }
 
 public sealed class PricePredictor : IPricePredictor
 {
     private readonly ISystemClock _clock;
+    private readonly IFlurlClientFactory _flurlFactory;
     private readonly IMarketDataSource _marketData;
 
-    public PricePredictor(IMarketDataSource marketData, ISystemClock clock)
+    public PricePredictor(IMarketDataSource marketData, ISystemClock clock, IFlurlClientFactory flurlFactory)
     {
         _marketData = marketData;
         _clock = clock;
+        _flurlFactory = flurlFactory;
     }
 
     public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync()
@@ -37,16 +42,17 @@ public sealed class PricePredictor : IPricePredictor
         return result;
     }
 
-    public static async Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data)
+    public async Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data)
     {
         var request = CreatePredictorRequest(data);
 
-        using var client = new FlurlClient("http://predictor:8000");
+        using var client = _flurlFactory.Get("http://predictor:8000");
         var response = await client.Request("predict").AllowAnyHttpStatus().PostJsonAsync(request);
-        if (response.StatusCode != StatusCodes.Status200OK)
-            throw new Exception($"Call failed with {response.StatusCode}: {await response.GetStringAsync()}");
-
-        var predictorOutput = await response.GetJsonAsync<PredictorResponse>();
+        var predictorOutput = response.StatusCode switch
+        {
+            StatusCodes.Status200OK => await response.GetJsonAsync<PredictorResponse>(),
+            var code => throw new PredictorCallException(code, await response.GetStringAsync())
+        };
 
         return CreatePredictionFromPredictorOutput(predictorOutput, data[^1]);
     }
