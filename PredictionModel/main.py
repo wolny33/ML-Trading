@@ -2,7 +2,7 @@ from datetime import datetime
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from keras.models import load_model
-from dto import DailyData, PredictResponse, PredictRequest
+from dto import DailyData, PredictResponse, PredictRequest, DailyPrediction
 from scaler import ScalerCollection
 
 
@@ -15,24 +15,14 @@ scalers = ScalerCollection.load("config.json")
 def predict(request: PredictRequest) -> PredictResponse:
     try:
         input_data = np.vstack([get_features_vector(v) for v in request.data])
+        scaled = scale_input(input_data, scalers)
+        reshaped = np.reshape(scaled, (1, 10, 8))
 
-        input_data[:, 0] = scalers.open_scaler.scale(input_data[:, 0])
-        input_data[:, 1] = scalers.close_scaler.scale(input_data[:, 1])
-        input_data[:, 2] = scalers.high_scaler.scale(input_data[:, 2])
-        input_data[:, 3] = scalers.low_scaler.scale(input_data[:, 3])
-        input_data[:, 4] = scalers.volume_scaler.scale(input_data[:, 4])
+        output = np.reshape(model.predict(reshaped), (-1, 3))
 
-        reshaped = np.reshape(input_data, (1, 10, 8))
-        prediction = np.reshape(model.predict(reshaped), (-1, 3))
+        prediction = descale_output(output, scalers)
 
-        prediction[:, 0] = scalers.close_scaler.descale(prediction[:, 0])
-        prediction[:, 1] = scalers.high_scaler.descale(prediction[:, 1])
-        prediction[:, 2] = scalers.low_scaler.descale(prediction[:, 2])
-
-        close = [v for v in prediction[:, 0]]
-        high = [v for v in prediction[:, 1]]
-        low = [v for v in prediction[:, 2]]
-        return PredictResponse(close=close, high=high, low=low)
+        return PredictResponse(predictions=[DailyPrediction(close=v[0], high=v[1], low=v[2]) for v in prediction])
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -49,3 +39,21 @@ def get_features_vector(data: DailyData) -> np.ndarray:
         np.sin(2 * np.pi * date.timetuple().tm_yday / 366),
         np.cos(2 * np.pi * date.timetuple().tm_yday / 366)
     ])
+
+
+def scale_input(input_data: np.ndarray, scaler_collection: ScalerCollection) -> np.ndarray:
+    result = input_data.copy()
+    result[:, 0] = scaler_collection.open_scaler.scale(result[:, 0])
+    result[:, 1] = scaler_collection.close_scaler.scale(result[:, 1])
+    result[:, 2] = scaler_collection.high_scaler.scale(result[:, 2])
+    result[:, 3] = scaler_collection.low_scaler.scale(result[:, 3])
+    result[:, 4] = scaler_collection.volume_scaler.scale(result[:, 4])
+    return result
+
+
+def descale_output(output: np.ndarray, scaler_collection: ScalerCollection) -> np.ndarray:
+    result = output.copy()
+    result[:, 0] = scaler_collection.close_scaler.scale(result[:, 0])
+    result[:, 1] = scaler_collection.high_scaler.scale(result[:, 1])
+    result[:, 2] = scaler_collection.low_scaler.scale(result[:, 2])
+    return result

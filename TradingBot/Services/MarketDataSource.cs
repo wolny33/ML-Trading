@@ -20,6 +20,7 @@ public sealed class MarketDataSource : IMarketDataSource
     public async Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetAllPricesAsync(DateOnly start,
         DateOnly end)
     {
+        // This method should ensure that data is valid (i.e. no <=0 values)
         return await Task.FromException<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>>(
             new NotImplementedException());
     }

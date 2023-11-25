@@ -75,15 +75,8 @@ public sealed class PricePredictor : IPricePredictor
         DailyTradingData lastDayData)
     {
         var result = new List<DailyPricePrediction>();
-        foreach (var (closeChange, highChange, lowChange) in Enumerable.Range(0, response.Close.Count)
-                     .Select(i => (response.Close[i], response.High[i], response.Low[i])))
-            result.Add(new DailyPricePrediction
-            {
-                Date = (result.LastOrDefault()?.Date ?? lastDayData.Date).AddDays(1),
-                ClosingPrice = (result.LastOrDefault()?.ClosingPrice ?? lastDayData.Close) * (1 + closeChange),
-                HighPrice = (result.LastOrDefault()?.HighPrice ?? lastDayData.High) * (1 + highChange),
-                LowPrice = (result.LastOrDefault()?.LowPrice ?? lastDayData.Low) * (1 + lowChange)
-            });
+        foreach (var prediction in response.Predictions)
+            result.Add(CreateDailyPrediction(lastDayData, result.LastOrDefault(), prediction));
 
         return new Prediction
         {
@@ -91,10 +84,31 @@ public sealed class PricePredictor : IPricePredictor
         };
     }
 
+    private static DailyPricePrediction CreateDailyPrediction(DailyTradingData lastDayData,
+        DailyPricePrediction? previous, SingleDayPrediction prediction)
+    {
+        var lastDay = previous?.Date ?? lastDayData.Date;
+        return new DailyPricePrediction
+        {
+            Date = lastDay.DayOfWeek switch
+            {
+                // Next weekday
+                DayOfWeek.Friday => lastDay.AddDays(3),
+                DayOfWeek.Saturday => lastDay.AddDays(2),
+                _ => lastDay.AddDays(1)
+            },
+            ClosingPrice = (previous?.ClosingPrice ?? lastDayData.Close) * (1 + prediction.CloseChange),
+            HighPrice = (previous?.HighPrice ?? lastDayData.High) * (1 + prediction.HighChange),
+            LowPrice = (previous?.LowPrice ?? lastDayData.Low) * (1 + prediction.LowChange)
+        };
+    }
+
     private static double RelativeChange(double previous, double now)
     {
         return (now - previous) / previous;
     }
+
+    #region Predictor service DTO
 
     private sealed class PredictorRequest
     {
@@ -125,13 +139,21 @@ public sealed class PricePredictor : IPricePredictor
 
     private sealed class PredictorResponse
     {
+        [JsonProperty("predictions")]
+        public required List<SingleDayPrediction> Predictions { get; init; }
+    }
+
+    private sealed class SingleDayPrediction
+    {
         [JsonProperty("close")]
-        public required List<double> Close { get; init; }
+        public required double CloseChange { get; init; }
 
         [JsonProperty("high")]
-        public required List<double> High { get; init; }
+        public required double HighChange { get; init; }
 
         [JsonProperty("low")]
-        public required List<double> Low { get; init; }
+        public required double LowChange { get; init; }
     }
+
+    #endregion
 }

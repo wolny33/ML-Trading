@@ -20,7 +20,11 @@ class PredictRequest(BaseModel):
         return v
 
 
+class DailyPrediction(BaseModel):
+    close: float
+    high: float
+    low: float
+
+
 class PredictResponse(BaseModel):
-    close: list[float]
-    high: list[float]
-    low: list[float]
+    predictions: list[DailyPrediction]
