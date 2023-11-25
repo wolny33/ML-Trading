@@ -71,7 +71,7 @@ public sealed class PricePredictor : IPricePredictor
                     Close = RelativeChange(previous.Close, current.Close),
                     High = RelativeChange(previous.High, current.High),
                     Low = RelativeChange(previous.Low, current.Low),
-                    Volume = RelativeChange(previous.Volume, current.Volume)
+                    Volume = current.Volume
                 };
             }).ToList()
         };
