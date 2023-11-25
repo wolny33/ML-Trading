@@ -11,6 +11,7 @@ const LOGIN_URL = '/login';
 const INVESTMENT_URL = '/investment';
 const PERFORMANCE_URL = '/performance';
 const TRADE_ACTIONS_URL = '/trade-actions';
+const STRATEGY_URL = '/strategy';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -21,6 +22,11 @@ const Home = () => {
   const [isTestModeOn, setIsTestModeOn] = useState(true);
   const [isInvestmentOn, setIsInvestmentOn] = useState(true);
   const [showStrategyOptions, setshowStrategyOptions] = useState(true);
+  const [strategyParameters, setStrategyParameters] = useState('');
+  const [performanceData, setPerformanceData] = useState([]);
+
+  const [editingStrategyParameters, setEditingStrategyParameters] = useState(false);
+  const [newImportantProperty, setNewImportantProperty] = useState('');
 
   useEffect(() => {
     const storedUserName = localStorage.getItem("userName");
@@ -62,6 +68,24 @@ const Home = () => {
       }
     });
 
+    axios.get(STRATEGY_URL,
+      {
+        auth: {
+            username: storedUserName,
+            password: storedPwd
+        }
+      }
+    ).then(result => {
+      setStrategyParameters(result.data);
+      setNewImportantProperty(result.data.importantProperty);
+    }).catch(err => {
+      if(!err?.response || err.response?.status === 401) {
+        logout();
+      } else {
+        setStrategyParameters(null);
+      }
+    });
+
     axios.get(PERFORMANCE_URL + TRADE_ACTIONS_URL,
       {
         auth: {
@@ -78,6 +102,23 @@ const Home = () => {
         setTradingAcionsData(null);
       }
     });
+
+    axios.get(PERFORMANCE_URL,
+      {
+        auth: {
+            username: storedUserName,
+            password: storedPwd
+        }
+      }
+    ).then(result => {
+      setPerformanceData(result.data);
+    }).catch(err => {
+      if(!err?.response || err.response?.status === 401) {
+        logout();
+      } else {
+        setPerformanceData([]);
+      }
+    });
   }, []);
 
   const getTradeActionDetails = async () => {
@@ -92,9 +133,7 @@ const Home = () => {
       );
     }catch(err){
       if(!err?.response || err.response?.status === 401 ) {
-        //logout();
-      } else if(err.response?.status === 400) {
-        //logout();
+        logout();
       }
     }
   }
@@ -170,6 +209,44 @@ const Home = () => {
 
   const handleStrategyOptionstClick = () => {
     setshowStrategyOptions(!showStrategyOptions);
+  }
+
+  const handleEditStrategyParametersClick = () => {
+    setEditingStrategyParameters(true);
+  };
+
+  const handleConfirmEditStrategyParametersClick = async () => {
+    try{
+      const response = await axios.put(STRATEGY_URL,
+        {
+          "importantProperty": newImportantProperty
+        },
+        {
+          auth: {
+              username: userName,
+              password: pwd
+          },
+          headers: { 
+            'Content-Type': 'application/json',
+          },
+          withCredentials: false
+        }
+      );
+      setStrategyParameters(response.data);
+      setNewImportantProperty(response.data.importantProperty);
+    }catch(err){
+      if(err.response?.status === 400) {
+        window.alert("Changing strategy parameters failed, please try again...");
+      } else {
+        logout();
+      }
+    }
+    setEditingStrategyParameters(false);
+  };
+
+  const handleCancelEditStrategyParametersClick = () => {
+    setNewImportantProperty(strategyParameters.importantProperty);
+    setEditingStrategyParameters(false);
   }
 
   const columns = useMemo( () => [
@@ -286,9 +363,38 @@ const Home = () => {
                 Show Strategy Options
               </button>
             ):(
-              <button className="text-center bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleStrategyOptionstClick}>
-                Hide Strategy Options
-              </button>
+              <div className="bg-white p-6 rounded-xl shadow-lg overflow-x-auto mt-4">
+                {editingStrategyParameters ? (
+                  <div>
+                    <h3 className="mb-2">Important Property:</h3>
+                    <input
+                      type="text"
+                      value={newImportantProperty}
+                      onChange={(e) => setNewImportantProperty(e.target.value)}
+                      className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                      style={{ width:"150px", height:"35px" }}
+                    />
+                    <button className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded mr-2" onClick={handleConfirmEditStrategyParametersClick}>
+                      Confirm
+                    </button>
+                    <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" onClick={handleCancelEditStrategyParametersClick}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" onClick={handleStrategyOptionstClick}>
+                      Hide Strategy Options
+                    </button>
+                    <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" onClick={handleEditStrategyParametersClick}>
+                      Edit Strategy Options
+                    </button>
+                    <h3 className="text-2xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                      Important Property: {strategyParameters.importantProperty}
+                    </h3>
+                  </div>
+                )}
+              </div>
             )}
             </div>
             <div>
