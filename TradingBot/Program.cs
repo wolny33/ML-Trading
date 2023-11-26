@@ -1,4 +1,5 @@
 using System.Reflection;
+using Flurl.Http.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -105,6 +106,8 @@ public sealed class Program
     private static void ConfigureServices(IServiceCollection services, IConfiguration config)
     {
         services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(config.GetConnectionString("Data")));
+        services.AddSingleton<IFlurlClientFactory, PerBaseUrlFlurlClientFactory>();
+
         services.AddSingleton<IAlpacaClientFactory, AlpacaClientFactory>();
         services.AddScoped<IMarketDataSource, MarketDataSource>();
         services.AddScoped<IPricePredictor, PricePredictor>();
