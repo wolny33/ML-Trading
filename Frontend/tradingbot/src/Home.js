@@ -23,7 +23,7 @@ const Home = () => {
 
   const [userName, setUserName] = useState('');
   const [pwd, setPwd] = useState(''); 
-  const [tradingAcionsData, setTradingAcionsData] = useState([]);
+  const [tradingActionsData, setTradingActionsData] = useState([]);
   const [isTestModeOn, setIsTestModeOn] = useState(true);
   const [isInvestmentOn, setIsInvestmentOn] = useState(true);
   const [showStrategyOptions, setshowStrategyOptions] = useState(true);
@@ -34,6 +34,8 @@ const Home = () => {
   const [newImportantProperty, setNewImportantProperty] = useState('');
 
   const [maxChartValue, setMaxChartValue] = useState(0);
+  const [detailsDictionary, setDetailsDictionary] = useState({});
+  const [isDetailsReady, setDetailsReady] = useState(false);
 
   useEffect(() => {
     const storedUserName = localStorage.getItem("userName");
@@ -101,12 +103,30 @@ const Home = () => {
         }
       }
     ).then(result => {
-      setTradingAcionsData(result.data);
+      setTradingActionsData(result.data);
+      const promises = result.data.map(tradingAction => {
+        const tradeActionId = tradingAction.id;
+        return getTradeActionDetails(tradeActionId, storedUserName, storedPwd)
+          .then(details => {
+            setDetailsDictionary(prevDetails => ({
+              ...prevDetails,
+              [tradeActionId]: details,
+            }));
+          })
+          .catch(err => {
+            if (!err?.response || err.response?.status === 401) {
+              logout();
+            }
+          });
+      });
+      return Promise.all(promises);
+    }).then(() => {
+      setDetailsReady(true);
     }).catch(err => {
       if(!err?.response || err.response?.status === 401) {
         logout();
       } else {
-        setTradingAcionsData(null);
+        setTradingActionsData(null);
       }
     });
 
@@ -129,19 +149,22 @@ const Home = () => {
     });
   }, []);
 
-  const getTradeActionDetails = async () => {
+  const getTradeActionDetails = async (tradeActionId, storedUserName, storedPwd) => {
     try{
-      await axios.put(TEST_MODE_URL, "", //to check
+      const response = await axios.get(PERFORMANCE_URL + TRADE_ACTIONS_URL + '/' + tradeActionId,
         {
           auth: {
-              username: userName,
-              password: pwd
+              username: storedUserName,
+              password: storedPwd
           }
         }
       );
+      return response.data;
     }catch(err){
       if(!err?.response || err.response?.status === 401 ) {
         logout();
+      } else {
+        return 'Error fetching trade action details';
       }
     }
   }
@@ -283,6 +306,10 @@ const Home = () => {
 
   const columns = useMemo( () => [
       {
+        accessorKey: 'id',
+        header: 'Id',
+      },
+      {
         accessorKey: 'createdAt',
         header: 'Date',
         accessorFn: (originalRow) => new Date(originalRow.createdAt),
@@ -334,8 +361,8 @@ const Home = () => {
 
   const table = useMaterialReactTable({
     columns,
-    data: tradingAcionsData,
-    initialState: { showColumnFilters: false, pagination: { pageSize: 5 } },
+    data: tradingActionsData,
+    initialState: { showColumnFilters: false, pagination: { pageSize: 5 }, columnVisibility: { id: false } },
     enableFullScreenToggle: false,
     enableDensityToggle: false,
     enableGlobalFilter: false,
@@ -346,7 +373,10 @@ const Home = () => {
       showLastButton: false,
     },
     muiDetailPanelProps:'',
-    renderDetailPanel: ({ row }) => (
+    renderDetailPanel: ({ row }) => {
+      const details = detailsDictionary.hasOwnProperty(row.original.id)
+      ? detailsDictionary[row.original.id]: 'No value';
+      return(
       <Box
         sx={{
           display: 'grid',
@@ -355,10 +385,15 @@ const Home = () => {
           width: '100%',
         }}
       >
-        <Typography>Details:</Typography>
+        <Typography>Details: {JSON.stringify(details)}</Typography>
       </Box>
-    ),
+    )
+    },
   });
+
+  if (!isDetailsReady) {
+    return <div>Loading...</div>;
+  }
 
     return(
         <div className="mx-auto items-center justify-center h-screen" style={{ marginTop: '100px', marginBottom: "200px" }}>
