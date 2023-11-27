@@ -14,7 +14,7 @@ public sealed class Assets
         {
             EquityValue = EquityValue,
             Cash = Cash.ToResponse(),
-            Positions = Positions.Values.Select(p => p.ToResponse()).ToList()
+            Positions = Positions.Values.OrderByDescending(p => p.MarketValue).Select(p => p.ToResponse()).ToList()
         };
     }
 }

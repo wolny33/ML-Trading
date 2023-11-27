@@ -35,8 +35,8 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
             services.RemoveAll<IAlpacaClientFactory>();
             var factory = Substitute.For<IAlpacaClientFactory>();
             SetUpAlpacaSubstitutes(_dataClientSubstitute, _tradingClientSubstitute);
-            factory.CreateTradingClientAsync().Returns(_tradingClientSubstitute);
-            factory.CreateMarketDataClientAsync().Returns(_dataClientSubstitute);
+            factory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClientSubstitute);
+            factory.CreateMarketDataClientAsync(Arg.Any<CancellationToken>()).Returns(_dataClientSubstitute);
             services.AddSingleton(factory);
 
             RemoveDatabaseServices(services);
