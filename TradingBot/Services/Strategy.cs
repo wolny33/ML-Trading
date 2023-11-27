@@ -11,13 +11,16 @@ public interface IStrategy
 
 public sealed class Strategy : IStrategy
 {
+    private readonly IAssetsDataSource _assetsDataSource;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IPricePredictor _predictor;
 
-    public Strategy(IPricePredictor predictor, IDbContextFactory<AppDbContext> dbContextFactory)
+    public Strategy(IPricePredictor predictor, IDbContextFactory<AppDbContext> dbContextFactory,
+        IAssetsDataSource assetsDataSource)
     {
         _predictor = predictor;
         _dbContextFactory = dbContextFactory;
+        _assetsDataSource = assetsDataSource;
     }
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync()

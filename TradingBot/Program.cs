@@ -122,6 +122,7 @@ public sealed class Program
         services.AddSingleton<IAlpacaClientFactory, AlpacaClientFactory>();
         services.AddScoped<IMarketDataSource, MarketDataSource>();
         services.AddScoped<IPricePredictor, PricePredictor>();
+        services.AddScoped<IAssetsDataSource, AssetsDataSource>();
         services.AddScoped<IStrategy, Strategy>();
         services.AddScoped<IActionExecutor, ActionExecutor>();
 
