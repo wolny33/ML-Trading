@@ -22,7 +22,7 @@ public sealed class ActionExecutor : IActionExecutor
     public async Task ExecuteTradingActionsAsync()
     {
         var actions = await _strategy.GetTradingActionsAsync();
-        var client = _clientFactory.CreateTradingClient();
+        var client = await _clientFactory.CreateTradingClientAsync();
         foreach (var action in actions) await ExecuteActionAsync(action, client);
     }
 
