@@ -1,4 +1,5 @@
-﻿using Flurl.Http;
+﻿using System.Net.Sockets;
+using Flurl.Http;
 using Flurl.Http.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Newtonsoft.Json;
@@ -8,9 +9,10 @@ namespace TradingBot.Services;
 
 public interface IPricePredictor
 {
-    public Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync();
+    public Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default);
 
-    public Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data);
+    public Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data,
+        CancellationToken token = default);
 }
 
 public sealed class PricePredictor : IPricePredictor
@@ -26,7 +28,7 @@ public sealed class PricePredictor : IPricePredictor
         _flurlFactory = flurlFactory;
     }
 
-    public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync()
+    public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default)
     {
         const int requiredDays = 10;
         var today = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
@@ -35,26 +37,19 @@ public sealed class PricePredictor : IPricePredictor
         var result = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in marketData)
         {
-            var prediction = await PredictForSymbolAsync(data);
+            var prediction = await PredictForSymbolAsync(data, token);
             result[symbol] = prediction;
         }
 
         return result;
     }
 
-    public async Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data)
+    public async Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data,
+        CancellationToken token = default)
     {
         var request = CreatePredictorRequest(data);
-
-        using var client = _flurlFactory.Get("http://predictor:8000");
-        var response = await client.Request("predict").AllowAnyHttpStatus().PostJsonAsync(request);
-        var predictorOutput = response.StatusCode switch
-        {
-            StatusCodes.Status200OK => await response.GetJsonAsync<PredictorResponse>(),
-            var code => throw new PredictorCallException(code, await response.GetStringAsync())
-        };
-
-        return CreatePredictionFromPredictorOutput(predictorOutput, data[^1]);
+        var response = await SendRequestAsync(request, token);
+        return CreatePredictionFromPredictorOutput(response, data[^1]);
     }
 
     private static PredictorRequest CreatePredictorRequest(IReadOnlyList<DailyTradingData> data)
@@ -75,6 +70,26 @@ public sealed class PricePredictor : IPricePredictor
                 };
             }).ToList()
         };
+    }
+
+    private async Task<PredictorResponse> SendRequestAsync(PredictorRequest request,
+        CancellationToken token = default)
+    {
+        using var client = _flurlFactory.Get("http://predictor:8000");
+
+        try
+        {
+            var response = await client.Request("predict").AllowAnyHttpStatus().PostJsonAsync(request, token);
+            return response.StatusCode switch
+            {
+                StatusCodes.Status200OK => await response.GetJsonAsync<PredictorResponse>(),
+                var code => throw new UnsuccessfulPredictorResponseException(code, await response.GetStringAsync())
+            };
+        }
+        catch (Exception e) when (e is HttpRequestException or SocketException)
+        {
+            throw new PredictorCallFailedException(e);
+        }
     }
 
     private static Prediction CreatePredictionFromPredictorOutput(PredictorResponse response,

@@ -1,10 +1,14 @@
-﻿using TradingBot.Models;
+﻿using System.Net.Sockets;
+using Alpaca.Markets;
+using TradingBot.Models;
 
 namespace TradingBot.Services;
 
 public interface IAssetsDataSource
 {
     public Task<Assets> GetAssetsAsync(CancellationToken token = default);
+
+    public Task<Assets> GetMockedAssetsAsync(CancellationToken token = default);
 }
 
 public sealed class AssetsDataSource : IAssetsDataSource
@@ -16,7 +20,32 @@ public sealed class AssetsDataSource : IAssetsDataSource
         _clientFactory = clientFactory;
     }
 
-    public Task<Assets> GetAssetsAsync(CancellationToken token = default)
+    public async Task<Assets> GetAssetsAsync(CancellationToken token = default)
+    {
+        using var client = await _clientFactory.CreateTradingClientAsync(token);
+        var (account, positions) = await SendRequestsAsync(client, token);
+
+        return new Assets
+        {
+            EquityValue = account.Equity ?? 0m,
+            Cash = new Cash
+            {
+                MainCurrency = account.Currency ?? "Unspecified",
+                AvailableAmount = account.TradableCash
+            },
+            Positions = positions.Select(p => new Position
+            {
+                Symbol = new TradingSymbol(p.Symbol),
+                SymbolId = p.AssetId,
+                Quantity = p.Quantity,
+                AvailableQuantity = p.AvailableQuantity,
+                MarketValue = p.MarketValue ?? 0m,
+                AverageEntryPrice = p.AverageEntryPrice
+            }).ToDictionary(p => p.Symbol)
+        };
+    }
+
+    public Task<Assets> GetMockedAssetsAsync(CancellationToken token = default)
     {
         return Task.FromResult(new Assets
         {
@@ -49,4 +78,26 @@ public sealed class AssetsDataSource : IAssetsDataSource
             }
         });
     }
+
+    private static async Task<AlpacaResponses> SendRequestsAsync(IAlpacaTradingClient client,
+        CancellationToken token = default)
+    {
+        try
+        {
+            var account = await client.GetAccountAsync(token);
+            var positions = await client.ListPositionsAsync(token);
+            return new AlpacaResponses(account, positions);
+        }
+        catch (RestClientErrorException e)
+        {
+            throw new UnsuccessfulAlpacaResponseException(e.HttpStatusCode is not null ? (int)e.HttpStatusCode : 0,
+                e.Message);
+        }
+        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException)
+        {
+            throw new AlpacaCallFailedException(e);
+        }
+    }
+
+    private sealed record AlpacaResponses(IAccount Account, IReadOnlyList<IPosition> Positions);
 }
