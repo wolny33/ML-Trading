@@ -34,7 +34,7 @@ public sealed class PerformanceController : ControllerBase
             {
                 returns.Add(new ReturnResponse
                 {
-                    Return = ((returns.LastOrDefault()?.Return ?? 0) + 1) * change.DailyChange - 1,
+                    Return = ((returns.LastOrDefault()?.Return ?? 0) + 1) * (change.DailyChange + 1) - 1,
                     Time = change.Time
                 });
                 return returns;
