@@ -25,6 +25,9 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
         _connection.Open();
     }
 
+    public IDbContextFactory<AppDbContext> DbContextFactory =>
+        Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>

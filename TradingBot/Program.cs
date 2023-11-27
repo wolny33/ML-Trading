@@ -126,6 +126,8 @@ public sealed class Program
         services.AddScoped<IActionExecutor, ActionExecutor>();
 
         services.AddScoped<CredentialsCommand>();
+        services.AddTransient<ITestModeConfigService, TestModeConfigService>();
+        services.AddTransient<IInvestmentConfigService, InvestmentConfigService>();
 
         services.AddCors(options =>
         {

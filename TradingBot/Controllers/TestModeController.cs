@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
+using TradingBot.Services;
 
 namespace TradingBot.Controllers;
 
@@ -7,6 +8,13 @@ namespace TradingBot.Controllers;
 [Route("api/test-mode")]
 public sealed class TestModeController : ControllerBase
 {
+    private readonly ITestModeConfigService _testModeConfig;
+
+    public TestModeController(ITestModeConfigService testModeConfig)
+    {
+        _testModeConfig = testModeConfig;
+    }
+
     /// <summary>
     ///     Turns the test mode on or off.
     /// </summary>
@@ -17,12 +25,9 @@ public sealed class TestModeController : ControllerBase
     [ProducesResponseType(typeof(TestModeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public TestModeResponse TurnTestModeOnOff(TestModeRequest request)
+    public async Task<TestModeResponse> ToggleTestModeAsync(TestModeRequest request)
     {
-        return new TestModeResponse
-        {
-            Enabled = request.Enable
-        };
+        return (await _testModeConfig.SetEnabledAsync(request.Enable, HttpContext.RequestAborted)).ToResponse();
     }
 
     /// <summary>
@@ -33,11 +38,8 @@ public sealed class TestModeController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(TestModeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public TestModeResponse IsTestModeOn()
+    public async Task<TestModeResponse> GetTestModeConfigurationAsync()
     {
-        return new TestModeResponse
-        {
-            Enabled = true
-        };
+        return (await _testModeConfig.GetConfigurationAsync(HttpContext.RequestAborted)).ToResponse();
     }
 }
