@@ -1,4 +1,5 @@
 ﻿using TradingBot.Database.Entities;
+using TradingBot.Dto;
 
 namespace TradingBot.Models;
 
@@ -13,6 +14,14 @@ public sealed class TradingActionDetails
         return new TradingActionDetails
         {
             Id = entity.TradingActionId
+        };
+    }
+
+    public TradingActionDetailsResponse ToResponse()
+    {
+        return new TradingActionDetailsResponse
+        {
+            Id = Id
         };
     }
 }
