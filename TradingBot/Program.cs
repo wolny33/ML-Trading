@@ -29,11 +29,22 @@ public sealed class Program
         builder.Services.AddHealthChecks().AddSqlite(GetConnectionString(builder.Configuration), name: "sqlite",
             timeout: TimeSpan.FromSeconds(10));
 
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend",
+                policyBuilder =>
+                {
+                    policyBuilder.WithOrigins("http://localhost:3000")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
+        });
+
         var app = builder.Build();
 
-        app.UseCors("AllowLocalhost3000");
-
         // Configure the HTTP request pipeline.
+        app.UseCors("AllowFrontend");
         app.UseSwagger();
         app.UseSwaggerUI();
 
@@ -56,7 +67,7 @@ public sealed class Program
 
     private static void ConfigureSwagger(SwaggerGenOptions c)
     {
-        c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "Trading Bot", Version = "v1" });
 
         var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
         var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -122,21 +133,13 @@ public sealed class Program
         services.AddSingleton<IAlpacaClientFactory, AlpacaClientFactory>();
         services.AddScoped<IMarketDataSource, MarketDataSource>();
         services.AddScoped<IPricePredictor, PricePredictor>();
+        services.AddScoped<IAssetsDataSource, AssetsDataSource>();
         services.AddScoped<IStrategy, Strategy>();
         services.AddScoped<IActionExecutor, ActionExecutor>();
 
         services.AddScoped<CredentialsCommand>();
-
-        services.AddCors(options =>
-        {
-            options.AddPolicy("AllowLocalhost3000",
-                builder =>
-                {
-                    builder.WithOrigins("http://localhost:3000")
-                           .AllowAnyHeader()
-                           .AllowAnyMethod()
-                           .AllowCredentials();
-                });
-        });
+        services.AddTransient<ITestModeConfigService, TestModeConfigService>();
+        services.AddTransient<IInvestmentConfigService, InvestmentConfigService>();
+        services.AddTransient<ITradingActionQuery, TradingActionQuery>();
     }
 }

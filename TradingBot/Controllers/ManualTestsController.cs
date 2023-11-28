@@ -25,6 +25,6 @@ public sealed class ManualTestsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<Prediction> MakePredictionAsync(IReadOnlyList<DailyTradingData> request)
     {
-        return await _predictor.PredictForSymbolAsync(request);
+        return await _predictor.PredictForSymbolAsync(request, HttpContext.RequestAborted);
     }
 }

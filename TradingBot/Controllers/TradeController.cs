@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
+using TradingBot.Services;
 
 namespace TradingBot.Controllers;
 
@@ -7,6 +8,13 @@ namespace TradingBot.Controllers;
 [Route("api/investment")]
 public sealed class TradeController : Controller
 {
+    private readonly IInvestmentConfigService _investmentConfig;
+
+    public TradeController(IInvestmentConfigService investmentConfig)
+    {
+        _investmentConfig = investmentConfig;
+    }
+
     /// <summary>
     ///     Starts/Stops the investment.
     /// </summary>
@@ -17,12 +25,9 @@ public sealed class TradeController : Controller
     [ProducesResponseType(typeof(InvestmentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public InvestmentResponse StartStopTheInvestment(InvestmentRequest request)
+    public async Task<InvestmentResponse> ToggleInvestmentAsync(InvestmentRequest request)
     {
-        return new InvestmentResponse
-        {
-            Enabled = request.Enable
-        };
+        return (await _investmentConfig.SetEnabledAsync(request.Enable, HttpContext.RequestAborted)).ToResponse();
     }
 
     /// <summary>
@@ -33,11 +38,8 @@ public sealed class TradeController : Controller
     [HttpGet]
     [ProducesResponseType(typeof(InvestmentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public InvestmentResponse IsTheInvestmentOn()
+    public async Task<InvestmentResponse> GetInvestmentConfigurationAsync()
     {
-        return new InvestmentResponse
-        {
-            Enabled = false
-        };
+        return (await _investmentConfig.GetConfigurationAsync(HttpContext.RequestAborted)).ToResponse();
     }
 }

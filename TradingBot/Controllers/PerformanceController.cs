@@ -1,9 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Alpaca.Markets;
 using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
-using TradingBot.Models;
-using OrderType = TradingBot.Models.OrderType;
+using TradingBot.Services;
 
 namespace TradingBot.Controllers;
 
@@ -11,6 +9,13 @@ namespace TradingBot.Controllers;
 [ApiController]
 public sealed class PerformanceController : ControllerBase
 {
+    private readonly ITradingActionQuery _query;
+
+    public PerformanceController(ITradingActionQuery query)
+    {
+        _query = query;
+    }
+
     /// <summary>
     ///     Gets information about profits and losses.
     /// </summary>
@@ -34,7 +39,7 @@ public sealed class PerformanceController : ControllerBase
             {
                 returns.Add(new ReturnResponse
                 {
-                    Return = ((returns.LastOrDefault()?.Return ?? 0) + 1) * change.DailyChange - 1,
+                    Return = ((returns.LastOrDefault()?.Return ?? 0) + 1) * (change.DailyChange + 1) - 1,
                     Time = change.Time
                 });
                 return returns;
@@ -52,13 +57,14 @@ public sealed class PerformanceController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<TradingActionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IReadOnlyList<TradingActionResponse> GetTradeActions([FromQuery] TradingActionRequest request)
+    public async Task<IReadOnlyList<TradingActionResponse>> GetTradeActionsAsync(
+        [FromQuery] TradingActionRequest request)
     {
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? DateTimeOffset.Now;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
 
-        return CreateTradingActions(start,
-            request.End ?? DateTimeOffset.Now).Select(a => a.ToResponse()).ToList();
+        return (await _query.GetTradingActionsAsync(start, end, HttpContext.RequestAborted)).Select(a => a.ToResponse())
+            .ToList();
     }
 
     /// <summary>
@@ -74,26 +80,8 @@ public sealed class PerformanceController : ControllerBase
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public TradingActionDetailsResponse GetTradeActionDetails([Required] Guid id)
+    public async Task<TradingActionDetailsResponse> GetTradeActionDetailsAsync([Required] Guid id)
     {
-        return new TradingActionDetailsResponse
-        {
-            Id = id
-        };
-    }
-
-    private static IEnumerable<TradingAction> CreateTradingActions(DateTimeOffset start, DateTimeOffset end)
-    {
-        var first = start - start.TimeOfDay + TimeSpan.FromDays(1);
-        return Enumerable.Range(0, (int)(end - first).TotalDays + 1).Select(i => new TradingAction
-        {
-            Id = Guid.NewGuid(),
-            CreatedAt = first + TimeSpan.FromDays(i),
-            Price = (decimal)(Random.Shared.NextDouble() * 99 + 1),
-            Quantity = (decimal)Random.Shared.NextDouble(),
-            Symbol = new TradingSymbol(Random.Shared.Next() % 2 == 0 ? "AMZN" : "BBBY"),
-            OrderType = Random.Shared.Next() % 2 == 0 ? OrderType.LimitBuy : OrderType.LimitSell,
-            InForce = TimeInForce.Day
-        });
+        return (await _query.GetDetailsAsync(id, HttpContext.RequestAborted)).ToResponse();
     }
 }
