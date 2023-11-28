@@ -17,6 +17,26 @@ const STRATEGY_URL = '/strategy';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
+export const displayErrorAlert = (errorBody, customMessage = '') => {
+  const errorMessage = errorBody ? 
+  `Error data:
+    Type: ${errorBody.type}
+    Title: ${errorBody.title}
+    Status: ${errorBody.status}
+    Trace ID: ${errorBody.traceId}
+    
+    Errors:
+    ${Object.entries(errorBody.errors)
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .join('\n')}
+  ` : '';
+  window.alert(customMessage + '\n' + errorMessage);
+};
+
+export const errorStatusString = (url, status, statusText) => {
+  return('Url: ' + axios.getUri() + url + '\nError status: ' + status + ' ' + statusText);
+}
+
 const Home = () => {
 
   const navigate = useNavigate();
@@ -53,10 +73,10 @@ const Home = () => {
     ).then(result => {
       setIsTestModeOn(result.data.enabled);
     }).catch(err => {
-      if(!err?.response || err.response?.status === 401) {
+      if(!err?.response || err.response?.status === 401 ) {
         logout();
       } else {
-        setIsTestModeOn(false);
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
       }
     });
 
@@ -70,10 +90,10 @@ const Home = () => {
     ).then(result => {
       setIsInvestmentOn(result.data.enabled);
     }).catch(err => {
-      if(!err?.response || err.response?.status === 401) {
+      if(!err?.response || err.response?.status === 401 ) {
         logout();
       } else {
-        setIsInvestmentOn(false);
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
       }
     });
 
@@ -88,10 +108,10 @@ const Home = () => {
       setStrategyParameters(result.data);
       setNewImportantProperty(result.data.importantProperty);
     }).catch(err => {
-      if(!err?.response || err.response?.status === 401) {
+      if(!err?.response || err.response?.status === 401 ) {
         logout();
       } else {
-        setStrategyParameters(null);
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
       }
     });
 
@@ -114,8 +134,10 @@ const Home = () => {
             }));
           })
           .catch(err => {
-            if (!err?.response || err.response?.status === 401) {
+            if(!err?.response || err.response?.status === 401 ) {
               logout();
+            } else {
+              displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
             }
           });
       });
@@ -123,10 +145,10 @@ const Home = () => {
     }).then(() => {
       setDetailsReady(true);
     }).catch(err => {
-      if(!err?.response || err.response?.status === 401) {
+      if(!err?.response || err.response?.status === 401 ) {
         logout();
       } else {
-        setTradingActionsData(null);
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
       }
     });
 
@@ -141,10 +163,10 @@ const Home = () => {
       setPerformanceData(result.data);
       setMaxChartValue(Math.max(...result.data.map((row) => Math.abs(row.return))));
     }).catch(err => {
-      if(!err?.response || err.response?.status === 401) {
+      if(!err?.response || err.response?.status === 401 ) {
         logout();
       } else {
-        setPerformanceData([]);
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
       }
     });
   }, []);
@@ -164,7 +186,7 @@ const Home = () => {
       if(!err?.response || err.response?.status === 401 ) {
         logout();
       } else {
-        return 'Error fetching trade action details';
+        displayErrorAlert(err.response?.data, "Error fetching trade action details \n" + errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
       }
     }
   }
@@ -195,10 +217,10 @@ const Home = () => {
         );
         setIsTestModeOn(response.data.enabled);
       }catch(err){
-        if(err.response?.status === 400) {
-          window.alert("Switching test mode failed, please try again...");
-        } else {
+        if(!err?.response || err.response?.status === 401 ) {
           logout();
+        } else {
+          displayErrorAlert(err.response?.data, "Switching test mode failed, please try again... \n" + errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
         }
       }
     }
@@ -229,10 +251,10 @@ const Home = () => {
         );
         setIsInvestmentOn(response.data.enabled);
       }catch(err){
-        if(err.response?.status === 400) {
-          window.alert("Switching investment failed, please try again...");
-        } else {
+        if(!err?.response || err.response?.status === 401 ) {
           logout();
+        } else {
+          displayErrorAlert(err.response?.data, "Switching investment failed, please try again... \n" + errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
         }
       }
     }
@@ -266,10 +288,10 @@ const Home = () => {
       setStrategyParameters(response.data);
       setNewImportantProperty(response.data.importantProperty);
     }catch(err){
-      if(err.response?.status === 400) {
-        window.alert("Changing strategy parameters failed, please try again...");
-      } else {
+      if(!err?.response || err.response?.status === 401 ) {
         logout();
+      } else {
+        displayErrorAlert(err.response?.data, "Changing strategy parameters failed, please try again... \n" + errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
       }
     }
     setEditingStrategyParameters(false);

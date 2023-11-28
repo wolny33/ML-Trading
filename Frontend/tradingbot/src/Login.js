@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from 'react';
 import axios from './API/axios';
 import { useNavigate } from 'react-router-dom'
 import { BounceLoader } from "react-spinners";
+import { displayErrorAlert } from './Home';
+import { errorStatusString } from './Home';
 
 const LOGIN_URL = '/investment';
 const HOME_URL = '/home';
@@ -50,13 +52,10 @@ const Login = () => {
         }catch(err){
             if(!err?.response) {
                 setErrMsg('No Server Response')
-            } else if(err.response?.status === 400) {
-                setErrMsg('Login Failed');
-            } else if(err.response?.status === 404){
-                setErrMsg('Account does not exist');
             } else if(err.response?.status === 401 ){
                 setErrMsg('Incorrect login credentials');
             } else {
+                displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
                 setErrMsg('Login Failed');
             }
             setIsLoading(false);
