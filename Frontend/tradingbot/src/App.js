@@ -1,7 +1,7 @@
 import './App.css';
 import Home from './Home';
 import Login from './Login';
-import { Route, Routes, NavLink } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import axios from './API/axios';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +10,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import en from 'date-fns/locale/en-GB';
 
 const HOME_URL = '/home';
-const LOGIN_URL = '/login';
+const LOGIN_URL = '/investment';
+const LOGIN_PATH = '/login';
 
 function App() {
   const navigate = useNavigate();
@@ -27,28 +28,28 @@ function App() {
     const savedUserName = localStorage.getItem("userName");
     const savedPwd = localStorage.getItem("pwd");
     if(savedUserName && savedPwd){
-        axios.get('',
+        axios.get(LOGIN_URL,
             {
                 auth: {
-                    username: savedUserName, //'foo'
-                    password: savedPwd //'bar'
+                    username: savedUserName,
+                    password: savedPwd
                 }
             }
         ).then(() => {
             setIsLoggedIn(true);
             navigate(HOME_URL);
         }).catch(() => {
-            navigate(LOGIN_URL);
+            navigate(LOGIN_PATH);
         });
     } else {
-      navigate(LOGIN_URL);
+      navigate(LOGIN_PATH);
     }
   }, []);
 
   const logout = async () => {
     localStorage.clear();
     setIsLoggedIn(false);
-    navigate(LOGIN_URL);
+    navigate(LOGIN_PATH);
   };
 
   return (

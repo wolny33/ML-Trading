@@ -31,6 +31,8 @@ public sealed class Program
 
         var app = builder.Build();
 
+        app.UseCors("AllowLocalhost3000");
+
         // Configure the HTTP request pipeline.
         app.UseSwagger();
         app.UseSwaggerUI();
@@ -124,5 +126,17 @@ public sealed class Program
         services.AddScoped<IActionExecutor, ActionExecutor>();
 
         services.AddScoped<CredentialsCommand>();
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowLocalhost3000",
+                builder =>
+                {
+                    builder.WithOrigins("http://localhost:3000")
+                           .AllowAnyHeader()
+                           .AllowAnyMethod()
+                           .AllowCredentials();
+                });
+        });
     }
 }
