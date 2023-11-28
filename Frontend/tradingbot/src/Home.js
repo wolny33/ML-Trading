@@ -15,6 +15,8 @@ const PERFORMANCE_URL = '/performance';
 const TRADE_ACTIONS_URL = '/trade-actions';
 const STRATEGY_URL = '/strategy';
 
+const CHART_SCALE_RATIO = 6/5;
+
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 export const displayErrorAlert = (errorBody, customMessage = '') => {
@@ -320,8 +322,8 @@ const Home = () => {
       y: {
         type: 'linear',
         beginAtZero: false,
-        min: -maxChartValue *6/5,
-        max: maxChartValue *6/5,
+        min: -maxChartValue * CHART_SCALE_RATIO,
+        max: maxChartValue * CHART_SCALE_RATIO,
       },
     },
   };
