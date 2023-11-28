@@ -21,7 +21,7 @@ public class AssetsController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(AssetsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<AssetsResponse> GetAsync([FromQuery]bool mocked = false)
+    public async Task<AssetsResponse> GetAsync([FromQuery] bool mocked = false)
     {
         var assets = mocked
             ? await _assetsDataSource.GetMockedAssetsAsync(HttpContext.RequestAborted)
