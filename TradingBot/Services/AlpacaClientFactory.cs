@@ -7,28 +7,37 @@ namespace TradingBot.Services;
 
 public interface IAlpacaClientFactory
 {
-    IAlpacaDataClient CreateMarketDataClient();
-    IAlpacaTradingClient CreateTradingClient();
+    Task<IAlpacaDataClient> CreateMarketDataClientAsync(CancellationToken token = default);
+    Task<IAlpacaTradingClient> CreateTradingClientAsync(CancellationToken token = default);
 }
 
 public sealed class AlpacaClientFactory : IAlpacaClientFactory
 {
     private readonly IOptionsMonitor<AlpacaConfiguration> _config;
+    private readonly ITestModeConfigService _testModeConfig;
 
-    public AlpacaClientFactory(IOptionsMonitor<AlpacaConfiguration> config)
+    public AlpacaClientFactory(IOptionsMonitor<AlpacaConfiguration> config, ITestModeConfigService testModeConfig)
     {
         _config = config;
+        _testModeConfig = testModeConfig;
     }
 
-    public IAlpacaDataClient CreateMarketDataClient()
+    public async Task<IAlpacaDataClient> CreateMarketDataClientAsync(CancellationToken token = default)
     {
-        return Environments.Paper.GetAlpacaDataClient(new SecretKey(_config.CurrentValue.Key,
+        var environment = await GetEnvironmentAsync(token);
+        return environment.GetAlpacaDataClient(new SecretKey(_config.CurrentValue.Key,
             _config.CurrentValue.Secret));
     }
 
-    public IAlpacaTradingClient CreateTradingClient()
+    public async Task<IAlpacaTradingClient> CreateTradingClientAsync(CancellationToken token = default)
     {
-        return Environments.Paper.GetAlpacaTradingClient(new SecretKey(_config.CurrentValue.Key,
+        var environment = await GetEnvironmentAsync(token);
+        return environment.GetAlpacaTradingClient(new SecretKey(_config.CurrentValue.Key,
             _config.CurrentValue.Secret));
+    }
+
+    private async Task<IEnvironment> GetEnvironmentAsync(CancellationToken token = default)
+    {
+        return (await _testModeConfig.GetConfigurationAsync(token)).Enabled ? Environments.Paper : Environments.Live;
     }
 }

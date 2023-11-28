@@ -1,6 +1,8 @@
 ﻿using FluentAssertions;
 using Flurl.Http;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using TradingBot.Database.Entities;
 using TradingBot.Dto;
 
 namespace TradingBotTests;
@@ -28,8 +30,13 @@ public sealed class TradeEndpointTests : IClassFixture<IntegrationTestSuite>
     }
 
     [Fact]
-    public async Task ShouldGetInvestmentState()
+    public async Task ShouldGetDefaultInvestmentState()
     {
+        await using (var context = await _testSuite.DbContextFactory.CreateDbContextAsync())
+        {
+            await context.InvestmentConfiguration.ExecuteDeleteAsync();
+        }
+
         using var client = _testSuite.CreateAuthenticatedClient();
         var investmentState = await client.Request("api", "investment").GetJsonAsync<InvestmentResponse>();
 
@@ -40,19 +47,58 @@ public sealed class TradeEndpointTests : IClassFixture<IntegrationTestSuite>
     }
 
     [Fact]
-    public async Task ShouldUpdateInvestmentState()
+    public async Task ShouldGetInvestmentStateFromDb()
     {
-        using var client = _testSuite.CreateAuthenticatedClient();
-        var response = await client.Request("api", "investment").PutJsonAsync(new
+        await using (var context = await _testSuite.DbContextFactory.CreateDbContextAsync())
         {
-            enable = true
-        });
-        var investmentState = await response.GetJsonAsync<InvestmentResponse>();
+            await context.InvestmentConfiguration.ExecuteDeleteAsync();
+            context.InvestmentConfiguration.Add(new InvestmentConfigEntity
+            {
+                Id = Guid.NewGuid(),
+                Enabled = true
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _testSuite.CreateAuthenticatedClient();
+        var investmentState = await client.Request("api", "investment").GetJsonAsync<InvestmentResponse>();
 
         investmentState.Should().BeEquivalentTo(new
         {
             Enabled = true
         });
+    }
+
+    [Fact]
+    public async Task ShouldUpdateInvestmentState()
+    {
+        await using (var context = await _testSuite.DbContextFactory.CreateDbContextAsync())
+        {
+            await context.InvestmentConfiguration.ExecuteDeleteAsync();
+            context.InvestmentConfiguration.Add(new InvestmentConfigEntity
+            {
+                Id = Guid.NewGuid(),
+                Enabled = true
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _testSuite.CreateAuthenticatedClient();
+        var response = await client.Request("api", "investment").PutJsonAsync(new
+        {
+            enable = false
+        });
+        var investmentState = await response.GetJsonAsync<InvestmentResponse>();
+
+        investmentState.Should().BeEquivalentTo(new
+        {
+            Enabled = false
+        });
+
+        await using (var context = await _testSuite.DbContextFactory.CreateDbContextAsync())
+        {
+            context.InvestmentConfiguration.Should().ContainSingle().Which.Enabled.Should().BeFalse();
+        }
     }
 
     [Fact]

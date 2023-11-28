@@ -1,6 +1,8 @@
 ﻿using FluentAssertions;
 using Flurl.Http;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using TradingBot.Database.Entities;
 using TradingBot.Dto;
 
 namespace TradingBotTests;
@@ -28,8 +30,13 @@ public sealed class TestModeEndpointTests : IClassFixture<IntegrationTestSuite>
     }
 
     [Fact]
-    public async Task ShouldGetTestModeState()
+    public async Task ShouldGetDefaultTestModeState()
     {
+        await using (var context = await _testSuite.DbContextFactory.CreateDbContextAsync())
+        {
+            await context.TestModeConfiguration.ExecuteDeleteAsync();
+        }
+
         using var client = _testSuite.CreateAuthenticatedClient();
         var testModeState = await client.Request("api", "test-mode").GetJsonAsync<TestModeResponse>();
 
@@ -40,19 +47,58 @@ public sealed class TestModeEndpointTests : IClassFixture<IntegrationTestSuite>
     }
 
     [Fact]
-    public async Task ShouldUpdateTestModeState()
+    public async Task ShouldGetTestModeStateFromDb()
     {
-        using var client = _testSuite.CreateAuthenticatedClient();
-        var response = await client.Request("api", "test-mode").PutJsonAsync(new
+        await using (var context = await _testSuite.DbContextFactory.CreateDbContextAsync())
         {
-            enable = false
-        });
-        var testModeState = await response.GetJsonAsync<TestModeResponse>();
+            await context.TestModeConfiguration.ExecuteDeleteAsync();
+            context.TestModeConfiguration.Add(new TestModeConfigEntity
+            {
+                Id = Guid.NewGuid(),
+                Enabled = false
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _testSuite.CreateAuthenticatedClient();
+        var testModeState = await client.Request("api", "test-mode").GetJsonAsync<TestModeResponse>();
 
         testModeState.Should().BeEquivalentTo(new
         {
             Enabled = false
         });
+    }
+
+    [Fact]
+    public async Task ShouldUpdateTestModeState()
+    {
+        await using (var context = await _testSuite.DbContextFactory.CreateDbContextAsync())
+        {
+            await context.TestModeConfiguration.ExecuteDeleteAsync();
+            context.TestModeConfiguration.Add(new TestModeConfigEntity
+            {
+                Id = Guid.NewGuid(),
+                Enabled = false
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var client = _testSuite.CreateAuthenticatedClient();
+        var response = await client.Request("api", "test-mode").PutJsonAsync(new
+        {
+            enable = true
+        });
+        var testModeState = await response.GetJsonAsync<TestModeResponse>();
+
+        testModeState.Should().BeEquivalentTo(new
+        {
+            Enabled = true
+        });
+
+        await using (var context = await _testSuite.DbContextFactory.CreateDbContextAsync())
+        {
+            context.TestModeConfiguration.Should().ContainSingle().Which.Enabled.Should().BeTrue();
+        }
     }
 
     [Fact]

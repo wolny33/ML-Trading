@@ -25,6 +25,9 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
         _connection.Open();
     }
 
+    public IDbContextFactory<AppDbContext> DbContextFactory =>
+        Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
@@ -32,8 +35,8 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
             services.RemoveAll<IAlpacaClientFactory>();
             var factory = Substitute.For<IAlpacaClientFactory>();
             SetUpAlpacaSubstitutes(_dataClientSubstitute, _tradingClientSubstitute);
-            factory.CreateTradingClient().Returns(_tradingClientSubstitute);
-            factory.CreateMarketDataClient().Returns(_dataClientSubstitute);
+            factory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClientSubstitute);
+            factory.CreateMarketDataClientAsync(Arg.Any<CancellationToken>()).Returns(_dataClientSubstitute);
             services.AddSingleton(factory);
 
             RemoveDatabaseServices(services);
