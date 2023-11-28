@@ -68,12 +68,13 @@ const Login = () => {
         <section className="container-fluid justify-content-center" style={{marginTop:"200px"}}>
             <p ref={errRef} className={errMsg ? "errmsg" : 
             "offscreen"} aria-live="assertive">{errMsg}</p>
-            <h1 className='login' style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Please sign In</h1>
+            <h1 className='login' style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Please Sign In</h1>
             <form onSubmit={handleSubmit}>
                 <label htmlFor="userName" className='login'>Username:</label>
                 <input 
                     type = "text"
                     id="userName"
+                    data-testid="username-input"
                     ref={userNameRef}
                     autoComplete="off"
                     onChange={(e) => setUserName(e.target.value)}
@@ -85,11 +86,12 @@ const Login = () => {
                 <input 
                     type = "password"
                     id="password"
+                    data-testid="password-input"
                     onChange={(e) => setPwd(e.target.value)}
                     value={pwd}
                     required
                 />
-                <button className="text-black bg-gray-300 hover:bg-gray-400 text-black py-2 px-3 rounded">Sign In</button>
+                <button data-testid="signin-button" className="text-black bg-gray-300 hover:bg-gray-400 text-black py-2 px-3 rounded">Sign In</button>
             </form>
         </section>
         {isLoading && (
