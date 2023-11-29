@@ -117,6 +117,24 @@ const Home = () => {
       }
     });
 
+    axios.get(PERFORMANCE_URL,
+      {
+        auth: {
+            username: storedUserName,
+            password: storedPwd
+        }
+      }
+    ).then(result => {
+      setPerformanceData(result.data);
+      setMaxChartValue(Math.max(...result.data.map((row) => Math.abs(row.return))));
+    }).catch(err => {
+      if(!err?.response || err.response?.status === 401 ) {
+        logout();
+      } else {
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
+      }
+    });
+
     axios.get(PERFORMANCE_URL + TRADE_ACTIONS_URL,
       {
         auth: {
@@ -146,24 +164,6 @@ const Home = () => {
       return Promise.all(promises);
     }).then(() => {
       setDetailsReady(true);
-    }).catch(err => {
-      if(!err?.response || err.response?.status === 401 ) {
-        logout();
-      } else {
-        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
-      }
-    });
-
-    axios.get(PERFORMANCE_URL,
-      {
-        auth: {
-            username: storedUserName,
-            password: storedPwd
-        }
-      }
-    ).then(result => {
-      setPerformanceData(result.data);
-      setMaxChartValue(Math.max(...result.data.map((row) => Math.abs(row.return))));
     }).catch(err => {
       if(!err?.response || err.response?.status === 401 ) {
         logout();
@@ -244,11 +244,7 @@ const Home = () => {
             auth: {
                 username: userName,
                 password: pwd
-            },
-            headers: { 
-              'Content-Type': 'application/json',
-            },
-            withCredentials: false
+            }
           }
         );
         setIsInvestmentOn(response.data.enabled);
@@ -489,14 +485,14 @@ const Home = () => {
             </div>
             <div>
             {isTestModeOn ? (
-              <button className="flex items-center bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleSwitchTestModeClick}>
+              <button data-testid="test-mode-on-button" className="flex items-center bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleSwitchTestModeClick}>
                 <svg viewBox="0 0 32 32" fill="currentColor" height="1.5em" width="1.5em">
                   <path d="M21 9H9a6 6 0 00-6 6 6 6 0 006 6h12a6 6 0 006-6 6 6 0 00-6-6m0 10a4 4 0 01-4-4 4 4 0 014-4 4 4 0 014 4 4 4 0 01-4 4z" />
                 </svg>
                 <span className="ml-2">Test mode on</span>
-              </button>            
+              </button>
             ): (
-              <button className="flex items-center bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleSwitchTestModeClick}>
+              <button data-testid="test-mode-off-button" className="flex items-center bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleSwitchTestModeClick}>
                 <svg viewBox="0 0 24 24" fill="currentColor" height="1.5em" width="1.3em">
                   <path d="M17 7H7a5 5 0 00-5 5 5 5 0 005 5h10a5 5 0 005-5 5 5 0 00-5-5M7 15a3 3 0 01-3-3 3 3 0 013-3 3 3 0 013 3 3 3 0 01-3 3z" />
                 </svg>
@@ -507,14 +503,14 @@ const Home = () => {
             </div>
             <div>
             {isInvestmentOn ? (
-              <button className="flex items-center bg-green-400 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleSwitchInvestmentClick}>
+              <button data-testid="investment-on-button" className="flex items-center bg-green-400 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleSwitchInvestmentClick}>
                 <svg viewBox="0 0 32 32" fill="currentColor" height="1.5em" width="1.5em">
                   <path d="M21 9H9a6 6 0 00-6 6 6 6 0 006 6h12a6 6 0 006-6 6 6 0 00-6-6m0 10a4 4 0 01-4-4 4 4 0 014-4 4 4 0 014 4 4 4 0 01-4 4z" />
                 </svg>
                 <span className="ml-2">Investment on</span>
               </button>            
             ): (
-              <button className="flex items-center bg-red-400 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleSwitchInvestmentClick}>
+              <button data-testid="investment-off-button" className="flex items-center bg-red-400 hover:bg-gray-400 text-black py-1 px-3 rounded" style={{ marginTop: "30px" }} onClick={handleSwitchInvestmentClick}>
                 <svg viewBox="0 0 24 24" fill="currentColor" height="1.5em" width="1.3em">
                   <path d="M17 7H7a5 5 0 00-5 5 5 5 0 005 5h10a5 5 0 005-5 5 5 0 00-5-5M7 15a3 3 0 01-3-3 3 3 0 013-3 3 3 0 013 3 3 3 0 01-3 3z" />
                 </svg>
