@@ -32,7 +32,7 @@ public sealed class PricePredictor : IPricePredictor
     {
         const int requiredDays = 10;
         var today = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
-        var marketData = await _marketData.GetAllPricesAsync(today.AddDays(-requiredDays - 1), today);
+        var marketData = await _marketData.GetAllPricesAsync(today.AddDays(-requiredDays - 1), today, token);
 
         var result = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in marketData)

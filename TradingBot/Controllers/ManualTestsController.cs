@@ -12,10 +12,12 @@ namespace TradingBot.Controllers;
 public sealed class ManualTestsController : ControllerBase
 {
     private readonly IPricePredictor _predictor;
+    private readonly IMarketDataSource _dataSource;
 
-    public ManualTestsController(IPricePredictor predictor)
+    public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource)
     {
         _predictor = predictor;
+        _dataSource = dataSource;
     }
 
     [HttpPost]
@@ -26,5 +28,12 @@ public sealed class ManualTestsController : ControllerBase
     public async Task<Prediction> MakePredictionAsync(IReadOnlyList<DailyTradingData> request)
     {
         return await _predictor.PredictForSymbolAsync(request, HttpContext.RequestAborted);
+    }
+    
+    [HttpGet]
+    [Route("market-data")]
+    public async Task GetDataAsync()
+    {
+        await _dataSource.GetAllPricesAsync(DateOnly.MinValue, DateOnly.MaxValue);
     }
 }
