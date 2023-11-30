@@ -14,6 +14,7 @@ const INVESTMENT_URL = '/investment';
 const PERFORMANCE_URL = '/performance';
 const TRADE_ACTIONS_URL = '/trade-actions';
 const STRATEGY_URL = '/strategy';
+const ASSETS_URL = '/assets';
 
 const CHART_SCALE_RATIO = 6/5;
 
@@ -51,6 +52,7 @@ const Home = () => {
   const [showStrategyOptions, setshowStrategyOptions] = useState(true);
   const [strategyParameters, setStrategyParameters] = useState('');
   const [performanceData, setPerformanceData] = useState([]);
+  const [equityValue, setEquityValue] = useState(0);
 
   const [editingStrategyParameters, setEditingStrategyParameters] = useState(false);
   const [newImportantProperty, setNewImportantProperty] = useState('');
@@ -64,6 +66,23 @@ const Home = () => {
     const storedPwd = localStorage.getItem("pwd");
     setUserName(localStorage.getItem("userName"));
     setPwd(localStorage.getItem("pwd"));
+
+    axios.get(ASSETS_URL,
+      {
+        auth: {
+            username: storedUserName,
+            password: storedPwd
+        }
+      }
+    ).then(result => {
+      setEquityValue(result.data.equityValue);
+    }).catch(err => {
+      if(!err?.response || err.response?.status === 401 ) {
+        logout();
+      } else {
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
+      }
+    });
 
     axios.get(TEST_MODE_URL,
       {
@@ -433,7 +452,7 @@ const Home = () => {
               Current Balance
             </h3>
             <h3 className="text-2xl font-bold text-gray-700 text-left">
-              USD 10,000.00
+              USD {equityValue}
             </h3>
           </div>
 
