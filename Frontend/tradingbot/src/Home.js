@@ -320,7 +320,7 @@ const Home = () => {
     setEditingStrategyParameters(false);
   }
 
-  const countInnitialAccountValue = () => {
+  const countInitialAccountValue = () => {
     return equityValue/(1 + performanceData[performanceData.length - 1].return);
   }
 
@@ -461,12 +461,12 @@ const Home = () => {
                 USD {equityValue.toFixed(2)}
               </h3>
             </div>
-            <div className={`p-6 rounded-xl shadow-lg overflow-x-auto w-min ml-5 whitespace-nowrap ${(equityValue - countInnitialAccountValue()) >= 0 ? 'bg-green-200' : 'bg-red-200'}`}>
+            <div className={`p-6 rounded-xl shadow-lg overflow-x-auto w-min ml-5 whitespace-nowrap ${(equityValue - countInitialAccountValue()) >= 0 ? 'bg-green-200' : 'bg-red-200'}`}>
               <h3 className="text-md text-gray-700 text-left">
-                {(equityValue - countInnitialAccountValue()) >= 0 ? 'Current income' : 'Current loss'}
+                {(equityValue - countInitialAccountValue()) >= 0 ? 'Current income' : 'Current loss'}
               </h3>
               <h3 className={`text-2xl font-bold text-gray-700 text-left `}>
-                USD {(Math.abs(equityValue - countInnitialAccountValue())).toFixed(2)}
+                USD {(Math.abs(equityValue - countInitialAccountValue())).toFixed(2)}
               </h3>
             </div>
           </div>
