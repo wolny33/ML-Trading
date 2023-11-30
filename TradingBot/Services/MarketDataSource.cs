@@ -79,7 +79,7 @@ public sealed class MarketDataSource : IMarketDataSource
             (await dataClient.ListMostActiveStocksByVolumeAsync(maxRequestSize, token)).Select(a =>
                 new TradingSymbol(a.Symbol));
 
-        return held.Concat(active);
+        return held.Concat(active).Distinct();
     }
 
     private static async Task<IReadOnlyList<DailyTradingData>> SendBarsRequestAsync(TradingSymbol symbol,
