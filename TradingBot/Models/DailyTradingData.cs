@@ -3,9 +3,9 @@
 public sealed class DailyTradingData
 {
     public required DateOnly Date { get; init; }
-    public required double Open { get; init; }
-    public required double Close { get; init; }
-    public required double High { get; init; }
-    public required double Low { get; init; }
-    public required double Volume { get; init; }
+    public required decimal Open { get; init; }
+    public required decimal Close { get; init; }
+    public required decimal High { get; init; }
+    public required decimal Low { get; init; }
+    public required decimal Volume { get; init; }
 }

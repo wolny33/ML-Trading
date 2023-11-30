@@ -46,7 +46,6 @@ public sealed class AlpacaClientFactory : IAlpacaClientFactory
     {
         return _flurlClientFactory
             .Get("https://broker-api.sandbox.alpaca.markets/v1/assets?status=active&asset_class=us_equity")
-            .AllowAnyHttpStatus()
             .WithBasicAuth(_config.CurrentValue.Broker.Key, _config.CurrentValue.Broker.Secret);
     }
 
