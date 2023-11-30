@@ -30,9 +30,9 @@ public sealed class PricePredictor : IPricePredictor
 
     public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default)
     {
-        const int requiredDays = 10;
+        const int requiredDays = 11;
         var today = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
-        var marketData = await _marketData.GetPricesAsync(SubtractWorkDays(today, 2 * requiredDays + 1), today, token);
+        var marketData = await _marketData.GetPricesAsync(SubtractWorkDays(today, 2 * requiredDays), today, token);
 
         var result = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in marketData)
@@ -131,14 +131,13 @@ public sealed class PricePredictor : IPricePredictor
 
     private static DateOnly SubtractWorkDays(DateOnly date, int count)
     {
-        while (count > 0)
-        {
-            date = date.AddDays(-1);
-            if (date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
+        for (var i = count; i > 0; i--)
+            date = date.AddDays(date.DayOfWeek switch
             {
-                count--;
-            }
-        }
+                DayOfWeek.Monday => -3,
+                DayOfWeek.Sunday => -2,
+                _ => -1
+            });
 
         return date;
     }

@@ -5,20 +5,20 @@ using Microsoft.Extensions.Options;
 using TradingBot.Configuration;
 using Environments = Alpaca.Markets.Environments;
 
-namespace TradingBot.Services;
+namespace TradingBot.Services.Alpaca;
 
 public interface IAlpacaClientFactory
 {
     Task<IAlpacaDataClient> CreateMarketDataClientAsync(CancellationToken token = default);
     Task<IAlpacaTradingClient> CreateTradingClientAsync(CancellationToken token = default);
-    IFlurlClient CreateAvailableAssetsClient();
+    IAlpacaAssetsClient CreateAvailableAssetsClient();
 }
 
 public sealed class AlpacaClientFactory : IAlpacaClientFactory
 {
     private readonly IOptionsMonitor<AlpacaConfiguration> _config;
-    private readonly ITestModeConfigService _testModeConfig;
     private readonly IFlurlClientFactory _flurlClientFactory;
+    private readonly ITestModeConfigService _testModeConfig;
 
     public AlpacaClientFactory(IOptionsMonitor<AlpacaConfiguration> config, ITestModeConfigService testModeConfig,
         IFlurlClientFactory flurlClientFactory)
@@ -42,7 +42,12 @@ public sealed class AlpacaClientFactory : IAlpacaClientFactory
             _config.CurrentValue.Trading.Secret));
     }
 
-    public IFlurlClient CreateAvailableAssetsClient()
+    public IAlpacaAssetsClient CreateAvailableAssetsClient()
+    {
+        return new AlpacaAssetsClient(CreateAssetsFlurlClient());
+    }
+
+    private IFlurlClient CreateAssetsFlurlClient()
     {
         return _flurlClientFactory
             .Get("https://broker-api.sandbox.alpaca.markets/v1/assets?status=active&asset_class=us_equity")

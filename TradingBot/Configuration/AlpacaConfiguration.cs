@@ -8,7 +8,7 @@ public sealed class AlpacaConfiguration
 
     [Required]
     public required KeySecretPair Trading { get; init; }
-    
+
     [Required]
     public required KeySecretPair Broker { get; init; }
 }
