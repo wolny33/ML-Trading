@@ -32,5 +32,5 @@ public sealed class TradingActionResponse
 
     public Guid? AlpacaId { get; init; }
 
-    public double? AverageFillPrice { get; init; }
+    public decimal? AverageFillPrice { get; init; }
 }

@@ -26,7 +26,7 @@ public sealed class TradingAction
     public OrderStatus? Status { get; set; }
     public DateTimeOffset? ExecutedAt { get; init; }
     public Guid? AlpacaId { get; init; }
-    public double? AverageFillPrice { get; init; }
+    public decimal? AverageFillPrice { get; init; }
 
     public static TradingAction FromEntity(TradingActionEntity entity)
     {
@@ -44,7 +44,7 @@ public sealed class TradingAction
                 ? DateTimeOffset.FromUnixTimeMilliseconds(entity.ExecutionTimestamp.Value)
                 : null,
             AlpacaId = entity.AlpacaId,
-            AverageFillPrice = entity.AverageFillPrice
+            AverageFillPrice = (decimal?)entity.AverageFillPrice
         };
     }
 
@@ -62,7 +62,7 @@ public sealed class TradingAction
             Status = Status,
             ExecutionTimestamp = ExecutedAt?.ToUnixTimeMilliseconds(),
             AlpacaId = AlpacaId,
-            AverageFillPrice = AverageFillPrice,
+            AverageFillPrice = (double?)AverageFillPrice,
             Details = new TradingActionDetailsEntity
             {
                 TradingActionId = Id

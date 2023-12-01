@@ -63,8 +63,11 @@ public sealed class PerformanceController : ControllerBase
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? DateTimeOffset.Now;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
 
-        return (await _query.GetTradingActionsAsync(start, end, HttpContext.RequestAborted)).Select(a => a.ToResponse())
-            .ToList();
+        var actions = request.Mocked
+            ? _query.CreateMockedTradingActions(start, end)
+            : await _query.GetTradingActionsAsync(start, end, HttpContext.RequestAborted);
+
+        return actions.Select(a => a.ToResponse()).ToList();
     }
 
     /// <summary>
