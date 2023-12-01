@@ -16,15 +16,16 @@ namespace TradingBotTests;
 public class IntegrationTestSuite : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection;
-    private readonly IAlpacaAssetsClient _assetsClientSubstitute = Substitute.For<IAlpacaAssetsClient>();
-    private readonly IAlpacaDataClient _dataClientSubstitute = Substitute.For<IAlpacaDataClient>();
-    private readonly IAlpacaTradingClient _tradingClientSubstitute = Substitute.For<IAlpacaTradingClient>();
 
     public IntegrationTestSuite()
     {
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
     }
+
+    public IAlpacaAssetsClient AssetsClientSubstitute { get; } = Substitute.For<IAlpacaAssetsClient>();
+    public IAlpacaDataClient DataClientSubstitute { get; } = Substitute.For<IAlpacaDataClient>();
+    public IAlpacaTradingClient TradingClientSubstitute { get; } = Substitute.For<IAlpacaTradingClient>();
 
     public IDbContextFactory<AppDbContext> DbContextFactory =>
         Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
@@ -35,10 +36,10 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
         {
             services.RemoveAll<IAlpacaClientFactory>();
             var factory = Substitute.For<IAlpacaClientFactory>();
-            SetUpAlpacaSubstitutes(_dataClientSubstitute, _tradingClientSubstitute, _assetsClientSubstitute);
-            factory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClientSubstitute);
-            factory.CreateMarketDataClientAsync(Arg.Any<CancellationToken>()).Returns(_dataClientSubstitute);
-            factory.CreateAvailableAssetsClient().Returns(_assetsClientSubstitute);
+            SetUpAlpacaSubstitutes(DataClientSubstitute, TradingClientSubstitute, AssetsClientSubstitute);
+            factory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(TradingClientSubstitute);
+            factory.CreateMarketDataClientAsync(Arg.Any<CancellationToken>()).Returns(DataClientSubstitute);
+            factory.CreateAvailableAssetsClient().Returns(AssetsClientSubstitute);
             services.AddSingleton(factory);
 
             RemoveDatabaseServices(services);

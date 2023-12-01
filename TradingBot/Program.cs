@@ -142,5 +142,6 @@ public sealed class Program
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();
         services.AddTransient<IInvestmentConfigService, InvestmentConfigService>();
         services.AddTransient<ITradingActionQuery, TradingActionQuery>();
+        services.AddTransient<ITradingActionCommand, TradingActionCommand>();
     }
 }
