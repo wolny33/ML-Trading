@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
 using TradingBot.Services;
@@ -10,10 +11,12 @@ namespace TradingBot.Controllers;
 public sealed class PerformanceController : ControllerBase
 {
     private readonly ITradingActionQuery _query;
+    private readonly ISystemClock _clock;
 
-    public PerformanceController(ITradingActionQuery query)
+    public PerformanceController(ITradingActionQuery query, ISystemClock clock)
     {
         _query = query;
+        _clock = clock;
     }
 
     /// <summary>
@@ -28,8 +31,8 @@ public sealed class PerformanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public IReadOnlyList<ReturnResponse> CheckPerformance([FromQuery] ReturnsRequest request)
     {
-        var start = request.Start ?? DateTimeOffset.Now - TimeSpan.FromDays(10);
-        var end = request.End ?? DateTimeOffset.Now;
+        var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
+        var start = request.Start ?? end - TimeSpan.FromDays(10);
 
         var first = start - start.TimeOfDay + TimeSpan.FromDays(1);
         return Enumerable.Range(0, (int)(end - first).TotalDays + 1).Select(i =>
@@ -60,7 +63,7 @@ public sealed class PerformanceController : ControllerBase
     public async Task<IReadOnlyList<TradingActionResponse>> GetTradeActionsAsync(
         [FromQuery] TradingActionRequest request)
     {
-        var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? DateTimeOffset.Now;
+        var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
 
         var actions = request.Mocked

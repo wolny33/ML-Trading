@@ -12,13 +12,11 @@ public interface ITradingActionCommand
 
 public sealed class TradingActionCommand : ITradingActionCommand
 {
-    private readonly IAlpacaClientFactory _clientFactory;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
     public TradingActionCommand(IDbContextFactory<AppDbContext> dbContextFactory, IAlpacaClientFactory clientFactory)
     {
         _dbContextFactory = dbContextFactory;
-        _clientFactory = clientFactory;
     }
 
     public async Task SaveActionWithAlpacaIdAsync(TradingAction action, Guid alpacaId,

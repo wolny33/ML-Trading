@@ -34,7 +34,7 @@ public sealed class TradingAction
         {
             Id = entity.Id,
             CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(entity.CreationTimestamp),
-            Price = entity.Price is not null ? (decimal)entity.Price : null,
+            Price = (decimal?)entity.Price,
             Quantity = (decimal)entity.Quantity,
             Symbol = new TradingSymbol(entity.Symbol),
             InForce = entity.InForce,
@@ -54,7 +54,7 @@ public sealed class TradingAction
         {
             Id = Id,
             CreationTimestamp = CreatedAt.ToUnixTimeMilliseconds(),
-            Price = Price is not null ? (double)Price : null,
+            Price = (double?)Price,
             Quantity = (double)Quantity,
             Symbol = Symbol.Value,
             InForce = InForce,
