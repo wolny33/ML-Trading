@@ -24,4 +24,13 @@ public sealed class TradingActionResponse
 
     [Required]
     public required string OrderType { get; init; }
+
+    [Required]
+    public required string Status { get; set; }
+
+    public DateTimeOffset? ExecutedAt { get; init; }
+
+    public Guid? AlpacaId { get; init; }
+
+    public double? AverageFillPrice { get; init; }
 }

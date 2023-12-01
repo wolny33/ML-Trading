@@ -15,6 +15,10 @@ public sealed class TradingActionEntity
     public required string Symbol { get; init; }
     public required TimeInForce InForce { get; init; }
     public required OrderType OrderType { get; init; }
+    public OrderStatus? Status { get; set; }
+    public long? ExecutionTimestamp { get; set; }
+    public Guid? AlpacaId { get; set; }
+    public double? AverageFillPrice { get; set; }
 
     [Required]
     public TradingActionDetailsEntity Details { get; init; } = null!;

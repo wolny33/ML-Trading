@@ -23,6 +23,10 @@ public sealed class TradingAction
     public required TradingSymbol Symbol { get; init; }
     public required TimeInForce InForce { get; init; }
     public required OrderType OrderType { get; init; }
+    public OrderStatus? Status { get; set; }
+    public DateTimeOffset? ExecutedAt { get; init; }
+    public Guid? AlpacaId { get; init; }
+    public double? AverageFillPrice { get; init; }
 
     public static TradingAction FromEntity(TradingActionEntity entity)
     {
@@ -34,7 +38,13 @@ public sealed class TradingAction
             Quantity = (decimal)entity.Quantity,
             Symbol = new TradingSymbol(entity.Symbol),
             InForce = entity.InForce,
-            OrderType = entity.OrderType
+            OrderType = entity.OrderType,
+            Status = entity.Status,
+            ExecutedAt = entity.ExecutionTimestamp is not null
+                ? DateTimeOffset.FromUnixTimeMilliseconds(entity.ExecutionTimestamp.Value)
+                : null,
+            AlpacaId = entity.AlpacaId,
+            AverageFillPrice = entity.AverageFillPrice
         };
     }
 
@@ -49,6 +59,10 @@ public sealed class TradingAction
             Symbol = Symbol.Value,
             InForce = InForce,
             OrderType = OrderType,
+            Status = Status,
+            ExecutionTimestamp = ExecutedAt?.ToUnixTimeMilliseconds(),
+            AlpacaId = AlpacaId,
+            AverageFillPrice = AverageFillPrice,
             Details = new TradingActionDetailsEntity
             {
                 TradingActionId = Id
@@ -66,7 +80,69 @@ public sealed class TradingAction
             Quantity = Quantity,
             Symbol = Symbol.Value,
             InForce = InForce.ToString(),
-            OrderType = OrderType.ToString()
+            OrderType = OrderType.ToString(),
+            Status = Status?.ToString() ?? "NotPosted",
+            ExecutedAt = ExecutedAt,
+            AlpacaId = AlpacaId,
+            AverageFillPrice = AverageFillPrice
+        };
+    }
+
+    public static TradingAction MarketBuy(TradingSymbol symbol, decimal quantity, DateTimeOffset createdAt)
+    {
+        return new TradingAction
+        {
+            Id = Guid.NewGuid(),
+            CreatedAt = createdAt,
+            Quantity = quantity,
+            Price = null,
+            Symbol = symbol,
+            InForce = TimeInForce.Gtc,
+            OrderType = OrderType.MarketBuy
+        };
+    }
+
+    public static TradingAction MarketSell(TradingSymbol symbol, decimal quantity, DateTimeOffset createdAt)
+    {
+        return new TradingAction
+        {
+            Id = Guid.NewGuid(),
+            CreatedAt = createdAt,
+            Quantity = quantity,
+            Price = null,
+            Symbol = symbol,
+            InForce = TimeInForce.Gtc,
+            OrderType = OrderType.MarketSell
+        };
+    }
+
+    public static TradingAction LimitBuy(TradingSymbol symbol, decimal quantity, decimal price,
+        DateTimeOffset createdAt)
+    {
+        return new TradingAction
+        {
+            Id = Guid.NewGuid(),
+            CreatedAt = createdAt,
+            Quantity = quantity,
+            Price = price,
+            Symbol = symbol,
+            InForce = TimeInForce.Gtc,
+            OrderType = OrderType.LimitBuy
+        };
+    }
+
+    public static TradingAction LimitSell(TradingSymbol symbol, decimal quantity, decimal price,
+        DateTimeOffset createdAt)
+    {
+        return new TradingAction
+        {
+            Id = Guid.NewGuid(),
+            CreatedAt = createdAt,
+            Quantity = quantity,
+            Price = price,
+            Symbol = symbol,
+            InForce = TimeInForce.Gtc,
+            OrderType = OrderType.LimitSell
         };
     }
 }

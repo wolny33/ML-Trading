@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using TradingBot;
 using TradingBot.Database;
-using TradingBot.Services.Alpaca;
+using TradingBot.Services.AlpacaClients;
 
 namespace TradingBotTests;
 
