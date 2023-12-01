@@ -3,7 +3,6 @@ import axios from './API/axios';
 import { MemoryRouter } from 'react-router-dom';
 import Home from './Home';
 import { expect } from '@jest/globals';
-import { logout } from './Home';
 
 jest.mock('./API/axios');
 
@@ -23,6 +22,9 @@ const setupAxiosMocks = () => {
     localStorage.setItem("userName", userName);
     localStorage.setItem("pwd", pwd);
     localStorage.setItem("isLoggedIn", 'true');
+    axios.get.mockImplementationOnce(() =>
+    Promise.resolve({ data: { "equityValue": 10000 } })
+  );
     axios.get.mockImplementationOnce(() =>
       Promise.resolve({ data: { "enabled": true } })
     );
@@ -70,8 +72,9 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await waitFor(() => {
-        expect(axios.get).toHaveBeenCalledTimes(6);
+        expect(axios.get).toHaveBeenCalledTimes(7);
     });
+    expect(axios.get).toHaveBeenCalledWith('/assets', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/test-mode', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/investment', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/strategy', expect.anything());
@@ -95,7 +98,7 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await waitFor(() => {
-        expect(axios.get).toHaveBeenCalledTimes(6);
+        expect(axios.get).toHaveBeenCalledTimes(7);
     });
     const switchTestModeButton = screen.getByTestId('test-mode-on-button');
     
@@ -133,9 +136,9 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await waitFor(() => {
-        expect(axios.get).toHaveBeenCalledTimes(6);
+        expect(axios.get).toHaveBeenCalledTimes(7);
     });
-    const switchTestModeButton = screen.getByTestId('investment-on-button');
+    const switchTestModeButton = screen.getByTestId("investment-on-button");
     
     await act(async () => {
         fireEvent.click(switchTestModeButton);

@@ -14,6 +14,7 @@ const INVESTMENT_URL = '/investment';
 const PERFORMANCE_URL = '/performance';
 const TRADE_ACTIONS_URL = '/trade-actions';
 const STRATEGY_URL = '/strategy';
+const ASSETS_URL = '/assets';
 
 const CHART_SCALE_RATIO = 6/5;
 
@@ -51,6 +52,8 @@ const Home = () => {
   const [showStrategyOptions, setshowStrategyOptions] = useState(true);
   const [strategyParameters, setStrategyParameters] = useState('');
   const [performanceData, setPerformanceData] = useState([]);
+  const [equityValue, setEquityValue] = useState(0);
+  const [innitialValue, setInnitialValue] = useState(0);
 
   const [editingStrategyParameters, setEditingStrategyParameters] = useState(false);
   const [newImportantProperty, setNewImportantProperty] = useState('');
@@ -64,6 +67,23 @@ const Home = () => {
     const storedPwd = localStorage.getItem("pwd");
     setUserName(localStorage.getItem("userName"));
     setPwd(localStorage.getItem("pwd"));
+
+    axios.get(ASSETS_URL,
+      {
+        auth: {
+            username: storedUserName,
+            password: storedPwd
+        }
+      }
+    ).then(result => {
+      setEquityValue(result.data.equityValue);
+    }).catch(err => {
+      if(!err?.response || err.response?.status === 401 ) {
+        logout();
+      } else {
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
+      }
+    });
 
     axios.get(TEST_MODE_URL,
       {
@@ -300,6 +320,10 @@ const Home = () => {
     setEditingStrategyParameters(false);
   }
 
+  const countInitialAccountValue = () => {
+    return equityValue/(1 + performanceData[performanceData.length - 1].return);
+  }
+
   const chartData = {
     labels: performanceData.map((data) => new Date(data.time).toISOString().split('T')[0]),
     datasets: [
@@ -428,15 +452,24 @@ const Home = () => {
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-xl shadow-lg overflow-x-auto w-min ml-0 whitespace-nowrap">
-            <h3 className="text-md text-gray-700 text-left">
-              Current Balance
-            </h3>
-            <h3 className="text-2xl font-bold text-gray-700 text-left">
-              USD 10,000.00
-            </h3>
+          <div className="flex">
+            <div className="bg-white p-6 rounded-xl shadow-lg overflow-x-auto w-min ml-0 whitespace-nowrap">
+              <h3 className="text-md text-gray-700 text-left">
+                Current Balance
+              </h3>
+              <h3 className="text-2xl font-bold text-gray-700 text-left">
+                USD {equityValue.toFixed(2)}
+              </h3>
+            </div>
+            <div className={`p-6 rounded-xl shadow-lg overflow-x-auto w-min ml-5 whitespace-nowrap ${(equityValue - countInitialAccountValue()) >= 0 ? 'bg-green-200' : 'bg-red-200'}`}>
+              <h3 className="text-md text-gray-700 text-left">
+                {(equityValue - countInitialAccountValue()) >= 0 ? 'Current income' : 'Current loss'}
+              </h3>
+              <h3 className={`text-2xl font-bold text-gray-700 text-left `}>
+                USD {(Math.abs(equityValue - countInitialAccountValue())).toFixed(2)}
+              </h3>
+            </div>
           </div>
-
           <div className="bg-white p-6 rounded-xl shadow-lg overflow-x-auto mt-4">
                 <h3 className="text-2xl font-semibold text-gray-700 mb-4 text-center">
                     Trading history
