@@ -66,6 +66,7 @@ public sealed class ManualTestsController : ControllerBase
     }
 
     [HttpPost]
+    [Route("trading-actions")]
     [ProducesResponseType(typeof(TradingActionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TradingActionResponse>> ExecuteActionAsync(TradingActionRequest request)
