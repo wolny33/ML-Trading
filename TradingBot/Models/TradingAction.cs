@@ -97,7 +97,7 @@ public sealed class TradingAction
             Quantity = quantity,
             Price = null,
             Symbol = symbol,
-            InForce = TimeInForce.Gtc,
+            InForce = TimeInForce.Day,
             OrderType = OrderType.MarketBuy
         };
     }
@@ -111,7 +111,7 @@ public sealed class TradingAction
             Quantity = quantity,
             Price = null,
             Symbol = symbol,
-            InForce = TimeInForce.Gtc,
+            InForce = TimeInForce.Day,
             OrderType = OrderType.MarketSell
         };
     }
@@ -126,7 +126,7 @@ public sealed class TradingAction
             Quantity = quantity,
             Price = price,
             Symbol = symbol,
-            InForce = TimeInForce.Gtc,
+            InForce = TimeInForce.Day,
             OrderType = OrderType.LimitBuy
         };
     }
@@ -141,7 +141,7 @@ public sealed class TradingAction
             Quantity = quantity,
             Price = price,
             Symbol = symbol,
-            InForce = TimeInForce.Gtc,
+            InForce = TimeInForce.Day,
             OrderType = OrderType.LimitSell
         };
     }
