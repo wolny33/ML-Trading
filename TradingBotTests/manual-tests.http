@@ -1,0 +1,14 @@
+﻿### Predict
+GET http://localhost:5000/manual-tests/predict
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Accept: application/json
+
+### Market data
+GET http://localhost:5000/manual-tests/market-data
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Accept: application/json
+
+### Single symbol
+GET http://localhost:5000/manual-tests/market-data/AMZN
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Accept: application/json

@@ -8,6 +8,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using TradingBot.Configuration;
 using TradingBot.Database;
 using TradingBot.Services;
+using TradingBot.Services.Alpaca;
 
 namespace TradingBot;
 

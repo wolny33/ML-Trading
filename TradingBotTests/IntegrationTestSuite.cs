@@ -9,13 +9,14 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using TradingBot;
 using TradingBot.Database;
-using TradingBot.Services;
+using TradingBot.Services.Alpaca;
 
 namespace TradingBotTests;
 
 public class IntegrationTestSuite : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection;
+    private readonly IAlpacaAssetsClient _assetsClientSubstitute = Substitute.For<IAlpacaAssetsClient>();
     private readonly IAlpacaDataClient _dataClientSubstitute = Substitute.For<IAlpacaDataClient>();
     private readonly IAlpacaTradingClient _tradingClientSubstitute = Substitute.For<IAlpacaTradingClient>();
 
@@ -34,9 +35,10 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
         {
             services.RemoveAll<IAlpacaClientFactory>();
             var factory = Substitute.For<IAlpacaClientFactory>();
-            SetUpAlpacaSubstitutes(_dataClientSubstitute, _tradingClientSubstitute);
+            SetUpAlpacaSubstitutes(_dataClientSubstitute, _tradingClientSubstitute, _assetsClientSubstitute);
             factory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClientSubstitute);
             factory.CreateMarketDataClientAsync(Arg.Any<CancellationToken>()).Returns(_dataClientSubstitute);
+            factory.CreateAvailableAssetsClient().Returns(_assetsClientSubstitute);
             services.AddSingleton(factory);
 
             RemoveDatabaseServices(services);
@@ -52,7 +54,8 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
         services.RemoveAll<AppDbContext>();
     }
 
-    protected virtual void SetUpAlpacaSubstitutes(IAlpacaDataClient dataClient, IAlpacaTradingClient tradingClient)
+    protected virtual void SetUpAlpacaSubstitutes(IAlpacaDataClient dataClient, IAlpacaTradingClient tradingClient,
+        IAlpacaAssetsClient assetsClient)
     {
     }
 

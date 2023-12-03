@@ -30,9 +30,9 @@ public sealed class PricePredictor : IPricePredictor
 
     public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default)
     {
-        const int requiredDays = 10;
+        const int requiredDays = 11;
         var today = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
-        var marketData = await _marketData.GetAllPricesAsync(today.AddDays(-requiredDays - 1), today);
+        var marketData = await _marketData.GetPricesAsync(SubtractWorkDays(today, 2 * requiredDays), today, token);
 
         var result = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in marketData)
@@ -68,7 +68,7 @@ public sealed class PricePredictor : IPricePredictor
                     Low = RelativeChange(previous.Low, current.Low),
                     Volume = current.Volume
                 };
-            }).ToList()
+            }).Take(10).ToList()
         };
     }
 
@@ -124,9 +124,22 @@ public sealed class PricePredictor : IPricePredictor
         };
     }
 
-    private static double RelativeChange(double previous, double now)
+    private static decimal RelativeChange(decimal previous, decimal now)
     {
         return (now - previous) / previous;
+    }
+
+    private static DateOnly SubtractWorkDays(DateOnly date, int count)
+    {
+        for (var i = count; i > 0; i--)
+            date = date.AddDays(date.DayOfWeek switch
+            {
+                DayOfWeek.Monday => -3,
+                DayOfWeek.Sunday => -2,
+                _ => -1
+            });
+
+        return date;
     }
 
     #region Predictor service DTO
@@ -143,19 +156,19 @@ public sealed class PricePredictor : IPricePredictor
         public required string Date { get; init; }
 
         [JsonProperty("open")]
-        public required double Open { get; init; }
+        public required decimal Open { get; init; }
 
         [JsonProperty("close")]
-        public required double Close { get; init; }
+        public required decimal Close { get; init; }
 
         [JsonProperty("high")]
-        public required double High { get; init; }
+        public required decimal High { get; init; }
 
         [JsonProperty("low")]
-        public required double Low { get; init; }
+        public required decimal Low { get; init; }
 
         [JsonProperty("volume")]
-        public required double Volume { get; init; }
+        public required decimal Volume { get; init; }
     }
 
     private sealed class PredictorResponse
@@ -167,13 +180,13 @@ public sealed class PricePredictor : IPricePredictor
     private sealed class SingleDayPrediction
     {
         [JsonProperty("close")]
-        public required double CloseChange { get; init; }
+        public required decimal CloseChange { get; init; }
 
         [JsonProperty("high")]
-        public required double HighChange { get; init; }
+        public required decimal HighChange { get; init; }
 
         [JsonProperty("low")]
-        public required double LowChange { get; init; }
+        public required decimal LowChange { get; init; }
     }
 
     #endregion
