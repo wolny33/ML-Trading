@@ -2,7 +2,7 @@
 
 namespace TradingBot.Dto;
 
-public class TradingActionRequest : IValidatableObject
+public class TradingActionCollectionRequest : IValidatableObject
 {
     public DateTimeOffset? Start { get; init; }
     public DateTimeOffset? End { get; init; }

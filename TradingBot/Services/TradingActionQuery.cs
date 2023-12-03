@@ -15,6 +15,8 @@ public interface ITradingActionQuery
     Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(DateTimeOffset start, DateTimeOffset end,
         CancellationToken token = default);
 
+    Task<TradingAction?> GetTradingActionByIdAsync(Guid id, CancellationToken token = default);
+
     Task<TradingActionDetails> GetDetailsAsync(Guid id, CancellationToken token = default);
 
     IEnumerable<TradingAction> CreateMockedTradingActions(DateTimeOffset start, DateTimeOffset end);
@@ -45,6 +47,20 @@ public sealed class TradingActionQuery : ITradingActionQuery
         await context.SaveChangesAsync(token);
 
         return entities.Select(TradingAction.FromEntity).ToList();
+    }
+
+    public async Task<TradingAction?> GetTradingActionByIdAsync(Guid id,
+        CancellationToken token = default)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+        var entity = await context.TradingActions.FirstOrDefaultAsync(a => a.Id == id, token);
+        if (entity is null) return null;
+
+        using var client = await _clientFactory.CreateTradingClientAsync(token);
+        await UpdateActionEntityAsync(entity, client, token);
+        await context.SaveChangesAsync(token);
+
+        return TradingAction.FromEntity(entity);
     }
 
     public Task<TradingActionDetails> GetDetailsAsync(Guid id, CancellationToken token = default)

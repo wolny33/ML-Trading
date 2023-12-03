@@ -180,10 +180,10 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
         await _testSuite.ResetAsync();
 
         using var client = _testSuite.CreateAuthenticatedClient();
-        var returns = await client.Request("api", "performance", "trade-actions")
+        var actions = await client.Request("api", "performance", "trade-actions")
             .GetJsonAsync<IReadOnlyList<TradingActionResponse>>();
 
-        returns.Should().BeEquivalentTo(new[]
+        actions.Should().BeEquivalentTo(new[]
         {
             new TradingActionResponse
             {
@@ -253,14 +253,14 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
         await _testSuite.ResetAsync();
 
         using var client = _testSuite.CreateAuthenticatedClient();
-        var returns = await client.Request("api", "performance", "trade-actions")
+        var actions = await client.Request("api", "performance", "trade-actions")
             .SetQueryParams(new
             {
                 start = "2023-12-01T17:52:00+00:00",
                 end = "2023-12-01T17:57:00+00:00"
             }).GetJsonAsync<IReadOnlyList<TradingActionResponse>>();
 
-        returns.Should().BeEquivalentTo(new[]
+        actions.Should().BeEquivalentTo(new[]
         {
             new TradingActionResponse
             {
@@ -309,7 +309,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
 
         response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
         var errors = await response.GetJsonAsync<ValidationProblemDetails>();
-        errors.Errors.Should().ContainKey(nameof(TradingActionRequest.Start)).WhoseValue.Should()
+        errors.Errors.Should().ContainKey(nameof(TradingActionCollectionRequest.Start)).WhoseValue.Should()
             .ContainMatch("*must be earlier than*");
     }
 
@@ -318,10 +318,10 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
     {
         using var client = _testSuite.CreateAuthenticatedClient();
 
-        var returns = await client.Request("api", "performance", "trade-actions", _testSuite.Actions[0].Id)
+        var response = await client.Request("api", "performance", "trade-actions", _testSuite.Actions[0].Id, "details")
             .GetJsonAsync<TradingActionDetailsResponse>();
 
-        returns.Should().BeEquivalentTo(new
+        response.Should().BeEquivalentTo(new
         {
             _testSuite.Actions[0].Id
         });

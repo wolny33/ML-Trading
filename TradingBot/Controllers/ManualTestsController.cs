@@ -1,6 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.ComponentModel.DataAnnotations;
+using Alpaca.Markets;
+using Microsoft.AspNetCore.Mvc;
+using TradingBot.Dto;
 using TradingBot.Models;
 using TradingBot.Services;
+using OrderType = TradingBot.Models.OrderType;
 
 namespace TradingBot.Controllers;
 
@@ -11,13 +15,18 @@ namespace TradingBot.Controllers;
 [Route("manual-tests")]
 public sealed class ManualTestsController : ControllerBase
 {
+    private readonly ITradingActionQuery _actionQuery;
     private readonly IMarketDataSource _dataSource;
+    private readonly IActionExecutor _executor;
     private readonly IPricePredictor _predictor;
 
-    public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource)
+    public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource, IActionExecutor executor,
+        ITradingActionQuery actionQuery)
     {
         _predictor = predictor;
         _dataSource = dataSource;
+        _executor = executor;
+        _actionQuery = actionQuery;
     }
 
     [HttpGet]
@@ -54,5 +63,56 @@ public sealed class ManualTestsController : ControllerBase
         if (result is null) return NotFound();
 
         return Ok(result);
+    }
+
+    [HttpPost]
+    [ProducesResponseType(typeof(TradingActionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TradingActionResponse>> ExecuteActionAsync(TradingActionRequest request)
+    {
+        var action = request.ToTradingAction();
+        await _executor.ExecuteActionAsync(action, HttpContext.RequestAborted);
+        var result = await _actionQuery.GetTradingActionByIdAsync(action.Id, HttpContext.RequestAborted);
+        return result is not null ? result.ToResponse() : NotFound();
+    }
+}
+
+public sealed class TradingActionRequest : IValidatableObject
+{
+    public decimal? Price { get; init; }
+
+    [Required]
+    public required decimal Quantity { get; init; }
+
+    [Required]
+    public required string Symbol { get; init; }
+
+    [Required]
+    public required string InForce { get; init; }
+
+    [Required]
+    public required string OrderType { get; init; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!Enum.TryParse<TimeInForce>(InForce, true, out _))
+            yield return new ValidationResult($"'{InForce}' is not a valid order duration", new[] { nameof(InForce) });
+
+        if (!Enum.TryParse<OrderType>(OrderType, true, out _))
+            yield return new ValidationResult($"'{OrderType}' is not a valid order type", new[] { nameof(OrderType) });
+    }
+
+    public TradingAction ToTradingAction()
+    {
+        return new TradingAction
+        {
+            Id = Guid.NewGuid(),
+            CreatedAt = DateTimeOffset.Now,
+            Symbol = new TradingSymbol(Symbol),
+            Quantity = Quantity,
+            Price = Price,
+            OrderType = Enum.Parse<OrderType>(OrderType),
+            InForce = Enum.Parse<TimeInForce>(InForce)
+        };
     }
 }

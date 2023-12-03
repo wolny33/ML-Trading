@@ -10,8 +10,8 @@ namespace TradingBot.Controllers;
 [ApiController]
 public sealed class PerformanceController : ControllerBase
 {
-    private readonly ITradingActionQuery _query;
     private readonly ISystemClock _clock;
+    private readonly ITradingActionQuery _query;
 
     public PerformanceController(ITradingActionQuery query, ISystemClock clock)
     {
@@ -61,7 +61,7 @@ public sealed class PerformanceController : ControllerBase
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IReadOnlyList<TradingActionResponse>> GetTradeActionsAsync(
-        [FromQuery] TradingActionRequest request)
+        [FromQuery] TradingActionCollectionRequest request)
     {
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
@@ -74,14 +74,33 @@ public sealed class PerformanceController : ControllerBase
     }
 
     /// <summary>
+    ///     Gets trade action by ID.
+    /// </summary>
+    /// <response code="200">OK</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="404">Not found</response>
+    [HttpGet]
+    [Route("trade-actions/{id:guid}")]
+    [ProducesResponseType(typeof(TradingActionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TradingActionResponse>> GetTradeActionsAsync([FromRoute] Guid id)
+    {
+        var result = await _query.GetTradingActionByIdAsync(id, HttpContext.RequestAborted);
+        return result is not null ? result.ToResponse() : NotFound();
+    }
+
+    /// <summary>
     ///     Gets details of trade action.
     /// </summary>
-    /// <param name="id">Id of the trade action which details should be displayed.</param>
+    /// <param name="id">ID of the trade action which details should be displayed.</param>
     /// <response code="200">OK</response>
     /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpGet]
-    [Route("trade-actions/{id:guid}")]
+    [Route("trade-actions/{id:guid}/details")]
     [ProducesResponseType(typeof(TradingActionDetailsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

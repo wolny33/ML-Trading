@@ -9,6 +9,8 @@ namespace TradingBot.Services;
 public interface IActionExecutor
 {
     public Task ExecuteTradingActionsAsync(CancellationToken token = default);
+
+    Task ExecuteActionAsync(TradingAction action, CancellationToken token = default);
 }
 
 public sealed class ActionExecutor : IActionExecutor
@@ -27,13 +29,12 @@ public sealed class ActionExecutor : IActionExecutor
     public async Task ExecuteTradingActionsAsync(CancellationToken token = default)
     {
         var actions = await _strategy.GetTradingActionsAsync();
-        var client = await _clientFactory.CreateTradingClientAsync(token);
-        foreach (var action in actions) await ExecuteActionAsync(action, client, token);
+        foreach (var action in actions) await ExecuteActionAsync(action, token);
     }
 
-    private async Task ExecuteActionAsync(TradingAction action, IAlpacaTradingClient client,
-        CancellationToken token = default)
+    public async Task ExecuteActionAsync(TradingAction action, CancellationToken token = default)
     {
+        using var client = await _clientFactory.CreateTradingClientAsync(token);
         var order = await PostOrderAsync(CreateRequestForAction(action), client, token);
         await _command.SaveActionWithAlpacaIdAsync(action, order.OrderId, token);
     }
