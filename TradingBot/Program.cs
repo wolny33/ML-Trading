@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using TradingBot.Configuration;
 using TradingBot.Database;
+using TradingBot.Exceptions;
 using TradingBot.Services;
 using TradingBot.Services.AlpacaClients;
 
@@ -49,7 +50,7 @@ public sealed class Program
         app.UseSwagger();
         app.UseSwaggerUI();
 
-        app.UseHttpsRedirection();
+        app.UseMiddleware<ExceptionMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();

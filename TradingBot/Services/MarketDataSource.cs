@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using Alpaca.Markets;
+using TradingBot.Exceptions;
 using TradingBot.Models;
 using TradingBot.Services.AlpacaClients;
 
@@ -105,12 +106,12 @@ public sealed class MarketDataSource : IMarketDataSource
                 Volume = b.Volume
             }).ToList();
         }
-        catch (RestClientErrorException e)
+        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
         {
-            throw new UnsuccessfulAlpacaResponseException(e.HttpStatusCode is not null ? (int)e.HttpStatusCode : 0,
-                e.Message);
+            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
         }
-        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException)
+        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
+                                      or TaskCanceledException)
         {
             throw new AlpacaCallFailedException(e);
         }

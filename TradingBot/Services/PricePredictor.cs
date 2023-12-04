@@ -3,6 +3,7 @@ using Flurl.Http;
 using Flurl.Http.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Newtonsoft.Json;
+using TradingBot.Exceptions;
 using TradingBot.Models;
 
 namespace TradingBot.Services;
