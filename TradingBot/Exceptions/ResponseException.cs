@@ -10,7 +10,7 @@ public abstract class ResponseException : Exception
     public int StatusCode { get; protected set; } = StatusCodes.Status500InternalServerError;
     public string ErrorCode { get; }
 
-    public virtual ErrorResponse ToResponse()
+    public virtual object ToResponse()
     {
         return new ErrorResponse
         {

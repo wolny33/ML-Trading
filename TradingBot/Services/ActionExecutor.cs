@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using Alpaca.Markets;
 using TradingBot.Exceptions;
+using TradingBot.Exceptions.Alpaca;
 using TradingBot.Models;
 using TradingBot.Services.AlpacaClients;
 using OrderType = TradingBot.Models.OrderType;
@@ -47,6 +48,14 @@ public sealed class ActionExecutor : IActionExecutor
         {
             return await client.PostOrderAsync(request, token);
         }
+        catch (RequestValidationException e)
+        {
+            throw new BadAlpacaRequestException(e);
+        }
+        catch (RestClientErrorException e) when (GetSpecialCaseException(e) is { } exception)
+        {
+            throw exception;
+        }
         catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
         {
             throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
@@ -56,6 +65,14 @@ public sealed class ActionExecutor : IActionExecutor
         {
             throw new AlpacaCallFailedException(e);
         }
+    }
+
+    private static UnsuccessfulAlpacaResponseException? GetSpecialCaseException(RestClientErrorException exception)
+    {
+        return InvalidFractionalOrderException.FromWrapperException(exception) ??
+               AssetNotFoundException.FromWrapperException(exception) ??
+               InsufficientAssetsException.FromWrapperException(exception) ??
+               InsufficientFundsException.FromWrapperException(exception) as UnsuccessfulAlpacaResponseException;
     }
 
     private static NewOrderRequest CreateRequestForAction(TradingAction action)
