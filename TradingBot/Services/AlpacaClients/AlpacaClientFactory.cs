@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using TradingBot.Configuration;
 using Environments = Alpaca.Markets.Environments;
 
-namespace TradingBot.Services.Alpaca;
+namespace TradingBot.Services.AlpacaClients;
 
 public interface IAlpacaClientFactory
 {

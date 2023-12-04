@@ -1,6 +1,6 @@
 ﻿using Flurl.Http;
 
-namespace TradingBot.Services.Alpaca;
+namespace TradingBot.Services.AlpacaClients;
 
 public interface IAlpacaAssetsClient : IDisposable
 {

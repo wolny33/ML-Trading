@@ -4,7 +4,7 @@ using Flurl.Http;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using TradingBot.Dto;
-using TradingBot.Services.Alpaca;
+using TradingBot.Services.AlpacaClients;
 
 namespace TradingBotTests;
 

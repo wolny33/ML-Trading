@@ -1,4 +1,4 @@
-﻿namespace TradingBot.Services.Alpaca;
+﻿namespace TradingBot.Services.AlpacaClients;
 
 public sealed class AssetResponse
 {
