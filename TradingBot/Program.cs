@@ -8,7 +8,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using TradingBot.Configuration;
 using TradingBot.Database;
 using TradingBot.Services;
-using TradingBot.Services.Alpaca;
+using TradingBot.Services.AlpacaClients;
 
 namespace TradingBot;
 
@@ -142,5 +142,6 @@ public sealed class Program
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();
         services.AddTransient<IInvestmentConfigService, InvestmentConfigService>();
         services.AddTransient<ITradingActionQuery, TradingActionQuery>();
+        services.AddTransient<ITradingActionCommand, TradingActionCommand>();
     }
 }

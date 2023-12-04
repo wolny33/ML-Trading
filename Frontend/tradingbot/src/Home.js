@@ -13,6 +13,7 @@ const LOGIN_URL = '/login';
 const INVESTMENT_URL = '/investment';
 const PERFORMANCE_URL = '/performance';
 const TRADE_ACTIONS_URL = '/trade-actions';
+const TRADE_ACTION_DETAILS_URL = '/details'
 const STRATEGY_URL = '/strategy';
 const ASSETS_URL = '/assets';
 
@@ -195,7 +196,7 @@ const Home = () => {
 
   const getTradeActionDetails = async (tradeActionId, storedUserName, storedPwd) => {
     try{
-      const response = await axios.get(PERFORMANCE_URL + TRADE_ACTIONS_URL + '/' + tradeActionId,
+      const response = await axios.get(PERFORMANCE_URL + TRADE_ACTIONS_URL + '/' + tradeActionId + TRADE_ACTION_DETAILS_URL,
         {
           auth: {
               username: storedUserName,

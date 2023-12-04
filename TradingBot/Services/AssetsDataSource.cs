@@ -1,7 +1,7 @@
 ﻿using System.Net.Sockets;
 using Alpaca.Markets;
 using TradingBot.Models;
-using TradingBot.Services.Alpaca;
+using TradingBot.Services.AlpacaClients;
 
 namespace TradingBot.Services;
 

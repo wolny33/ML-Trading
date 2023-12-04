@@ -2,10 +2,11 @@
 
 namespace TradingBot.Dto;
 
-public class TradingActionRequest : IValidatableObject
+public class TradingActionCollectionRequest : IValidatableObject
 {
     public DateTimeOffset? Start { get; init; }
     public DateTimeOffset? End { get; init; }
+    public bool Mocked { get; init; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
