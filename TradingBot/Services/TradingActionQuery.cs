@@ -4,6 +4,7 @@ using Alpaca.Markets;
 using Microsoft.EntityFrameworkCore;
 using TradingBot.Database;
 using TradingBot.Database.Entities;
+using TradingBot.Exceptions;
 using TradingBot.Models;
 using TradingBot.Services.AlpacaClients;
 using OrderType = TradingBot.Models.OrderType;
@@ -116,12 +117,12 @@ public sealed class TradingActionQuery : ITradingActionQuery
                 : null;
             entity.AverageFillPrice = (double?)response.AverageFillPrice;
         }
-        catch (RestClientErrorException e)
+        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
         {
-            throw new UnsuccessfulAlpacaResponseException(e.HttpStatusCode is not null ? (int)e.HttpStatusCode : 0,
-                e.Message);
+            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
         }
-        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException)
+        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
+                                      or TaskCanceledException)
         {
             throw new AlpacaCallFailedException(e);
         }
