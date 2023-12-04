@@ -84,7 +84,7 @@ public sealed class Strategy : IStrategy
 
         for (int i = 1; i <= 5; i++)
         {
-            if (closingPrices[i] > closingPrices[i - 1])
+            if (closingPrices[i] > closingPrices[0])
             {
                 isPriceDecreasing = false;
                 break;
