@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using TradingBot.Configuration;
 using TradingBot.Database;
@@ -18,6 +19,10 @@ public sealed class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        builder.Host.UseSerilog((context, loggerConfiguration) =>
+            loggerConfiguration.ReadFrom.Configuration(context.Configuration)
+        );
 
         ConfigureConfiguration(builder.Services, builder.Configuration);
         ConfigureServices(builder.Services, builder.Configuration);
