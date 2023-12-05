@@ -1,6 +1,7 @@
 ﻿using Alpaca.Markets;
 using TradingBot.Database.Entities;
 using TradingBot.Dto;
+using TradingBot.Exceptions;
 
 namespace TradingBot.Models;
 
@@ -11,8 +12,6 @@ public enum OrderType
     MarketSell,
     MarketBuy
 }
-
-public sealed record TradingSymbol(string Value);
 
 public sealed class TradingAction
 {
@@ -27,6 +26,7 @@ public sealed class TradingAction
     public DateTimeOffset? ExecutedAt { get; init; }
     public Guid? AlpacaId { get; init; }
     public decimal? AverageFillPrice { get; init; }
+    public Error? Error { get; init; }
 
     public static TradingAction FromEntity(TradingActionEntity entity)
     {
@@ -44,7 +44,10 @@ public sealed class TradingAction
                 ? DateTimeOffset.FromUnixTimeMilliseconds(entity.ExecutionTimestamp.Value)
                 : null,
             AlpacaId = entity.AlpacaId,
-            AverageFillPrice = (decimal?)entity.AverageFillPrice
+            AverageFillPrice = (decimal?)entity.AverageFillPrice,
+            Error = entity.ErrorCode is not null && entity.ErrorMessage is not null
+                ? new Error(entity.ErrorCode, entity.ErrorMessage)
+                : null
         };
     }
 
@@ -84,7 +87,8 @@ public sealed class TradingAction
             Status = Status?.ToString() ?? "NotPosted",
             ExecutedAt = ExecutedAt,
             AlpacaId = AlpacaId,
-            AverageFillPrice = AverageFillPrice
+            AverageFillPrice = AverageFillPrice,
+            Error = Error?.ToResponse()
         };
     }
 

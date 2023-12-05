@@ -53,10 +53,11 @@ public sealed class ActionExecutor : IActionExecutor
         {
             await ExecuteActionAsync(action, token);
         }
-        catch (Exception e) when (e is BadAlpacaRequestException or InvalidFractionalOrderException
-                                      or AssetNotFoundException or InsufficientAssetsException
-                                      or InsufficientFundsException)
+        catch (ResponseException e) when (e is BadAlpacaRequestException or InvalidFractionalOrderException
+                                              or AssetNotFoundException or InsufficientAssetsException
+                                              or InsufficientFundsException)
         {
+            await _command.SaveActionWithErrorAsync(action, e.GetError(), token);
         }
     }
 

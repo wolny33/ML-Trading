@@ -1,4 +1,6 @@
-﻿namespace TradingBot.Exceptions;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace TradingBot.Exceptions;
 
 public abstract class ResponseException : Exception
 {
@@ -12,16 +14,32 @@ public abstract class ResponseException : Exception
 
     public virtual object ToResponse()
     {
+        return GetError().ToResponse();
+    }
+
+    public Error GetError()
+    {
+        return new Error(ErrorCode, Message);
+    }
+}
+
+public sealed record Error(string Code, string Message)
+{
+    public ErrorResponse ToResponse()
+    {
         return new ErrorResponse
         {
-            Code = ErrorCode,
+            Code = Code,
             Message = Message
         };
     }
 }
 
-public class ErrorResponse
+public sealed class ErrorResponse
 {
+    [Required]
     public required string Code { get; init; }
+
+    [Required]
     public required string Message { get; init; }
 }

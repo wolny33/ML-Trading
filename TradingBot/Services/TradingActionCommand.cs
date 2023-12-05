@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TradingBot.Database;
+using TradingBot.Exceptions;
 using TradingBot.Models;
 
 namespace TradingBot.Services;
@@ -7,6 +8,7 @@ namespace TradingBot.Services;
 public interface ITradingActionCommand
 {
     Task SaveActionWithAlpacaIdAsync(TradingAction action, Guid alpacaId, CancellationToken token = default);
+    Task SaveActionWithErrorAsync(TradingAction action, Error error, CancellationToken token = default);
 }
 
 public sealed class TradingActionCommand : ITradingActionCommand
@@ -25,6 +27,19 @@ public sealed class TradingActionCommand : ITradingActionCommand
 
         var entity = action.ToEntity();
         entity.AlpacaId = alpacaId;
+
+        context.TradingActions.Add(entity);
+        await context.SaveChangesAsync(token);
+    }
+
+    public async Task SaveActionWithErrorAsync(TradingAction action, Error error,
+        CancellationToken token = default)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+
+        var entity = action.ToEntity();
+        entity.ErrorCode = error.Code;
+        entity.ErrorMessage = error.Message;
 
         context.TradingActions.Add(entity);
         await context.SaveChangesAsync(token);
