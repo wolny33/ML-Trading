@@ -4,6 +4,7 @@ using TradingBot.Exceptions;
 using TradingBot.Exceptions.Alpaca;
 using TradingBot.Models;
 using TradingBot.Services.AlpacaClients;
+using ILogger = Serilog.ILogger;
 using OrderType = TradingBot.Models.OrderType;
 
 namespace TradingBot.Services;
@@ -19,13 +20,16 @@ public sealed class ActionExecutor : IActionExecutor
 {
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ITradingActionCommand _command;
+    private readonly ILogger _logger;
     private readonly IStrategy _strategy;
 
-    public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ITradingActionCommand command)
+    public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ITradingActionCommand command,
+        ILogger logger)
     {
         _strategy = strategy;
         _clientFactory = clientFactory;
         _command = command;
+        _logger = logger.ForContext<ActionExecutor>();
     }
 
     public async Task ExecuteTradingActionsAsync(CancellationToken token = default)
@@ -36,12 +40,13 @@ public sealed class ActionExecutor : IActionExecutor
 
     public async Task ExecuteActionAsync(TradingAction action, CancellationToken token = default)
     {
+        _logger.Debug("Executing action {@Action}", action);
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var order = await PostOrderAsync(CreateRequestForAction(action), client, token);
         await _command.SaveActionWithAlpacaIdAsync(action, order.OrderId, token);
     }
 
-    private static async Task<IOrder> PostOrderAsync(NewOrderRequest request, IAlpacaTradingClient client,
+    private async Task<IOrder> PostOrderAsync(NewOrderRequest request, IAlpacaTradingClient client,
         CancellationToken token = default)
     {
         try
@@ -50,19 +55,23 @@ public sealed class ActionExecutor : IActionExecutor
         }
         catch (RequestValidationException e)
         {
+            _logger.Warning(e, "Alpaca request failed validation");
             throw new BadAlpacaRequestException(e);
         }
         catch (RestClientErrorException e) when (GetSpecialCaseException(e) is { } exception)
         {
+            _logger.Warning(exception, "Alpaca request was invalid");
             throw exception;
         }
         catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
         {
+            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
             throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
         }
         catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
                                       or TaskCanceledException)
         {
+            _logger.Error(e, "Alpaca request failed");
             throw new AlpacaCallFailedException(e);
         }
     }

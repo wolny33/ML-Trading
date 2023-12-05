@@ -1,5 +1,6 @@
 ﻿using Alpaca.Markets;
 using NSubstitute;
+using Serilog;
 using TradingBot.Models;
 using TradingBot.Services;
 using TradingBot.Services.AlpacaClients;
@@ -39,7 +40,7 @@ public sealed class ActionExecutorTests
 
         var command = Substitute.For<ITradingActionCommand>();
 
-        var actionExecutor = new ActionExecutor(strategy, clientFactory, command);
+        var actionExecutor = new ActionExecutor(strategy, clientFactory, command, Substitute.For<ILogger>());
 
         await actionExecutor.ExecuteTradingActionsAsync();
 

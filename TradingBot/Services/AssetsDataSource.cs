@@ -3,6 +3,7 @@ using Alpaca.Markets;
 using TradingBot.Exceptions;
 using TradingBot.Models;
 using TradingBot.Services.AlpacaClients;
+using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
 
@@ -16,14 +17,17 @@ public interface IAssetsDataSource
 public sealed class AssetsDataSource : IAssetsDataSource
 {
     private readonly IAlpacaClientFactory _clientFactory;
+    private readonly ILogger _logger;
 
-    public AssetsDataSource(IAlpacaClientFactory clientFactory)
+    public AssetsDataSource(IAlpacaClientFactory clientFactory, ILogger logger)
     {
         _clientFactory = clientFactory;
+        _logger = logger.ForContext<AssetsDataSource>();
     }
 
     public async Task<Assets> GetAssetsAsync(CancellationToken token = default)
     {
+        _logger.Debug("Getting assets");
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var (account, positions) = await SendRequestsAsync(client, token);
 
@@ -81,9 +85,11 @@ public sealed class AssetsDataSource : IAssetsDataSource
         });
     }
 
-    private static async Task<AlpacaResponses> SendRequestsAsync(IAlpacaTradingClient client,
+    private async Task<AlpacaResponses> SendRequestsAsync(IAlpacaTradingClient client,
         CancellationToken token = default)
     {
+        _logger.Debug("Sending requests to Alpaca");
+
         try
         {
             var account = await client.GetAccountAsync(token);
@@ -92,11 +98,13 @@ public sealed class AssetsDataSource : IAssetsDataSource
         }
         catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
         {
+            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
             throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
         }
         catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
                                       or TaskCanceledException)
         {
+            _logger.Error(e, "Alpaca request failed");
             throw new AlpacaCallFailedException(e);
         }
     }

@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TradingBot.Database;
 using TradingBot.Models;
-using TradingBot.Services.AlpacaClients;
 
 namespace TradingBot.Services;
 
@@ -14,7 +13,7 @@ public sealed class TradingActionCommand : ITradingActionCommand
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
-    public TradingActionCommand(IDbContextFactory<AppDbContext> dbContextFactory, IAlpacaClientFactory clientFactory)
+    public TradingActionCommand(IDbContextFactory<AppDbContext> dbContextFactory)
     {
         _dbContextFactory = dbContextFactory;
     }

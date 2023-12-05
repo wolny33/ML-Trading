@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Newtonsoft.Json;
 using TradingBot.Exceptions;
 using TradingBot.Models;
+using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
 
@@ -20,24 +21,30 @@ public sealed class PricePredictor : IPricePredictor
 {
     private readonly ISystemClock _clock;
     private readonly IFlurlClientFactory _flurlFactory;
+    private readonly ILogger _logger;
     private readonly IMarketDataSource _marketData;
 
-    public PricePredictor(IMarketDataSource marketData, ISystemClock clock, IFlurlClientFactory flurlFactory)
+    public PricePredictor(IMarketDataSource marketData, ISystemClock clock, IFlurlClientFactory flurlFactory,
+        ILogger logger)
     {
         _marketData = marketData;
         _clock = clock;
         _flurlFactory = flurlFactory;
+        _logger = logger.ForContext<PricePredictor>();
     }
 
     public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default)
     {
         const int requiredDays = 11;
         var today = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
+
+        _logger.Debug("Getting predictions for {Today}", today);
         var marketData = await _marketData.GetPricesAsync(SubtractWorkDays(today, 2 * requiredDays), today, token);
 
         var result = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in marketData)
         {
+            _logger.Verbose("Getting predictions for {Token}", symbol.Value);
             var prediction = await PredictForSymbolAsync(data, token);
             result[symbol] = prediction;
         }
@@ -76,6 +83,7 @@ public sealed class PricePredictor : IPricePredictor
     private async Task<PredictorResponse> SendRequestAsync(PredictorRequest request,
         CancellationToken token = default)
     {
+        _logger.Verbose("Sending request to predictor service");
         using var client = _flurlFactory.Get("http://predictor:8000");
 
         try
@@ -89,6 +97,7 @@ public sealed class PricePredictor : IPricePredictor
         }
         catch (Exception e) when (e is HttpRequestException or SocketException)
         {
+            _logger.Error(e, "Predictor call failed");
             throw new PredictorCallFailedException(e);
         }
     }
