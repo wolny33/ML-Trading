@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Diagnostics;
+using System.Net.Sockets;
 using Alpaca.Markets;
 using TradingBot.Exceptions;
 using TradingBot.Exceptions.Alpaca;
@@ -93,14 +94,14 @@ public sealed class ActionExecutor : IActionExecutor
                 OrderType.LimitBuy => OrderSide.Buy,
                 OrderType.MarketSell => OrderSide.Sell,
                 OrderType.MarketBuy => OrderSide.Buy,
-                _ => throw new ArgumentOutOfRangeException()
+                _ => throw new UnreachableException($"Switch on {nameof(OrderType)} should be exhaustive")
             }, action.OrderType switch
             {
                 OrderType.LimitSell => Alpaca.Markets.OrderType.Limit,
                 OrderType.LimitBuy => Alpaca.Markets.OrderType.Limit,
                 OrderType.MarketSell => Alpaca.Markets.OrderType.Market,
                 OrderType.MarketBuy => Alpaca.Markets.OrderType.Market,
-                _ => throw new ArgumentOutOfRangeException()
+                _ => throw new UnreachableException($"Switch on {nameof(OrderType)} should be exhaustive")
             }, action.InForce);
 
         if (order.Type == Alpaca.Markets.OrderType.Limit) order.LimitPrice = action.Price;
