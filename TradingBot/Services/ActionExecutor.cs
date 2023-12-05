@@ -36,7 +36,7 @@ public sealed class ActionExecutor : IActionExecutor
     public async Task ExecuteTradingActionsAsync(CancellationToken token = default)
     {
         var actions = await _strategy.GetTradingActionsAsync();
-        foreach (var action in actions) await ExecuteActionAsync(action, token);
+        foreach (var action in actions) await ExecuteActionAndHandleErrorsAsync(action, token);
     }
 
     public async Task ExecuteActionAsync(TradingAction action, CancellationToken token = default)
@@ -45,6 +45,19 @@ public sealed class ActionExecutor : IActionExecutor
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var order = await PostOrderAsync(CreateRequestForAction(action), client, token);
         await _command.SaveActionWithAlpacaIdAsync(action, order.OrderId, token);
+    }
+
+    private async Task ExecuteActionAndHandleErrorsAsync(TradingAction action, CancellationToken token)
+    {
+        try
+        {
+            await ExecuteActionAsync(action, token);
+        }
+        catch (Exception e) when (e is BadAlpacaRequestException or InvalidFractionalOrderException
+                                      or AssetNotFoundException or InsufficientAssetsException
+                                      or InsufficientFundsException)
+        {
+        }
     }
 
     private async Task<IOrder> PostOrderAsync(NewOrderRequest request, IAlpacaTradingClient client,
