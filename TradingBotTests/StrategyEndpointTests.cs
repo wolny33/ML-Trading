@@ -31,7 +31,7 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
     public async Task ShouldGetStrategySettings()
     {
         using var client = _testSuite.CreateAuthenticatedClient();
-        var strategySettings = await client.Request("api", "strategy").GetJsonAsync<StrategySettingsResponse>();
+        var strategySettings = await client.Request("api", "strategy").GetJsonAsync<StrategyParametersResponse>();
 
         strategySettings.Should().BeEquivalentTo(new
         {
@@ -47,7 +47,7 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
         {
             importantProperty = "new value"
         });
-        var strategySettings = await response.GetJsonAsync<StrategySettingsResponse>();
+        var strategySettings = await response.GetJsonAsync<StrategyParametersResponse>();
 
         strategySettings.Should().BeEquivalentTo(new
         {
