@@ -141,6 +141,7 @@ public sealed class Program
         services.AddScoped<CredentialsCommand>();
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();
         services.AddTransient<IInvestmentConfigService, InvestmentConfigService>();
+        services.AddTransient<IStrategyParametersService, StrategyParametersService>();
         services.AddTransient<ITradingActionQuery, TradingActionQuery>();
         services.AddTransient<ITradingActionCommand, TradingActionCommand>();
     }
