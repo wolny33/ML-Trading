@@ -1,4 +1,5 @@
 ﻿using Flurl.Http;
+using TradingBot.Exceptions;
 
 namespace TradingBot.Services.AlpacaClients;
 

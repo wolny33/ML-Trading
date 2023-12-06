@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using TradingBot.Exceptions;
 
 namespace TradingBot.Dto;
 
@@ -28,9 +29,11 @@ public sealed class TradingActionResponse
     [Required]
     public required string Status { get; set; }
 
-    public DateTimeOffset? ExecutedAt { get; init; }
+    public required DateTimeOffset? ExecutedAt { get; init; }
 
-    public Guid? AlpacaId { get; init; }
+    public required Guid? AlpacaId { get; init; }
 
-    public decimal? AverageFillPrice { get; init; }
+    public required decimal? AverageFillPrice { get; init; }
+
+    public required ErrorResponse? Error { get; init; }
 }

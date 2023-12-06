@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TradingBot.Configuration;
 using TradingBot.Database;
+using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
 
@@ -13,10 +14,12 @@ public interface ITestModeConfigService
 public sealed class TestModeConfigService : ITestModeConfigService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly ILogger _logger;
 
-    public TestModeConfigService(IDbContextFactory<AppDbContext> dbContextFactory)
+    public TestModeConfigService(IDbContextFactory<AppDbContext> dbContextFactory, ILogger logger)
     {
         _dbContextFactory = dbContextFactory;
+        _logger = logger;
     }
 
     public async Task<TestModeConfiguration> GetConfigurationAsync(CancellationToken token = default)
@@ -41,6 +44,7 @@ public sealed class TestModeConfigService : ITestModeConfigService
         entity.Enabled = enabled;
         await context.SaveChangesAsync(token);
 
+        _logger.Information($"Test mode was {(enabled ? "enabled" : "disabled")}");
         return TestModeConfiguration.FromEntity(entity);
     }
 }

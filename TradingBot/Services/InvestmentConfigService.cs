@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TradingBot.Configuration;
 using TradingBot.Database;
+using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
 
@@ -13,10 +14,12 @@ public interface IInvestmentConfigService
 public sealed class InvestmentConfigService : IInvestmentConfigService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly ILogger _logger;
 
-    public InvestmentConfigService(IDbContextFactory<AppDbContext> dbContextFactory)
+    public InvestmentConfigService(IDbContextFactory<AppDbContext> dbContextFactory, ILogger logger)
     {
         _dbContextFactory = dbContextFactory;
+        _logger = logger.ForContext<InvestmentConfigService>();
     }
 
     public async Task<InvestmentConfiguration> GetConfigurationAsync(CancellationToken token = default)
@@ -41,6 +44,7 @@ public sealed class InvestmentConfigService : IInvestmentConfigService
         entity.Enabled = enabled;
         await context.SaveChangesAsync(token);
 
+        _logger.Information($"Automatic investing was {(enabled ? "enabled" : "disabled")}");
         return InvestmentConfiguration.FromEntity(entity);
     }
 }

@@ -4,8 +4,10 @@ using Alpaca.Markets;
 using Microsoft.EntityFrameworkCore;
 using TradingBot.Database;
 using TradingBot.Database.Entities;
+using TradingBot.Exceptions;
 using TradingBot.Models;
 using TradingBot.Services.AlpacaClients;
+using ILogger = Serilog.ILogger;
 using OrderType = TradingBot.Models.OrderType;
 
 namespace TradingBot.Services;
@@ -26,11 +28,14 @@ public sealed class TradingActionQuery : ITradingActionQuery
 {
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly ILogger _logger;
 
-    public TradingActionQuery(IDbContextFactory<AppDbContext> dbContextFactory, IAlpacaClientFactory clientFactory)
+    public TradingActionQuery(IDbContextFactory<AppDbContext> dbContextFactory, IAlpacaClientFactory clientFactory,
+        ILogger logger)
     {
         _dbContextFactory = dbContextFactory;
         _clientFactory = clientFactory;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(DateTimeOffset start, DateTimeOffset end,
@@ -99,30 +104,38 @@ public sealed class TradingActionQuery : ITradingActionQuery
         });
     }
 
-    private static async Task UpdateActionEntityAsync(TradingActionEntity entity, IAlpacaTradingClient client,
+    private async Task UpdateActionEntityAsync(TradingActionEntity entity, IAlpacaTradingClient client,
         CancellationToken token = default)
     {
         if (entity.AlpacaId is null || entity.ExecutionTimestamp is not null) return;
 
+        _logger.Verbose("Updating action {Id}: {Action}", entity.Id, entity);
+
         try
         {
             var response = await client.GetOrderAsync(entity.AlpacaId.Value, token);
-
             var executedAt = response.FilledAtUtc ??
                              response.CancelledAtUtc ?? response.ExpiredAtUtc ?? response.FailedAtUtc;
+
+            _logger.Verbose(
+                "Retrieved properties: Execution time = {ExecutionTime}, Status = {Status}, Fill price = {FillPrice}",
+                executedAt, response.OrderStatus.ToString(), response.AverageFillPrice);
+
             entity.Status = response.OrderStatus;
             entity.ExecutionTimestamp = executedAt is not null
                 ? new DateTimeOffset(executedAt.Value, TimeSpan.Zero).ToUnixTimeMilliseconds()
                 : null;
             entity.AverageFillPrice = (double?)response.AverageFillPrice;
         }
-        catch (RestClientErrorException e)
+        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
         {
-            throw new UnsuccessfulAlpacaResponseException(e.HttpStatusCode is not null ? (int)e.HttpStatusCode : 0,
-                e.Message);
+            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
+            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
         }
-        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException)
+        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
+                                      or TaskCanceledException)
         {
+            _logger.Error(e, "Alpaca request failed");
             throw new AlpacaCallFailedException(e);
         }
     }

@@ -19,6 +19,8 @@ public sealed class TradingActionEntity
     public long? ExecutionTimestamp { get; set; }
     public Guid? AlpacaId { get; set; }
     public double? AverageFillPrice { get; set; }
+    public string? ErrorCode { get; set; }
+    public string? ErrorMessage { get; set; }
 
     [Required]
     public TradingActionDetailsEntity Details { get; init; } = null!;
