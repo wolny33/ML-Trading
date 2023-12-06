@@ -14,11 +14,11 @@ namespace TradingBotTests;
 public sealed class ActionExecutorTests
 {
     private readonly Guid _actionId = Guid.NewGuid();
-    private readonly ITradingActionCommand _command;
     private readonly ActionExecutor _executor;
     private readonly DateTimeOffset _now = new(2023, 12, 1, 20, 15, 0, TimeSpan.Zero);
     private readonly IStrategy _strategy;
     private readonly IAlpacaTradingClient _tradingClient = Substitute.For<IAlpacaTradingClient>();
+    private readonly ITradingTaskDetailsUpdater _tradingTask;
 
     public ActionExecutorTests()
     {
@@ -30,9 +30,9 @@ public sealed class ActionExecutorTests
         clientFactory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClient);
 
         _strategy = Substitute.For<IStrategy>();
-        _command = Substitute.For<ITradingActionCommand>();
+        _tradingTask = Substitute.For<ITradingTaskDetailsUpdater>();
         var logger = Substitute.For<ILogger>();
-        _executor = new ActionExecutor(_strategy, clientFactory, _command, logger);
+        _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask);
     }
 
     [Fact]
@@ -63,8 +63,8 @@ public sealed class ActionExecutorTests
             order.Duration == TimeInForce.Day &&
             order.LimitPrice == null
         ), Arg.Any<CancellationToken>());
-        await _command.Received(1).SaveActionWithAlpacaIdAsync(actions[0], _actionId, Arg.Any<CancellationToken>());
-        await _command.Received(1).SaveActionWithAlpacaIdAsync(actions[1], _actionId, Arg.Any<CancellationToken>());
+        await _tradingTask.Received(1).SaveActionWithAlpacaIdAsync(actions[0], _actionId, Arg.Any<CancellationToken>());
+        await _tradingTask.Received(1).SaveActionWithAlpacaIdAsync(actions[1], _actionId, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public sealed class ActionExecutorTests
             order.Duration == TimeInForce.Day &&
             order.LimitPrice == null
         ), Arg.Any<CancellationToken>());
-        await _command.Received(1).SaveActionWithErrorAsync(action,
+        await _tradingTask.Received(1).SaveActionWithErrorAsync(action,
             Arg.Is<Error>(e =>
                 e.Code == "bad-alpaca-request" &&
                 e.Message == "Validation failed for property 'quantity': quantity must be positive"),

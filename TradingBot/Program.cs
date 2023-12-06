@@ -140,19 +140,21 @@ public sealed class Program
     {
         services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(GetConnectionString(config)));
         services.AddSingleton<IFlurlClientFactory, PerBaseUrlFlurlClientFactory>();
-
         services.AddSingleton<IAlpacaClientFactory, AlpacaClientFactory>();
+
         services.AddScoped<IMarketDataSource, MarketDataSource>();
         services.AddScoped<IPricePredictor, PricePredictor>();
         services.AddScoped<IAssetsDataSource, AssetsDataSource>();
         services.AddScoped<IStrategy, Strategy>();
         services.AddScoped<IActionExecutor, ActionExecutor>();
         services.AddScoped<IExchangeCalendar, ExchangeCalendar>();
+        services.AddScoped<ITradingTaskDetailsUpdater, TradingTaskDetailsUpdater>();
 
-        services.AddScoped<CredentialsCommand>();
+        services.AddTransient<CredentialsCommand>();
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();
         services.AddTransient<IInvestmentConfigService, InvestmentConfigService>();
         services.AddTransient<ITradingActionQuery, TradingActionQuery>();
         services.AddTransient<ITradingActionCommand, TradingActionCommand>();
+        services.AddTransient<ITradingTaskCommand, TradingTaskCommand>();
     }
 }
