@@ -156,5 +156,6 @@ public sealed class Program
         services.AddTransient<ITradingActionQuery, TradingActionQuery>();
         services.AddTransient<ITradingActionCommand, TradingActionCommand>();
         services.AddTransient<ITradingTaskCommand, TradingTaskCommand>();
+        services.AddTransient<ITradingTaskQuery, TradingTaskQuery>();
     }
 }

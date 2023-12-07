@@ -1,4 +1,5 @@
 ﻿using TradingBot.Database.Entities;
+using TradingBot.Dto;
 
 namespace TradingBot.Models;
 
@@ -25,6 +26,18 @@ public sealed class TradingTask
                     : null,
             State = entity.State,
             StateDetails = entity.StateDetails
+        };
+    }
+
+    public TradingTaskResponse ToResponse()
+    {
+        return new TradingTaskResponse
+        {
+            Id = Id,
+            StartedAt = StartedAt,
+            FinishedAt = FinishedAt,
+            State = State.ToString(),
+            StateDetails = StateDetails
         };
     }
 }

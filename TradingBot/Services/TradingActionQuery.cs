@@ -19,6 +19,8 @@ public interface ITradingActionQuery
 
     Task<TradingAction?> GetTradingActionByIdAsync(Guid id, CancellationToken token = default);
 
+    Task<IReadOnlyList<TradingAction>?> GetActionsForTaskWithIdAsync(Guid taskId, CancellationToken token = default);
+
     IEnumerable<TradingAction> CreateMockedTradingActions(DateTimeOffset start, DateTimeOffset end);
 }
 
@@ -63,6 +65,24 @@ public sealed class TradingActionQuery : ITradingActionQuery
         await context.SaveChangesAsync(token);
 
         return TradingAction.FromEntity(entity);
+    }
+
+    public async Task<IReadOnlyList<TradingAction>?> GetActionsForTaskWithIdAsync(Guid taskId,
+        CancellationToken token = default)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+        var entities =
+            (await context.TradingTasks.Include(t => t.TradingActions).FirstOrDefaultAsync(t => t.Id == taskId, token))
+            ?.TradingActions;
+
+        if (entities is null) return null;
+
+        using var client = await _clientFactory.CreateTradingClientAsync(token);
+        // ReSharper disable once AccessToDisposedClosure
+        await Task.WhenAll(entities.Select(e => UpdateActionEntityAsync(e, client, token)));
+        await context.SaveChangesAsync(token);
+
+        return entities.Select(TradingAction.FromEntity).ToList();
     }
 
     public IEnumerable<TradingAction> CreateMockedTradingActions(DateTimeOffset start, DateTimeOffset end)
