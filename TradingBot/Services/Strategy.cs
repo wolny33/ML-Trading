@@ -67,11 +67,12 @@ public sealed class Strategy : IStrategy
             else if (IsPriceIncreasing(closingPrices, minDaysIncreasing))
             {
                 decimal growthRate = CalculateAverageGrowthRate(closingPrices);
-
-                var buyLimitPrice = closingPrices[0] + (closingPrices[1] - closingPrices[0]) / 2;
+                var lowPrice0 = prediction.Value.Prices.Select(dailyPrice => dailyPrice.LowPrice).ToList()[0];
+                var lowPrice1 = prediction.Value.Prices.Select(dailyPrice => dailyPrice.LowPrice).ToList()[1];
+                var buyLimitPrice = lowPrice0 + (lowPrice1 - lowPrice0) / 2;
                 if(currentPrice != null)
                 {
-                    var tomorrowLowPrice = prediction.Value.Prices.Select(dailyPrice => dailyPrice.LowPrice).ToList()[0];
+                    var tomorrowLowPrice = lowPrice0;
                     if (tomorrowLowPrice > currentPrice.Low)
                         buyLimitPrice = currentPrice.Low + (tomorrowLowPrice - currentPrice.Low) / 2;
                     else
@@ -163,7 +164,7 @@ public sealed class Strategy : IStrategy
 
             if (i == topGrowingSymbols.Count - 1)
             {
-                quantity = (int)Math.Ceiling(cashAvaliable / price);
+                quantity = (int)Math.Floor(cashAvaliable / price);
             }
 
             if (quantity * price > cashAvaliable || quantity == 0)

@@ -55,6 +55,14 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
         });
         var strategySettings = await response.GetJsonAsync<StrategyParametersResponse>();
 
+        await client.Request("api", "strategy").PutJsonAsync(new
+        {
+            MaxStocksBuyCount = 10,
+            MinDaysDecreasing = 5,
+            MinDaysIncreasing = 5,
+            TopGrowingSymbolsBuyRatio = 0.4m
+        });
+
         strategySettings.Should().BeEquivalentTo(new
         {
             MaxStocksBuyCount = 12,
