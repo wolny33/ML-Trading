@@ -29,7 +29,7 @@ public sealed class TradingActionCommand : ITradingActionCommand
 
         var entity = action.ToEntity();
         entity.AlpacaId = alpacaId;
-        entity.TaskId = taskId;
+        entity.TradingTaskId = taskId;
 
         context.TradingActions.Add(entity);
         await context.SaveChangesAsync(token);
@@ -43,7 +43,7 @@ public sealed class TradingActionCommand : ITradingActionCommand
         var entity = action.ToEntity();
         entity.ErrorCode = error.Code;
         entity.ErrorMessage = error.Message;
-        entity.TaskId = taskId;
+        entity.TradingTaskId = taskId;
 
         context.TradingActions.Add(entity);
         await context.SaveChangesAsync(token);

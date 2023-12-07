@@ -50,7 +50,7 @@ public sealed class TradingAction
             Error = entity.ErrorCode is not null && entity.ErrorMessage is not null
                 ? new Error(entity.ErrorCode, entity.ErrorMessage)
                 : null,
-            TaskId = entity.TaskId
+            TaskId = entity.TradingTaskId
         };
     }
 
@@ -69,7 +69,7 @@ public sealed class TradingAction
             ExecutionTimestamp = ExecutedAt?.ToUnixTimeMilliseconds(),
             AlpacaId = AlpacaId,
             AverageFillPrice = (double?)AverageFillPrice,
-            TaskId = TaskId
+            TradingTaskId = TaskId
         };
     }
 
