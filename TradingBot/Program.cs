@@ -29,7 +29,7 @@ public sealed class Program
         ConfigureServices(builder.Services, builder.Configuration);
         ConfigureAuth(builder.Services);
 
-        builder.Services.AddQuartz(PeriodicExecutionJob.RegisterJob);
+        builder.Services.AddQuartz(TradingTaskJob.RegisterJob);
         builder.Services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
         builder.Services.AddControllers();

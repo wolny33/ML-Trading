@@ -4,7 +4,7 @@ using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
 
-public sealed class PeriodicExecutionJob : IJob
+public sealed class TradingTaskJob : IJob
 {
     private readonly IActionExecutor _actionExecutor;
     private readonly IExchangeCalendar _calendar;
@@ -12,7 +12,7 @@ public sealed class PeriodicExecutionJob : IJob
     private readonly ILogger _logger;
     private readonly ITradingTaskDetailsUpdater _tradingTask;
 
-    public PeriodicExecutionJob(IActionExecutor actionExecutor, IInvestmentConfigService investmentConfig,
+    public TradingTaskJob(IActionExecutor actionExecutor, IInvestmentConfigService investmentConfig,
         IExchangeCalendar calendar, ITradingTaskDetailsUpdater tradingTask, ILogger logger)
     {
         _actionExecutor = actionExecutor;
@@ -22,7 +22,6 @@ public sealed class PeriodicExecutionJob : IJob
         _logger = logger;
     }
 
-    // TODO: Test
     public async Task Execute(IJobExecutionContext context)
     {
         try
@@ -56,10 +55,10 @@ public sealed class PeriodicExecutionJob : IJob
 
     public static void RegisterJob(IServiceCollectionQuartzConfigurator options)
     {
-        var jobKey = new JobKey(nameof(PeriodicExecutionJob));
-        options.AddJob<PeriodicExecutionJob>(opts => opts.WithIdentity(jobKey));
+        var jobKey = new JobKey(nameof(TradingTaskJob));
+        options.AddJob<TradingTaskJob>(opts => opts.WithIdentity(jobKey));
         options.AddTrigger(opts =>
-            opts.ForJob(jobKey).WithIdentity($"{nameof(PeriodicExecutionJob)}Trigger")
+            opts.ForJob(jobKey).WithIdentity($"{nameof(TradingTaskJob)}Trigger")
                 .WithDailyTimeIntervalSchedule(schedule =>
                     schedule.OnEveryDay().StartingDailyAt(TimeOfDay.HourAndMinuteOfDay(12, 0)).WithRepeatCount(0))
                 .StartNow());
