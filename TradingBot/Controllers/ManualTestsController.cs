@@ -19,14 +19,16 @@ public sealed class ManualTestsController : ControllerBase
     private readonly IMarketDataSource _dataSource;
     private readonly IActionExecutor _executor;
     private readonly IPricePredictor _predictor;
+    private readonly IStrategy _strategy;
 
     public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource, IActionExecutor executor,
-        ITradingActionQuery actionQuery)
+        ITradingActionQuery actionQuery, IStrategy strategy)
     {
         _predictor = predictor;
         _dataSource = dataSource;
         _executor = executor;
         _actionQuery = actionQuery;
+        _strategy = strategy;
     }
 
     [HttpGet]
@@ -75,6 +77,19 @@ public sealed class ManualTestsController : ControllerBase
         await _executor.ExecuteActionAsync(action, HttpContext.RequestAborted);
         var result = await _actionQuery.GetTradingActionByIdAsync(action.Id, HttpContext.RequestAborted);
         return result is not null ? result.ToResponse() : NotFound();
+    }
+
+    [HttpGet]
+    [Route("strategy-results")]
+    [ProducesResponseType(typeof(IReadOnlyList<TradingAction>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<TradingAction>>> GetStrategyResultsAsync()
+    {
+        var result = await _strategy.GetTradingActionsAsync(HttpContext.RequestAborted);
+
+        if (result is null) return NotFound();
+
+        return Ok(result);
     }
 }
 
