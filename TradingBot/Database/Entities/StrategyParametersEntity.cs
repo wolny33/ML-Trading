@@ -9,6 +9,7 @@ namespace TradingBot.Database.Entities
 
         public required int MaxStocksBuyCount { get; set; }
         public required int MinDaysDecreasing { get; set; }
+        public required int MinDaysIncreasing { get; set; }
         public required double TopGrowingSymbolsBuyRatio { get; set; }
     }
 }

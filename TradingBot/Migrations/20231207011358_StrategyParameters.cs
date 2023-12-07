@@ -18,6 +18,7 @@ namespace TradingBot.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     MaxStocksBuyCount = table.Column<int>(type: "INTEGER", nullable: false),
                     MinDaysDecreasing = table.Column<int>(type: "INTEGER", nullable: false),
+                    MinDaysIncreasing = table.Column<int>(type: "INTEGER", nullable: false),
                     TopGrowingSymbolsBuyRatio = table.Column<double>(type: "REAL", nullable: false)
                 },
                 constraints: table =>

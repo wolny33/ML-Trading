@@ -40,7 +40,7 @@ public sealed class StrategyController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<StrategyParametersResponse> ChangeStrategyParameters(StrategyParametersRequest request)
     {
-        return (await _strategyParametersService.SetParametersAsync(request.MaxStocksBuyCount, request.MinDaysDecreasing,
+        return (await _strategyParametersService.SetParametersAsync(request.MaxStocksBuyCount, request.MinDaysDecreasing, request.MinDaysIncreasing,
             request.TopGrowingSymbolsBuyRatio, HttpContext.RequestAborted)).ToResponse();
     }
 }

@@ -34,12 +34,12 @@ public sealed class Strategy : IStrategy
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
     {
         var strategyParameters = await _strategyParameters.GetConfigurationAsync();
-        var actions = await DetermineTradingActionsAsync(strategyParameters.MaxStocksBuyCount, strategyParameters.MinDaysDecreasing, strategyParameters.TopGrowingSymbolsBuyRatio, token);
+        var actions = await DetermineTradingActionsAsync(strategyParameters.MaxStocksBuyCount, strategyParameters.MinDaysDecreasing, strategyParameters.MinDaysIncreasing, strategyParameters.TopGrowingSymbolsBuyRatio, token);
 
         return actions;
     }
 
-    private async Task<IReadOnlyList<TradingAction>> DetermineTradingActionsAsync(int maxBuyCount, int maxDaysDecreasing, decimal topGrowingSymbolsBuyRatio, CancellationToken token = default)
+    private async Task<IReadOnlyList<TradingAction>> DetermineTradingActionsAsync(int maxBuyCount, int minDaysDecreasing, int minDaysIncreasing, decimal topGrowingSymbolsBuyRatio, CancellationToken token = default)
     {
         var predictions = await _predictor.GetPredictionsAsync();
         var assets = await _assetsDataSource.GetAssetsAsync();
@@ -60,11 +60,11 @@ public sealed class Strategy : IStrategy
 
             closingPrices.AddRange(prediction.Value.Prices.Select(dailyPrice => dailyPrice.ClosingPrice).ToList());    
 
-            if (IsPriceDecreasing(closingPrices, maxDaysDecreasing) && assets.Positions.TryGetValue(symbol, out var position))
+            if (IsPriceDecreasing(closingPrices, minDaysDecreasing) && assets.Positions.TryGetValue(symbol, out var position))
             {
-                sellActions.Add(TradingAction.MarketSell(symbol, position.Quantity, _clock.UtcNow));
+                sellActions.Add(TradingAction.MarketSell(symbol, position.AvailableQuantity, _clock.UtcNow));
             }
-            else if (IsPriceIncreasing(closingPrices))
+            else if (IsPriceIncreasing(closingPrices, minDaysIncreasing))
             {
                 decimal growthRate = CalculateAverageGrowthRate(closingPrices);
 
@@ -99,6 +99,7 @@ public sealed class Strategy : IStrategy
     private static bool IsPriceDecreasing(IReadOnlyList<decimal> closingPrices, int maxDaysDecreasing)
     {
         var isPriceDecreasing = true;
+        maxDaysDecreasing = maxDaysDecreasing > closingPrices.Count - 1 ? closingPrices.Count - 1 : maxDaysDecreasing;
 
         for (int i = 1; i <= maxDaysDecreasing; i++)
         {
@@ -112,11 +113,12 @@ public sealed class Strategy : IStrategy
         return isPriceDecreasing;
     }
 
-    private static bool IsPriceIncreasing(IReadOnlyList<decimal> closingPrices)
+    private static bool IsPriceIncreasing(IReadOnlyList<decimal> closingPrices, int maxDaysDecreasing)
     {
         var isPriceIncreasing = true;
+        maxDaysDecreasing = maxDaysDecreasing > closingPrices.Count - 1 ? closingPrices.Count - 1 : maxDaysDecreasing;
 
-        for (int i = 1; i <= 10; i++)
+        for (int i = 1; i <= maxDaysDecreasing; i++)
         {
             if (closingPrices[i] < closingPrices[i - 1])
             {

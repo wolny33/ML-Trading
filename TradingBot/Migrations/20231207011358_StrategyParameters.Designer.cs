@@ -11,7 +11,7 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20231206180208_StrategyParameters")]
+    [Migration("20231207011358_StrategyParameters")]
     partial class StrategyParameters
     {
         /// <inheritdoc />
@@ -44,6 +44,9 @@ namespace TradingBot.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("MinDaysDecreasing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinDaysIncreasing")
                         .HasColumnType("INTEGER");
 
                     b.Property<double>("TopGrowingSymbolsBuyRatio")

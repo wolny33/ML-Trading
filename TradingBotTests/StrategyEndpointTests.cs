@@ -37,6 +37,7 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
         {
             MaxStocksBuyCount = 10,
             MinDaysDecreasing = 5,
+            MinDaysIncreasing = 5,
             TopGrowingSymbolsBuyRatio = 0.4m
         });
     }
@@ -49,6 +50,7 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
         {
             MaxStocksBuyCount = 12,
             MinDaysDecreasing = 3,
+            MinDaysIncreasing = 3,
             TopGrowingSymbolsBuyRatio = 0.5m
         });
         var strategySettings = await response.GetJsonAsync<StrategyParametersResponse>();
@@ -57,6 +59,7 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
         {
             MaxStocksBuyCount = 12,
             MinDaysDecreasing = 3,
+            MinDaysIncreasing = 3,
             TopGrowingSymbolsBuyRatio = 0.5m
         });
     }

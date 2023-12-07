@@ -43,6 +43,9 @@ namespace TradingBot.Migrations
                     b.Property<int>("MinDaysDecreasing")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("MinDaysIncreasing")
+                        .HasColumnType("INTEGER");
+
                     b.Property<double>("TopGrowingSymbolsBuyRatio")
                         .HasColumnType("REAL");
 
