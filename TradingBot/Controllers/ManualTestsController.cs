@@ -19,14 +19,16 @@ public sealed class ManualTestsController : ControllerBase
     private readonly IMarketDataSource _dataSource;
     private readonly IActionExecutor _executor;
     private readonly IPricePredictor _predictor;
+    private readonly TradingTaskExecutor _taskExecutor;
 
     public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource, IActionExecutor executor,
-        ITradingActionQuery actionQuery)
+        ITradingActionQuery actionQuery, TradingTaskExecutor taskExecutor)
     {
         _predictor = predictor;
         _dataSource = dataSource;
         _executor = executor;
         _actionQuery = actionQuery;
+        _taskExecutor = taskExecutor;
     }
 
     [HttpGet]
@@ -76,6 +78,15 @@ public sealed class ManualTestsController : ControllerBase
         var result = await _actionQuery.GetTradingActionByIdAsync(action.Id, HttpContext.RequestAborted);
         return result is not null ? result.ToResponse() : NotFound();
     }
+
+    [HttpPost]
+    [Route("trading-tasks")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<ActionResult> ExecuteTaskAsync(TradingActionRequest request)
+    {
+        await _taskExecutor.ExecuteAsync(HttpContext.RequestAborted);
+        return NoContent();
+    }
 }
 
 public sealed class TradingActionRequest : IValidatableObject
@@ -93,6 +104,8 @@ public sealed class TradingActionRequest : IValidatableObject
 
     [Required]
     public required string OrderType { get; init; }
+
+    public Guid? TaskId { get; init; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -113,7 +126,8 @@ public sealed class TradingActionRequest : IValidatableObject
             Quantity = Quantity,
             Price = Price,
             OrderType = Enum.Parse<OrderType>(OrderType),
-            InForce = Enum.Parse<TimeInForce>(InForce)
+            InForce = Enum.Parse<TimeInForce>(InForce),
+            TaskId = TaskId
         };
     }
 }

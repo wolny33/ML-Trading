@@ -20,6 +20,12 @@ public sealed class TradingTaskController : ControllerBase
         _actionQuery = actionQuery;
     }
 
+    /// <summary>
+    ///     Returns all trading tasks from given time range
+    /// </summary>
+    /// <response code="200">OK</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="401">Unauthorized</response>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<TradingTaskResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -33,6 +39,13 @@ public sealed class TradingTaskController : ControllerBase
         return tasks.Select(t => t.ToResponse()).ToList();
     }
 
+    /// <summary>
+    ///     Returns trading task with given ID
+    /// </summary>
+    /// <response code="200">OK</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="401">Task not found</response>
     [HttpGet]
     [Route("{id:guid}")]
     [ProducesResponseType(typeof(TradingTaskResponse), StatusCodes.Status200OK)]
@@ -45,6 +58,13 @@ public sealed class TradingTaskController : ControllerBase
         return task is null ? NotFound() : task.ToResponse();
     }
 
+    /// <summary>
+    ///     Returns trading actions related to trading task with given ID
+    /// </summary>
+    /// <response code="200">OK</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="401">Task not found</response>
     [HttpGet]
     [Route("{id:guid}/trading-actions")]
     [ProducesResponseType(typeof(IReadOnlyList<TradingActionResponse>), StatusCodes.Status200OK)]
