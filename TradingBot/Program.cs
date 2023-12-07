@@ -149,6 +149,7 @@ public sealed class Program
         services.AddScoped<IActionExecutor, ActionExecutor>();
         services.AddScoped<IExchangeCalendar, ExchangeCalendar>();
         services.AddScoped<ITradingTaskDetailsUpdater, TradingTaskDetailsUpdater>();
+        services.AddScoped<TradingTaskExecutor>();
 
         services.AddTransient<CredentialsCommand>();
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();

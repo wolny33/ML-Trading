@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
-using Quartz;
 using Serilog;
 using TradingBot.Configuration;
 using TradingBot.Exceptions;
@@ -10,15 +9,15 @@ using TradingBot.Services;
 namespace TradingBotTests;
 
 [Trait("Category", "Unit")]
-public sealed class TradingTaskJobTests
+public sealed class TradingTaskExecutorTests
 {
     private readonly IActionExecutor _actionExecutor;
     private readonly IExchangeCalendar _calendar;
     private readonly IInvestmentConfigService _investmentConfig;
-    private readonly TradingTaskJob _tradingTaskJob;
+    private readonly TradingTaskExecutor _taskExecutor;
     private readonly ITradingTaskDetailsUpdater _tradingTaskUpdater;
 
-    public TradingTaskJobTests()
+    public TradingTaskExecutorTests()
     {
         _actionExecutor = Substitute.For<IActionExecutor>();
 
@@ -32,17 +31,14 @@ public sealed class TradingTaskJobTests
         _tradingTaskUpdater = Substitute.For<ITradingTaskDetailsUpdater>();
         var logger = Substitute.For<ILogger>();
 
-        _tradingTaskJob =
-            new TradingTaskJob(_actionExecutor, _investmentConfig, _calendar, _tradingTaskUpdater, logger);
+        _taskExecutor =
+            new TradingTaskExecutor(_actionExecutor, _calendar, _investmentConfig, _tradingTaskUpdater, logger);
     }
 
     [Fact]
     public async Task ShouldSuccessfullyExecuteTradingTask()
     {
-        var context = Substitute.For<IJobExecutionContext>();
-        context.CancellationToken.Returns(CancellationToken.None);
-
-        await _tradingTaskJob.Execute(context);
+        await _taskExecutor.ExecuteAsync();
 
         Received.InOrder(() =>
         {
@@ -60,10 +56,7 @@ public sealed class TradingTaskJobTests
         _investmentConfig.GetConfigurationAsync(Arg.Any<CancellationToken>())
             .Returns(new InvestmentConfiguration { Enabled = false });
 
-        var context = Substitute.For<IJobExecutionContext>();
-        context.CancellationToken.Returns(CancellationToken.None);
-
-        await _tradingTaskJob.Execute(context);
+        await _taskExecutor.ExecuteAsync();
 
         Received.InOrder(() =>
         {
@@ -80,10 +73,7 @@ public sealed class TradingTaskJobTests
     {
         _calendar.DoesTradingOpenInNext24HoursAsync(Arg.Any<CancellationToken>()).Returns(false);
 
-        var context = Substitute.For<IJobExecutionContext>();
-        context.CancellationToken.Returns(CancellationToken.None);
-
-        await _tradingTaskJob.Execute(context);
+        await _taskExecutor.ExecuteAsync();
 
         Received.InOrder(() =>
         {
@@ -103,10 +93,7 @@ public sealed class TradingTaskJobTests
             new UnsuccessfulAlpacaResponseException(StatusCodes.Status401Unauthorized, "invalid credentials");
         _actionExecutor.ExecuteTradingActionsAsync(Arg.Any<CancellationToken>()).ThrowsAsync(exception);
 
-        var context = Substitute.For<IJobExecutionContext>();
-        context.CancellationToken.Returns(CancellationToken.None);
-
-        await _tradingTaskJob.Execute(context);
+        await _taskExecutor.ExecuteAsync();
 
         Received.InOrder(() =>
         {
@@ -128,10 +115,7 @@ public sealed class TradingTaskJobTests
         var exception = new InvalidOperationException("something went wrong");
         _actionExecutor.ExecuteTradingActionsAsync(Arg.Any<CancellationToken>()).ThrowsAsync(exception);
 
-        var context = Substitute.For<IJobExecutionContext>();
-        context.CancellationToken.Returns(CancellationToken.None);
-
-        await _tradingTaskJob.Execute(context);
+        await _taskExecutor.ExecuteAsync();
 
         Received.InOrder(() =>
         {
