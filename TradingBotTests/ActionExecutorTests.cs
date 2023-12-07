@@ -63,8 +63,8 @@ public sealed class ActionExecutorTests
             order.Duration == TimeInForce.Day &&
             order.LimitPrice == null
         ), Arg.Any<CancellationToken>());
-        await _tradingTask.Received(1).SaveActionWithAlpacaIdAsync(actions[0], _actionId, Arg.Any<CancellationToken>());
-        await _tradingTask.Received(1).SaveActionWithAlpacaIdAsync(actions[1], _actionId, Arg.Any<CancellationToken>());
+        await _tradingTask.Received(1).SaveAndLinkSuccessfulActionAsync(actions[0], _actionId, Arg.Any<CancellationToken>());
+        await _tradingTask.Received(1).SaveAndLinkSuccessfulActionAsync(actions[1], _actionId, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public sealed class ActionExecutorTests
             order.Duration == TimeInForce.Day &&
             order.LimitPrice == null
         ), Arg.Any<CancellationToken>());
-        await _tradingTask.Received(1).SaveActionWithErrorAsync(action,
+        await _tradingTask.Received(1).SaveAndLinkErroredActionAsync(action,
             Arg.Is<Error>(e =>
                 e.Code == "bad-alpaca-request" &&
                 e.Message == "Validation failed for property 'quantity': quantity must be positive"),

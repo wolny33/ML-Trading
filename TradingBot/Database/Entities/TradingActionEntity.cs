@@ -21,7 +21,6 @@ public sealed class TradingActionEntity
     public double? AverageFillPrice { get; set; }
     public string? ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
-
-    [Required]
-    public TradingActionDetailsEntity Details { get; init; } = null!;
+    public Guid? TaskId { get; set; }
+    public TradingTaskEntity? TradingTask { get; set; }
 }

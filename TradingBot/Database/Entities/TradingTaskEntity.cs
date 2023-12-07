@@ -11,4 +11,7 @@ public sealed class TradingTaskEntity
     public required long? EndTimestamp { get; set; }
     public required TradingTaskState State { get; set; }
     public required string StateDetails { get; set; }
+
+    [Required]
+    public IList<TradingActionEntity> TradingActions = new List<TradingActionEntity>();
 }

@@ -44,7 +44,7 @@ public sealed class ActionExecutor : IActionExecutor
         _logger.Debug("Executing action {@Action}", action);
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var order = await PostOrderAsync(CreateRequestForAction(action), client, token);
-        await _tradingTask.SaveActionWithAlpacaIdAsync(action, order.OrderId, token);
+        await _tradingTask.SaveAndLinkSuccessfulActionAsync(action, order.OrderId, token);
     }
 
     private async Task ExecuteActionAndHandleErrorsAsync(TradingAction action, CancellationToken token)
@@ -57,7 +57,7 @@ public sealed class ActionExecutor : IActionExecutor
                                               or AssetNotFoundException or InsufficientAssetsException
                                               or InsufficientFundsException)
         {
-            await _tradingTask.SaveActionWithErrorAsync(action, e.GetError(), token);
+            await _tradingTask.SaveAndLinkErroredActionAsync(action, e.GetError(), token);
         }
     }
 

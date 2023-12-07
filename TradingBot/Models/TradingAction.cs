@@ -27,6 +27,7 @@ public sealed class TradingAction
     public Guid? AlpacaId { get; init; }
     public decimal? AverageFillPrice { get; init; }
     public Error? Error { get; init; }
+    public Guid? TaskId { get; init; }
 
     public static TradingAction FromEntity(TradingActionEntity entity)
     {
@@ -40,14 +41,16 @@ public sealed class TradingAction
             InForce = entity.InForce,
             OrderType = entity.OrderType,
             Status = entity.Status,
-            ExecutedAt = entity.ExecutionTimestamp is not null
-                ? DateTimeOffset.FromUnixTimeMilliseconds(entity.ExecutionTimestamp.Value)
-                : null,
+            ExecutedAt =
+                entity.ExecutionTimestamp is not null
+                    ? DateTimeOffset.FromUnixTimeMilliseconds(entity.ExecutionTimestamp.Value)
+                    : null,
             AlpacaId = entity.AlpacaId,
             AverageFillPrice = (decimal?)entity.AverageFillPrice,
             Error = entity.ErrorCode is not null && entity.ErrorMessage is not null
                 ? new Error(entity.ErrorCode, entity.ErrorMessage)
-                : null
+                : null,
+            TaskId = entity.TaskId
         };
     }
 
@@ -66,10 +69,7 @@ public sealed class TradingAction
             ExecutionTimestamp = ExecutedAt?.ToUnixTimeMilliseconds(),
             AlpacaId = AlpacaId,
             AverageFillPrice = (double?)AverageFillPrice,
-            Details = new TradingActionDetailsEntity
-            {
-                TradingActionId = Id
-            }
+            TaskId = TaskId
         };
     }
 
@@ -88,7 +88,8 @@ public sealed class TradingAction
             ExecutedAt = ExecutedAt,
             AlpacaId = AlpacaId,
             AverageFillPrice = AverageFillPrice,
-            Error = Error?.ToResponse()
+            Error = Error?.ToResponse(),
+            TaskId = TaskId
         };
     }
 

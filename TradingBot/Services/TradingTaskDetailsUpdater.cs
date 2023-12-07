@@ -13,8 +13,8 @@ namespace TradingBot.Services;
 public interface ITradingTaskDetailsUpdater
 {
     Task StartNewAsync(CancellationToken token = default);
-    Task SaveActionWithAlpacaIdAsync(TradingAction action, Guid alpacaId, CancellationToken token = default);
-    Task SaveActionWithErrorAsync(TradingAction action, Error error, CancellationToken token = default);
+    Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default);
+    Task SaveAndLinkErroredActionAsync(TradingAction action, Error error, CancellationToken token = default);
     Task FinishSuccessfullyAsync(CancellationToken token = default);
     Task MarkAsDisabledFromConfigAsync(CancellationToken token = default);
     Task MarkAsExchangeClosedAsync(CancellationToken token = default);
@@ -41,14 +41,14 @@ public sealed class TradingTaskDetailsUpdater : ITradingTaskDetailsUpdater
         _currentTradingTaskId = await _taskCommand.CreateNewAsync(_clock.UtcNow, token);
     }
 
-    public Task SaveActionWithAlpacaIdAsync(TradingAction action, Guid alpacaId, CancellationToken token = default)
+    public Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default)
     {
-        return _tradingActionCommand.SaveActionWithAlpacaIdAsync(action, alpacaId, token);
+        return _tradingActionCommand.SaveActionWithAlpacaIdAsync(action, alpacaId, _currentTradingTaskId, token);
     }
 
-    public Task SaveActionWithErrorAsync(TradingAction action, Error error, CancellationToken token = default)
+    public Task SaveAndLinkErroredActionAsync(TradingAction action, Error error, CancellationToken token = default)
     {
-        return _tradingActionCommand.SaveActionWithErrorAsync(action, error, token);
+        return _tradingActionCommand.SaveActionWithErrorAsync(action, error, _currentTradingTaskId, token);
     }
 
     public Task FinishSuccessfullyAsync(CancellationToken token = default)
