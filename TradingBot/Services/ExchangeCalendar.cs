@@ -9,7 +9,7 @@ namespace TradingBot.Services;
 
 public interface IExchangeCalendar
 {
-    Task<bool> DoesTradingOpenInNext24Hours(CancellationToken token = default);
+    Task<bool> DoesTradingOpenInNext24HoursAsync(CancellationToken token = default);
 }
 
 public sealed class ExchangeCalendar : IExchangeCalendar
@@ -25,7 +25,7 @@ public sealed class ExchangeCalendar : IExchangeCalendar
         _logger = logger;
     }
 
-    public async Task<bool> DoesTradingOpenInNext24Hours(CancellationToken token = default)
+    public async Task<bool> DoesTradingOpenInNext24HoursAsync(CancellationToken token = default)
     {
         var now = _clock.UtcNow;
         var nextTradingDay = await SendCalendarRequestAsync(now, token);

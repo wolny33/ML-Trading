@@ -1,5 +1,6 @@
 ﻿using Quartz;
 using TradingBot.Exceptions;
+using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
 
@@ -8,17 +9,20 @@ public sealed class PeriodicExecutionJob : IJob
     private readonly IActionExecutor _actionExecutor;
     private readonly IExchangeCalendar _calendar;
     private readonly IInvestmentConfigService _investmentConfig;
+    private readonly ILogger _logger;
     private readonly ITradingTaskDetailsUpdater _tradingTask;
 
     public PeriodicExecutionJob(IActionExecutor actionExecutor, IInvestmentConfigService investmentConfig,
-        IExchangeCalendar calendar, ITradingTaskDetailsUpdater tradingTask)
+        IExchangeCalendar calendar, ITradingTaskDetailsUpdater tradingTask, ILogger logger)
     {
         _actionExecutor = actionExecutor;
         _investmentConfig = investmentConfig;
         _calendar = calendar;
         _tradingTask = tradingTask;
+        _logger = logger;
     }
 
+    // TODO: Test
     public async Task Execute(IJobExecutionContext context)
     {
         try
@@ -27,14 +31,14 @@ public sealed class PeriodicExecutionJob : IJob
 
             if (!(await _investmentConfig.GetConfigurationAsync(context.CancellationToken)).Enabled)
             {
-                // TODO: Log
+                _logger.Information("Automatic investing is disabled in configuration - no actions were taken");
                 await _tradingTask.MarkAsDisabledFromConfigAsync(context.CancellationToken);
                 return;
             }
 
-            if (!await _calendar.DoesTradingOpenInNext24Hours(context.CancellationToken))
+            if (!await _calendar.DoesTradingOpenInNext24HoursAsync(context.CancellationToken))
             {
-                // TODO: Log
+                _logger.Information("Exchange does not open in the next 24 hours - no actions were taken");
                 await _tradingTask.MarkAsExchangeClosedAsync(context.CancellationToken);
                 return;
             }
@@ -44,7 +48,7 @@ public sealed class PeriodicExecutionJob : IJob
         }
         catch (Exception e)
         {
-            // TODO: Log
+            _logger.Error(e, "Trading task execution failed");
             var error = (e as ResponseException)?.GetError() ?? new Error("unknown", e.Message);
             await _tradingTask.MarkAsErroredAsync(error, context.CancellationToken);
         }
