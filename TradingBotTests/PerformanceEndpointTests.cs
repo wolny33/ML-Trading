@@ -125,7 +125,6 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
     {
         await using var context = await DbContextFactory.CreateDbContextAsync();
         await context.TradingActions.ExecuteDeleteAsync();
-        await context.Details.ExecuteDeleteAsync();
         context.TradingActions.AddRange(Actions);
         await context.SaveChangesAsync();
 
@@ -223,7 +222,8 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 Status = _testSuite.Actions[0].Status.ToString()!,
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[0].ExecutionTimestamp!.Value),
                 AverageFillPrice = (decimal)_testSuite.Actions[0].AverageFillPrice!.Value,
-                Error = null
+                Error = null,
+                TaskId = null
             },
             new TradingActionResponse
             {
@@ -238,7 +238,8 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 Status = _testSuite.Actions[1].Status.ToString()!,
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[1].ExecutionTimestamp!.Value),
                 AverageFillPrice = (decimal)_testSuite.Actions[1].AverageFillPrice!.Value,
-                Error = null
+                Error = null,
+                TaskId = null
             },
             new TradingActionResponse
             {
@@ -253,7 +254,8 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 Status = _testSuite.Actions[2].Status.ToString()!,
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[2].ExecutionTimestamp!.Value),
                 AverageFillPrice = null,
-                Error = null
+                Error = null,
+                TaskId = null
             },
             new TradingActionResponse
             {
@@ -268,7 +270,8 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 Status = OrderStatus.Filled.ToString(),
                 ExecutedAt = PerformanceTestSuite.Now - TimeSpan.FromMinutes(10),
                 AverageFillPrice = 30.2m,
-                Error = null
+                Error = null,
+                TaskId = null
             },
             new TradingActionResponse
             {
@@ -287,7 +290,8 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 {
                     Code = _testSuite.Actions[4].ErrorCode!,
                     Message = _testSuite.Actions[4].ErrorMessage!
-                }
+                },
+                TaskId = null
             }
         });
 
@@ -323,7 +327,8 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 Status = _testSuite.Actions[1].Status.ToString()!,
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[1].ExecutionTimestamp!.Value),
                 AverageFillPrice = (decimal)_testSuite.Actions[1].AverageFillPrice!.Value,
-                Error = null
+                Error = null,
+                TaskId = null
             },
             new TradingActionResponse
             {
@@ -338,7 +343,8 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 Status = _testSuite.Actions[2].Status.ToString()!,
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[2].ExecutionTimestamp!.Value),
                 AverageFillPrice = null,
-                Error = null
+                Error = null,
+                TaskId = null
             }
         });
 

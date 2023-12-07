@@ -19,8 +19,6 @@ public interface ITradingActionQuery
 
     Task<TradingAction?> GetTradingActionByIdAsync(Guid id, CancellationToken token = default);
 
-    Task<TradingActionDetails> GetDetailsAsync(Guid id, CancellationToken token = default);
-
     IEnumerable<TradingAction> CreateMockedTradingActions(DateTimeOffset start, DateTimeOffset end);
 }
 
@@ -54,8 +52,7 @@ public sealed class TradingActionQuery : ITradingActionQuery
         return entities.Select(TradingAction.FromEntity).ToList();
     }
 
-    public async Task<TradingAction?> GetTradingActionByIdAsync(Guid id,
-        CancellationToken token = default)
+    public async Task<TradingAction?> GetTradingActionByIdAsync(Guid id, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entity = await context.TradingActions.FirstOrDefaultAsync(a => a.Id == id, token);
@@ -66,14 +63,6 @@ public sealed class TradingActionQuery : ITradingActionQuery
         await context.SaveChangesAsync(token);
 
         return TradingAction.FromEntity(entity);
-    }
-
-    public Task<TradingActionDetails> GetDetailsAsync(Guid id, CancellationToken token = default)
-    {
-        return Task.FromResult(new TradingActionDetails
-        {
-            Id = id
-        });
     }
 
     public IEnumerable<TradingAction> CreateMockedTradingActions(DateTimeOffset start, DateTimeOffset end)
