@@ -1,9 +1,12 @@
 ﻿using Alpaca.Markets;
 using FluentAssertions;
 using Flurl.Http;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using TradingBot.Database.Entities;
 using TradingBot.Dto;
@@ -129,6 +132,14 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
         await context.SaveChangesAsync();
 
         TradingClientSubstitute.ClearReceivedCalls();
+    }
+
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        services.RemoveAll<ISystemClock>();
+        var clock = Substitute.For<ISystemClock>();
+        clock.UtcNow.Returns(Now);
+        services.AddSingleton(clock);
     }
 }
 

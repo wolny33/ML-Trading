@@ -49,6 +49,8 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
             // Remove Quartz service to not run jobs in tests
             var quartzService = services.Where(s => s.ImplementationType == typeof(QuartzHostedService)).ToList();
             foreach (var service in quartzService) services.Remove(service);
+
+            ConfigureServices(services);
         });
     }
 
@@ -62,6 +64,10 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
 
     protected virtual void SetUpAlpacaSubstitutes(IAlpacaDataClient dataClient, IAlpacaTradingClient tradingClient,
         IAlpacaAssetsClient assetsClient)
+    {
+    }
+
+    protected virtual void ConfigureServices(IServiceCollection services)
     {
     }
 

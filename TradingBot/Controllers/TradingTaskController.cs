@@ -6,7 +6,7 @@ using TradingBot.Services;
 namespace TradingBot.Controllers;
 
 [ApiController]
-[Route("trading-tasks")]
+[Route("api/trading-tasks")]
 public sealed class TradingTaskController : ControllerBase
 {
     private readonly ITradingActionQuery _actionQuery;
