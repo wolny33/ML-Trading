@@ -22,7 +22,7 @@ public sealed class ExchangeCalendar : IExchangeCalendar
     {
         _clock = clock;
         _clientFactory = clientFactory;
-        _logger = logger;
+        _logger = logger.ForContext<ExchangeCalendar>();
     }
 
     public async Task<bool> DoesTradingOpenInNext24HoursAsync(CancellationToken token = default)

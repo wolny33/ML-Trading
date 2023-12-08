@@ -35,7 +35,7 @@ public sealed class TradingActionQuery : ITradingActionQuery
     {
         _dbContextFactory = dbContextFactory;
         _clientFactory = clientFactory;
-        _logger = logger;
+        _logger = logger.ForContext<TradingActionQuery>();
     }
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(DateTimeOffset start, DateTimeOffset end,

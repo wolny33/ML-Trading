@@ -43,7 +43,8 @@ public sealed class AuthTests : IAsyncDisposable
         var secondResponse = await client.AllowAnyHttpStatus().Request("api", "test-mode").GetAsync();
         secondResponse.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
 
-        using var newClient = _testSuite.CreateUnauthenticatedClient().WithBasicAuth("admin", "new-password");
+        using var newClient = _testSuite.CreateUnauthenticatedClient()
+            .WithBasicAuth(IntegrationTestSuite.TestUsername, "new-password");
         var thirdResponse = await newClient.AllowAnyHttpStatus().Request("api", "test-mode").GetAsync();
         thirdResponse.StatusCode.Should().Be(StatusCodes.Status200OK);
     }

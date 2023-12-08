@@ -19,7 +19,7 @@ public sealed class TestModeConfigService : ITestModeConfigService
     public TestModeConfigService(IDbContextFactory<AppDbContext> dbContextFactory, ILogger logger)
     {
         _dbContextFactory = dbContextFactory;
-        _logger = logger;
+        _logger = logger.ForContext<TestModeConfigService>();
     }
 
     public async Task<TestModeConfiguration> GetConfigurationAsync(CancellationToken token = default)
