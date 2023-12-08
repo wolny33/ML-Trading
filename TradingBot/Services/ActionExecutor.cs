@@ -20,16 +20,16 @@ public interface IActionExecutor
 public sealed class ActionExecutor : IActionExecutor
 {
     private readonly IAlpacaClientFactory _clientFactory;
-    private readonly ITradingActionCommand _command;
     private readonly ILogger _logger;
     private readonly IStrategy _strategy;
+    private readonly ITradingTaskDetailsUpdater _tradingTask;
 
-    public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ITradingActionCommand command,
-        ILogger logger)
+    public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ILogger logger,
+        ITradingTaskDetailsUpdater tradingTask)
     {
         _strategy = strategy;
         _clientFactory = clientFactory;
-        _command = command;
+        _tradingTask = tradingTask;
         _logger = logger.ForContext<ActionExecutor>();
     }
 
@@ -44,7 +44,7 @@ public sealed class ActionExecutor : IActionExecutor
         _logger.Debug("Executing action {@Action}", action);
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var order = await PostOrderAsync(CreateRequestForAction(action), client, token);
-        await _command.SaveActionWithAlpacaIdAsync(action, order.OrderId, token);
+        await _tradingTask.SaveAndLinkSuccessfulActionAsync(action, order.OrderId, token);
     }
 
     private async Task ExecuteActionAndHandleErrorsAsync(TradingAction action, CancellationToken token)
@@ -57,7 +57,7 @@ public sealed class ActionExecutor : IActionExecutor
                                               or AssetNotFoundException or InsufficientAssetsException
                                               or InsufficientFundsException)
         {
-            await _command.SaveActionWithErrorAsync(action, e.GetError(), token);
+            await _tradingTask.SaveAndLinkErroredActionAsync(action, e.GetError(), token);
         }
     }
 

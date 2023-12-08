@@ -99,14 +99,15 @@ public sealed class PerformanceController : ControllerBase
     /// <response code="200">OK</response>
     /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
+    // TODO: Remove after updating UI
     [HttpGet]
     [Route("trade-actions/{id:guid}/details")]
     [ProducesResponseType(typeof(TradingActionDetailsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<TradingActionDetailsResponse> GetTradeActionDetailsAsync([Required] Guid id)
+    public TradingActionDetailsResponse GetTradeActionDetails([Required] Guid id)
     {
-        return (await _query.GetDetailsAsync(id, HttpContext.RequestAborted)).ToResponse();
+        return new TradingActionDetailsResponse { Id = id };
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Quartz;
 using Serilog;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using TradingBot.Configuration;
@@ -27,6 +28,9 @@ public sealed class Program
         ConfigureConfiguration(builder.Services, builder.Configuration);
         ConfigureServices(builder.Services, builder.Configuration);
         ConfigureAuth(builder.Services);
+
+        builder.Services.AddQuartz(TradingTaskJob.RegisterJob);
+        builder.Services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
         builder.Services.AddControllers();
 
@@ -136,18 +140,23 @@ public sealed class Program
     {
         services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(GetConnectionString(config)));
         services.AddSingleton<IFlurlClientFactory, PerBaseUrlFlurlClientFactory>();
-
         services.AddSingleton<IAlpacaClientFactory, AlpacaClientFactory>();
+
         services.AddScoped<IMarketDataSource, MarketDataSource>();
         services.AddScoped<IPricePredictor, PricePredictor>();
         services.AddScoped<IAssetsDataSource, AssetsDataSource>();
         services.AddScoped<IStrategy, Strategy>();
         services.AddScoped<IActionExecutor, ActionExecutor>();
+        services.AddScoped<IExchangeCalendar, ExchangeCalendar>();
+        services.AddScoped<ITradingTaskDetailsUpdater, TradingTaskDetailsUpdater>();
+        services.AddScoped<TradingTaskExecutor>();
 
-        services.AddScoped<CredentialsCommand>();
+        services.AddTransient<CredentialsCommand>();
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();
         services.AddTransient<IInvestmentConfigService, InvestmentConfigService>();
         services.AddTransient<ITradingActionQuery, TradingActionQuery>();
         services.AddTransient<ITradingActionCommand, TradingActionCommand>();
+        services.AddTransient<ITradingTaskCommand, TradingTaskCommand>();
+        services.AddTransient<ITradingTaskQuery, TradingTaskQuery>();
     }
 }

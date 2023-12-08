@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using Alpaca.Markets;
+using Flurl.Http;
 using TradingBot.Exceptions;
 using TradingBot.Models;
 using TradingBot.Services.AlpacaClients;
@@ -69,7 +70,7 @@ public sealed class MarketDataSource : IMarketDataSource
             return availableAssets.Where(a => a is { Fractionable: true, Tradable: true })
                 .Select(a => new TradingSymbol(a.Symbol)).ToHashSet();
         }
-        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException)
+        catch (FlurlHttpException e)
         {
             _logger.Error(e, "Alpaca call failed");
             throw new AlpacaCallFailedException(e);

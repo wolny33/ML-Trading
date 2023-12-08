@@ -11,9 +11,9 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<UserCredentialsEntity> Credentials => Set<UserCredentialsEntity>();
     public DbSet<TradingActionEntity> TradingActions => Set<TradingActionEntity>();
-    public DbSet<TradingActionDetailsEntity> Details => Set<TradingActionDetailsEntity>();
     public DbSet<TestModeConfigEntity> TestModeConfiguration => Set<TestModeConfigEntity>();
     public DbSet<InvestmentConfigEntity> InvestmentConfiguration => Set<InvestmentConfigEntity>();
+    public DbSet<TradingTaskEntity> TradingTasks => Set<TradingTaskEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -19,7 +19,7 @@ public interface ITradingActionQuery
 
     Task<TradingAction?> GetTradingActionByIdAsync(Guid id, CancellationToken token = default);
 
-    Task<TradingActionDetails> GetDetailsAsync(Guid id, CancellationToken token = default);
+    Task<IReadOnlyList<TradingAction>?> GetActionsForTaskWithIdAsync(Guid taskId, CancellationToken token = default);
 
     IEnumerable<TradingAction> CreateMockedTradingActions(DateTimeOffset start, DateTimeOffset end);
 }
@@ -54,8 +54,7 @@ public sealed class TradingActionQuery : ITradingActionQuery
         return entities.Select(TradingAction.FromEntity).ToList();
     }
 
-    public async Task<TradingAction?> GetTradingActionByIdAsync(Guid id,
-        CancellationToken token = default)
+    public async Task<TradingAction?> GetTradingActionByIdAsync(Guid id, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entity = await context.TradingActions.FirstOrDefaultAsync(a => a.Id == id, token);
@@ -68,12 +67,22 @@ public sealed class TradingActionQuery : ITradingActionQuery
         return TradingAction.FromEntity(entity);
     }
 
-    public Task<TradingActionDetails> GetDetailsAsync(Guid id, CancellationToken token = default)
+    public async Task<IReadOnlyList<TradingAction>?> GetActionsForTaskWithIdAsync(Guid taskId,
+        CancellationToken token = default)
     {
-        return Task.FromResult(new TradingActionDetails
-        {
-            Id = id
-        });
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+        var entities =
+            (await context.TradingTasks.Include(t => t.TradingActions).FirstOrDefaultAsync(t => t.Id == taskId, token))
+            ?.TradingActions;
+
+        if (entities is null) return null;
+
+        using var client = await _clientFactory.CreateTradingClientAsync(token);
+        // ReSharper disable once AccessToDisposedClosure
+        await Task.WhenAll(entities.Select(e => UpdateActionEntityAsync(e, client, token)));
+        await context.SaveChangesAsync(token);
+
+        return entities.Select(TradingAction.FromEntity).ToList();
     }
 
     public IEnumerable<TradingAction> CreateMockedTradingActions(DateTimeOffset start, DateTimeOffset end)

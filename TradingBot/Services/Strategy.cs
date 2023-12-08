@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using TradingBot.Database;
+﻿using Microsoft.AspNetCore.Authentication;
 using TradingBot.Models;
 
 namespace TradingBot.Services;
@@ -12,31 +11,23 @@ public interface IStrategy
 public sealed class Strategy : IStrategy
 {
     private readonly IAssetsDataSource _assetsDataSource;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly ISystemClock _clock;
     private readonly IPricePredictor _predictor;
 
-    public Strategy(IPricePredictor predictor, IDbContextFactory<AppDbContext> dbContextFactory,
-        IAssetsDataSource assetsDataSource)
+    public Strategy(IPricePredictor predictor, IAssetsDataSource assetsDataSource, ISystemClock clock)
     {
         _predictor = predictor;
-        _dbContextFactory = dbContextFactory;
         _assetsDataSource = assetsDataSource;
+        _clock = clock;
     }
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync()
     {
-        var actions = await DetermineTradingActionsAsync();
-
-        await using var context = await _dbContextFactory.CreateDbContextAsync();
-        foreach (var action in actions) context.TradingActions.Add(action.ToEntity());
-
-        await context.SaveChangesAsync();
-
-        return actions;
-    }
-
-    private async Task<IReadOnlyList<TradingAction>> DetermineTradingActionsAsync()
-    {
-        return await Task.FromException<IReadOnlyList<TradingAction>>(new NotImplementedException());
+        var predictions = await _predictor.GetPredictionsAsync();
+        var assets = await _assetsDataSource.GetAssetsAsync();
+        return new[]
+        {
+            TradingAction.MarketBuy(new TradingSymbol("TSLA"), 0.5m, _clock.UtcNow)
+        };
     }
 }

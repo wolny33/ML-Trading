@@ -36,4 +36,6 @@ public sealed class TradingActionResponse
     public required decimal? AverageFillPrice { get; init; }
 
     public required ErrorResponse? Error { get; init; }
+
+    public required Guid? TaskId { get; init; }
 }
