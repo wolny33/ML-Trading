@@ -82,7 +82,7 @@ public sealed class ManualTestsController : ControllerBase
     [HttpPost]
     [Route("trading-tasks")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<ActionResult> ExecuteTaskAsync(TradingActionRequest request)
+    public async Task<ActionResult> ExecuteTaskAsync()
     {
         await _taskExecutor.ExecuteAsync(HttpContext.RequestAborted);
         return NoContent();

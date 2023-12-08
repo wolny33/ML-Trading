@@ -1,5 +1,4 @@
-﻿using System.Net.Sockets;
-using Flurl.Http;
+﻿using Flurl.Http;
 using Flurl.Http.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Newtonsoft.Json;
@@ -95,7 +94,7 @@ public sealed class PricePredictor : IPricePredictor
                 var code => throw new UnsuccessfulPredictorResponseException(code, await response.GetStringAsync())
             };
         }
-        catch (Exception e) when (e is HttpRequestException or SocketException)
+        catch (FlurlHttpException e)
         {
             _logger.Error(e, "Predictor call failed");
             throw new PredictorCallFailedException(e);
