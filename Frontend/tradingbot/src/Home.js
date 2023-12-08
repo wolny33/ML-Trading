@@ -51,13 +51,12 @@ const Home = () => {
   const [isTestModeOn, setIsTestModeOn] = useState(true);
   const [isInvestmentOn, setIsInvestmentOn] = useState(true);
   const [showStrategyOptions, setshowStrategyOptions] = useState(true);
-  const [strategyParameters, setStrategyParameters] = useState('');
+  const [strategyParameters, setStrategyParameters] = useState({});
   const [performanceData, setPerformanceData] = useState([]);
   const [equityValue, setEquityValue] = useState(0);
-  const [innitialValue, setInnitialValue] = useState(0);
 
   const [editingStrategyParameters, setEditingStrategyParameters] = useState(false);
-  const [newImportantProperty, setNewImportantProperty] = useState('');
+  const [newStrategyParameters, setNewStrategyParameters] = useState({});
 
   const [maxChartValue, setMaxChartValue] = useState(0);
   const [detailsDictionary, setDetailsDictionary] = useState({});
@@ -129,7 +128,7 @@ const Home = () => {
       }
     ).then(result => {
       setStrategyParameters(result.data);
-      setNewImportantProperty(result.data.importantProperty);
+      setNewStrategyParameters(result.data);
     }).catch(err => {
       if(!err?.response || err.response?.status === 401 ) {
         logout();
@@ -291,7 +290,10 @@ const Home = () => {
     try{
       const response = await axios.put(STRATEGY_URL,
         {
-          "importantProperty": newImportantProperty
+          "maxStocksBuyCount": newStrategyParameters.maxStocksBuyCount,
+          "minDaysDecreasing": newStrategyParameters.minDaysDecreasing,
+          "minDaysIncreasing": newStrategyParameters.minDaysIncreasing,
+          "topGrowingSymbolsBuyRatio": newStrategyParameters.topGrowingSymbolsBuyRatio
         },
         {
           auth: {
@@ -305,7 +307,7 @@ const Home = () => {
         }
       );
       setStrategyParameters(response.data);
-      setNewImportantProperty(response.data.importantProperty);
+      setNewStrategyParameters(response.data);
     }catch(err){
       if(!err?.response || err.response?.status === 401 ) {
         logout();
@@ -317,9 +319,23 @@ const Home = () => {
   };
 
   const handleCancelEditStrategyParametersClick = () => {
-    setNewImportantProperty(strategyParameters.importantProperty);
+    setNewStrategyParameters(strategyParameters);
     setEditingStrategyParameters(false);
   }
+
+  const handleStrategyParameterChange = (field, value) => {
+    if(value < 0)
+        value = 0;
+
+    if(field === 'topGrowingSymbolsBuyRatio'){
+      if(value > 1)
+        value = 1.0;
+    }
+    setNewStrategyParameters((prevParameters) => ({
+      ...prevParameters,
+      [field]: value,
+    }));
+  };
 
   const countInitialAccountValue = () => {
     return equityValue/(1 + performanceData[performanceData.length - 1].return);
@@ -367,7 +383,7 @@ const Home = () => {
         header: 'Order Type',
         size: 200,
         filterVariant: 'multi-select',
-        filterSelectOptions: ["BUY", "SELL"],
+        filterSelectOptions: ["MarketBuy", "LimitBuy", "MarketSell", "LimitSell"],
       },
       {
         accessorKey: 'symbol',
@@ -377,13 +393,22 @@ const Home = () => {
       {
         accessorKey: 'price',
         header: 'Price',
-        Cell: ({ cell }) =>
-          cell.getValue().toLocaleString('en-US', {
+        Cell: ({ cell }) => {
+          const priceValue = cell.getValue();
+          if (priceValue === null || priceValue === undefined)
+            return null;
+          return priceValue.toLocaleString('en-US', {
             style: 'currency',
             currency: 'USD',
-          }),
+          });
+        },
         filterVariant: 'range-slider',
-        filterFn: 'betweenInclusive',
+        filterFn: (row, id, filterValues) =>{
+          if(row.getValue(id) === null || row.getValue(id) === undefined)
+            return false;
+          const value = row.getValue(id);
+          return (value >= filterValues[0] && value <= filterValues[1]);
+        },
         muiFilterSliderProps: {
           min: 0,
           max: 1000,
@@ -486,20 +511,46 @@ const Home = () => {
               <div className="bg-white p-6 rounded-xl shadow-lg overflow-x-auto mt-4">
                 {editingStrategyParameters ? (
                   <div>
-                    <h3 className="mb-2">Important Property:</h3>
+                    <h3 className="mb-2">Max Stocks Buy Count:</h3>
                     <input
                       type="text"
-                      value={newImportantProperty}
-                      onChange={(e) => setNewImportantProperty(e.target.value)}
+                      value={newStrategyParameters.maxStocksBuyCount}
+                      onChange={(e) => handleStrategyParameterChange('maxStocksBuyCount', e.target.value)}
                       className="border border-gray-300 p-0.5 mb-2 mr-1.5"
                       style={{ width:"150px", height:"35px" }}
                     />
-                    <button className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded mr-2" onClick={handleConfirmEditStrategyParametersClick}>
-                      Confirm
-                    </button>
-                    <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" onClick={handleCancelEditStrategyParametersClick}>
-                      Cancel
-                    </button>
+                    <h3 className="mb-2">Min Days Decreasing:</h3>
+                    <input
+                      type="text"
+                      value={newStrategyParameters.minDaysDecreasing}
+                      onChange={(e) => handleStrategyParameterChange('minDaysDecreasing', e.target.value)}
+                      className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                      style={{ width:"150px", height:"35px" }}
+                    />
+                    <h3 className="mb-2">Min Days Increasing:</h3>
+                    <input
+                      type="text"
+                      value={newStrategyParameters.minDaysIncreasing}
+                      onChange={(e) => handleStrategyParameterChange('minDaysIncreasing', e.target.value)}
+                      className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                      style={{ width:"150px", height:"35px" }}
+                    />
+                    <h3 className="mb-2">Top Growing Symbols Buy Ratio:</h3>
+                    <input
+                      type="text"
+                      value={newStrategyParameters.topGrowingSymbolsBuyRatio}
+                      onChange={(e) => handleStrategyParameterChange('topGrowingSymbolsBuyRatio', e.target.value)}
+                      className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                      style={{ width:"150px", height:"35px" }}
+                    />
+                    <div>
+                      <button className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded mr-2" onClick={handleConfirmEditStrategyParametersClick}>
+                        Confirm
+                      </button>
+                      <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" onClick={handleCancelEditStrategyParametersClick}>
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div>
@@ -509,8 +560,17 @@ const Home = () => {
                     <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" onClick={handleEditStrategyParametersClick}>
                       Edit Strategy Options
                     </button>
-                    <h3 className="text-2xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
-                      Important Property: {strategyParameters.importantProperty}
+                    <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                      Max Stocks Buy Count: {strategyParameters.maxStocksBuyCount}
+                    </h3>
+                    <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                      Min Days Decreasing: {strategyParameters.minDaysDecreasing}
+                    </h3>
+                    <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                      Min Days Increasing: {strategyParameters.minDaysIncreasing}
+                    </h3>
+                    <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                      Top Growing Symbols Buy Ratio: {strategyParameters.topGrowingSymbolsBuyRatio}
                     </h3>
                   </div>
                 )}
