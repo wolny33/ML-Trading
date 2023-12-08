@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TradingBot.Database;
 
@@ -10,9 +11,11 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231205204804_TradingActionErrors")]
+    partial class TradingActionErrors
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.13");
@@ -31,29 +34,6 @@ namespace TradingBot.Migrations
                     b.ToTable("InvestmentConfiguration");
                 });
 
-            modelBuilder.Entity("TradingBot.Database.Entities.StrategyParametersEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("MaxStocksBuyCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MinDaysDecreasing")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MinDaysIncreasing")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("TopGrowingSymbolsBuyRatio")
-                        .HasColumnType("REAL");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("StrategyParameters");
-                });
-
             modelBuilder.Entity("TradingBot.Database.Entities.TestModeConfigEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -66,6 +46,16 @@ namespace TradingBot.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("TestModeConfiguration");
+                });
+
+            modelBuilder.Entity("TradingBot.Database.Entities.TradingActionDetailsEntity", b =>
+                {
+                    b.Property<Guid>("TradingActionId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("TradingActionId");
+
+                    b.ToTable("Details");
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.TradingActionEntity", b =>
@@ -111,38 +101,9 @@ namespace TradingBot.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("TradingTaskId")
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("TradingTaskId");
 
                     b.ToTable("TradingActions");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.TradingTaskEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<long?>("EndTimestamp")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<long>("StartTimestamp")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("State")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("StateDetails")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TradingTasks");
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.UserCredentialsEntity", b =>
@@ -171,13 +132,21 @@ namespace TradingBot.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TradingBot.Database.Entities.TradingActionDetailsEntity", b =>
+                {
+                    b.HasOne("TradingBot.Database.Entities.TradingActionEntity", "TradingAction")
+                        .WithOne("Details")
+                        .HasForeignKey("TradingBot.Database.Entities.TradingActionDetailsEntity", "TradingActionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TradingAction");
+                });
+
             modelBuilder.Entity("TradingBot.Database.Entities.TradingActionEntity", b =>
                 {
-                    b.HasOne("TradingBot.Database.Entities.TradingTaskEntity", "TradingTask")
-                        .WithMany()
-                        .HasForeignKey("TradingTaskId");
-
-                    b.Navigation("TradingTask");
+                    b.Navigation("Details")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

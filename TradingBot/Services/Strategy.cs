@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Alpaca.Markets;
 using TradingBot.Database;
 using TradingBot.Models;

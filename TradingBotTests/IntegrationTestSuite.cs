@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
+using Quartz;
 using TradingBot;
 using TradingBot.Database;
 using TradingBot.Services.AlpacaClients;
@@ -44,6 +45,12 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
 
             RemoveDatabaseServices(services);
             services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(_connection));
+
+            // Remove Quartz service to not run jobs in tests
+            var quartzService = services.Where(s => s.ImplementationType == typeof(QuartzHostedService)).ToList();
+            foreach (var service in quartzService) services.Remove(service);
+
+            ConfigureServices(services);
         });
     }
 
@@ -57,6 +64,10 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
 
     protected virtual void SetUpAlpacaSubstitutes(IAlpacaDataClient dataClient, IAlpacaTradingClient tradingClient,
         IAlpacaAssetsClient assetsClient)
+    {
+    }
+
+    protected virtual void ConfigureServices(IServiceCollection services)
     {
     }
 

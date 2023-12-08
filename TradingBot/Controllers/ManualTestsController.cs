@@ -19,15 +19,17 @@ public sealed class ManualTestsController : ControllerBase
     private readonly IMarketDataSource _dataSource;
     private readonly IActionExecutor _executor;
     private readonly IPricePredictor _predictor;
+    private readonly TradingTaskExecutor _taskExecutor;
     private readonly IStrategy _strategy;
 
     public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource, IActionExecutor executor,
-        ITradingActionQuery actionQuery, IStrategy strategy)
+        ITradingActionQuery actionQuery, TradingTaskExecutor taskExecutor, IStrategy strategy)
     {
         _predictor = predictor;
         _dataSource = dataSource;
         _executor = executor;
         _actionQuery = actionQuery;
+        _taskExecutor = taskExecutor;
         _strategy = strategy;
     }
 
@@ -79,6 +81,15 @@ public sealed class ManualTestsController : ControllerBase
         return result is not null ? result.ToResponse() : NotFound();
     }
 
+    [HttpPost]
+    [Route("trading-tasks")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<ActionResult> ExecuteTaskAsync()
+    {
+        await _taskExecutor.ExecuteAsync(HttpContext.RequestAborted);
+        return NoContent();
+    }
+
     [HttpGet]
     [Route("strategy-results")]
     [ProducesResponseType(typeof(IReadOnlyList<TradingAction>), StatusCodes.Status200OK)]
@@ -124,6 +135,8 @@ public sealed class TradingActionRequest : IValidatableObject
     [Required]
     public required string OrderType { get; init; }
 
+    public Guid? TaskId { get; init; }
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (!Enum.TryParse<TimeInForce>(InForce, true, out _))
@@ -143,7 +156,8 @@ public sealed class TradingActionRequest : IValidatableObject
             Quantity = Quantity,
             Price = Price,
             OrderType = Enum.Parse<OrderType>(OrderType),
-            InForce = Enum.Parse<TimeInForce>(InForce)
+            InForce = Enum.Parse<TimeInForce>(InForce),
+            TaskId = TaskId
         };
     }
 }
