@@ -91,6 +91,21 @@ public sealed class ManualTestsController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet]
+    [Route("trading-cycle-test")]
+    [ProducesResponseType(typeof(IReadOnlyList<DailyTradingData>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<DailyTradingData>>> ExecuteCycleActionsAsync()
+    {
+        var now = DateTimeOffset.UtcNow;
+        await _executor.ExecuteTradingActionsAsync(HttpContext.RequestAborted);
+        var resultAfterCycleExecution = await _actionQuery.GetTradingActionsAsync(now, DateTimeOffset.UtcNow, HttpContext.RequestAborted);
+
+        if (resultAfterCycleExecution is null) return NotFound();
+
+        return Ok(resultAfterCycleExecution);
+    }
 }
 
 public sealed class TradingActionRequest : IValidatableObject

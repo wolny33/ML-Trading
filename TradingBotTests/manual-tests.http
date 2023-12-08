@@ -23,6 +23,11 @@ GET http://localhost:5000/manual-tests/strategy-results
 Authorization: Basic YWRtaW46cGFzc3dvcmQ=
 Content-Type: application/json
 
+### Trading cycle execution
+GET http://localhost:5000/manual-tests/trading-cycle-test
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Type: application/json
+
 {
   "symbol": "TQQQ",
   "quantity": 1,

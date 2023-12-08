@@ -5,6 +5,7 @@ using TradingBot.Models;
 using Microsoft.AspNetCore.Authentication;
 using SQLitePCL;
 using TradingBot.Migrations;
+using Newtonsoft.Json.Linq;
 
 namespace TradingBot.Services;
 
@@ -48,7 +49,7 @@ public sealed class Strategy : IStrategy
         var sellActions = new List<TradingAction>();
         var growthRates = new List<averageGrowthRate>();
 
-        var cashAvailable = assets.Cash.AvailableAmount;
+        var cashAvailable = assets.Cash.BuyingPower;
 
         foreach (var prediction in predictions)
         {
@@ -62,7 +63,8 @@ public sealed class Strategy : IStrategy
 
             if (IsPriceDecreasing(closingPrices, minDaysDecreasing) && assets.Positions.TryGetValue(symbol, out var position))
             {
-                sellActions.Add(TradingAction.MarketSell(symbol, position.AvailableQuantity, _clock.UtcNow));
+                if (position.AvailableQuantity > 0)
+                    sellActions.Add(TradingAction.MarketSell(symbol, position.AvailableQuantity, _clock.UtcNow));
             }
             else if (IsPriceIncreasing(closingPrices, minDaysIncreasing))
             {
@@ -160,6 +162,11 @@ public sealed class Strategy : IStrategy
         {
             var symbol = topGrowingSymbols[i].Symbol;
             var price = topGrowingSymbols[i].Price;
+            if(price >= 1)
+                price = Math.Round(price, 2);
+            else
+                price = Math.Round(price, 4);
+
             var quantity = (int)(cashAvaliable * topGrowingSymbolsBuyRatio / price);
 
             if (i == topGrowingSymbols.Count - 1)
@@ -167,7 +174,7 @@ public sealed class Strategy : IStrategy
                 quantity = (int)Math.Floor(cashAvaliable / price);
             }
 
-            if (quantity * price > cashAvaliable || quantity == 0)
+            if (quantity * price > cashAvaliable || quantity <= 0)
                 continue;
 
             cashAvaliable -= quantity * price;

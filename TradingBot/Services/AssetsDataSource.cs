@@ -32,7 +32,8 @@ public sealed class AssetsDataSource : IAssetsDataSource
             Cash = new Cash
             {
                 MainCurrency = account.Currency ?? "Unspecified",
-                AvailableAmount = account.TradableCash
+                AvailableAmount = account.TradableCash,
+                BuyingPower = account.BuyingPower ?? 0
             },
             Positions = positions.Select(p => new Position
             {
@@ -54,7 +55,8 @@ public sealed class AssetsDataSource : IAssetsDataSource
             Cash = new Cash
             {
                 AvailableAmount = 11015.98m,
-                MainCurrency = "USD"
+                MainCurrency = "USD",
+                BuyingPower = 9024.56m
             },
             Positions = new Dictionary<TradingSymbol, Position>
             {

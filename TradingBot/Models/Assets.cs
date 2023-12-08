@@ -45,13 +45,15 @@ public sealed class Cash
 {
     public required string MainCurrency { get; init; }
     public required decimal AvailableAmount { get; init; }
+    public required decimal BuyingPower { get; init; }
 
     public CashResponse ToResponse()
     {
         return new CashResponse
         {
             MainCurrency = MainCurrency,
-            AvailableAmount = AvailableAmount
+            AvailableAmount = AvailableAmount,
+            BuyingPower = BuyingPower
         };
     }
 }

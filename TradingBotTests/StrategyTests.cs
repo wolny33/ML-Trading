@@ -188,8 +188,9 @@ namespace TradingBotTests
                 EquityValue = 12345m,
                 Cash = new Cash
                 {
-                    AvailableAmount = 1234m,
-                    MainCurrency = "EUR"
+                    AvailableAmount = 1555m,
+                    MainCurrency = "EUR",
+                    BuyingPower = 1234m
                 },
                 Positions = new Dictionary<TradingSymbol, Position>
                 {
@@ -294,9 +295,9 @@ namespace TradingBotTests
             }, options => options
                 .Excluding(x => x.Id));
 
-            var SOXSPrice = _predictions[new TradingSymbol("SOXS")].Prices[0].LowPrice +
-                (_predictions[new TradingSymbol("SOXS")].Prices[1].LowPrice - _predictions[new TradingSymbol("SOXS")].Prices[0].LowPrice) / 2;
-            var SOXSQuantity = (int)(_assets.Cash.AvailableAmount * _strategyParameters.TopGrowingSymbolsBuyRatio / SOXSPrice);
+            var SOXSPrice = Math.Round(_predictions[new TradingSymbol("SOXS")].Prices[0].LowPrice +
+                (_predictions[new TradingSymbol("SOXS")].Prices[1].LowPrice - _predictions[new TradingSymbol("SOXS")].Prices[0].LowPrice) / 2, 2);
+            var SOXSQuantity = (int)(_assets.Cash.BuyingPower * _strategyParameters.TopGrowingSymbolsBuyRatio / SOXSPrice);
             tradeActions.Should().ContainEquivalentOf(new TradingAction
             {
                 Id = Arg.Any<Guid>(),
@@ -309,8 +310,8 @@ namespace TradingBotTests
             }, options => options
                 .Excluding(x => x.Id));
 
-            var PLUGPrice = PLUGTradingData.Low + (_predictions[new TradingSymbol("PLUG")].Prices[0].LowPrice - PLUGTradingData.Low) / 2;
-            var PLUGQuantity = (int)Math.Floor((_assets.Cash.AvailableAmount - SOXSQuantity * SOXSPrice) / PLUGPrice);
+            var PLUGPrice = Math.Round(PLUGTradingData.Low + (_predictions[new TradingSymbol("PLUG")].Prices[0].LowPrice - PLUGTradingData.Low) / 2, 2);
+            var PLUGQuantity = (int)Math.Floor((_assets.Cash.BuyingPower - SOXSQuantity * SOXSPrice) / PLUGPrice);
             tradeActions.Should().ContainEquivalentOf(new TradingAction
             {
                 Id = Arg.Any<Guid>(),
