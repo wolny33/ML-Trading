@@ -6,7 +6,10 @@ public sealed class StrategyParametersResponse
 {
     [Required]
     public required int MaxStocksBuyCount { get; init; }
+    [Required]
     public required int MinDaysDecreasing { get; init; }
+    [Required]
     public required int MinDaysIncreasing { get; init; }
+    [Required]
     public required decimal TopGrowingSymbolsBuyRatio { get; init; }
 }
