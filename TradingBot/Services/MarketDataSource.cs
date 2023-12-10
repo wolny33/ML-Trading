@@ -16,7 +16,7 @@ public interface IMarketDataSource
 
     Task<IReadOnlyList<DailyTradingData>?> GetDataForSingleSymbolAsync(TradingSymbol symbol, DateOnly start,
         DateOnly end, CancellationToken token = default);
-    Task<decimal?> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
+    Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
 }
 
 public sealed class MarketDataSource : IMarketDataSource
@@ -64,24 +64,25 @@ public sealed class MarketDataSource : IMarketDataSource
         return IsDataValid(data) ? data : null;
     }
 
-    public async Task<decimal?> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default)
+    public async Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default)
     {
-        var lastWorkingDay = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
         using var client = await _clientFactory.CreateMarketDataClientAsync(token);
-
-        if (lastWorkingDay.DayOfWeek == DayOfWeek.Saturday)
-            lastWorkingDay = lastWorkingDay.AddDays(-1);
-        else if (lastWorkingDay.DayOfWeek == DayOfWeek.Sunday)
-            lastWorkingDay = lastWorkingDay.AddDays(-2);
-        else
+        try
         {
-            var todaysData = await client.GetLatestQuoteAsync(new LatestMarketDataRequest(symbol.Value), token);
-            if(todaysData != null && todaysData.AskPrice != 0 && todaysData.BidPrice != 0)
-                return (todaysData.AskPrice + todaysData.BidPrice) / 2;
+            var latestTradeData = await client.GetLatestTradeAsync(new LatestMarketDataRequest(symbol.Value), token);
+            return latestTradeData.Price;
         }
-
-        var result = await GetDataForSingleSymbolAsync(symbol, lastWorkingDay, lastWorkingDay.AddDays(1), token);
-        return (result == null) ? null : result.First().Close;
+        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
+        {
+            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
+            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
+        }
+        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
+                                      or TaskCanceledException)
+        {
+            _logger.Error(e, "Alpaca request failed");
+            throw new AlpacaCallFailedException(e);
+        }
     }
 
     private async Task<ISet<TradingSymbol>> SendValidSymbolsRequestAsync(CancellationToken token = default)

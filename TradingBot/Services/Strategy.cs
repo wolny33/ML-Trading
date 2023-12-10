@@ -83,10 +83,7 @@ public sealed class Strategy : IStrategy
     {
         var currentPrice = await _marketDataSource.GetLastAvailablePriceForSymbolAsync(symbol, token);
 
-        if (currentPrice == null)
-            throw new UnreachableException();
-        else
-            return (decimal)currentPrice;
+        return currentPrice;
     }
 
     private static bool IsPriceDecreasing(IReadOnlyList<decimal> closingPrices, int maxDaysDecreasing)

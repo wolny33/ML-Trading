@@ -253,7 +253,7 @@ namespace TradingBotTests
 
             tradeActions.Should().ContainEquivalentOf(new TradingAction
             {
-                Id = Arg.Any<Guid>(),
+                Id = Guid.NewGuid(),
                 CreatedAt = time,
                 Price = null,
                 Quantity = 80m,
@@ -267,7 +267,7 @@ namespace TradingBotTests
             var PLUGQuantity = (int)Math.Floor((_assets.Cash.BuyingPower * (decimal)_strategyParameters.TopGrowingSymbolsBuyRatio) / PLUGPrice);
             tradeActions.Should().ContainEquivalentOf(new TradingAction
             {
-                Id = Arg.Any<Guid>(),
+                Id = Guid.NewGuid(),
                 CreatedAt = time,
                 Price = PLUGPrice,
                 Quantity = PLUGQuantity,
@@ -281,7 +281,7 @@ namespace TradingBotTests
             var SOXSQuantity = (int)((_assets.Cash.BuyingPower - PLUGQuantity * PLUGPrice) / SOXSPrice);
             tradeActions.Should().ContainEquivalentOf(new TradingAction
             {
-                Id = Arg.Any<Guid>(),
+                Id = Guid.NewGuid(),
                 CreatedAt = time,
                 Price = SOXSPrice,
                 Quantity = SOXSQuantity,
