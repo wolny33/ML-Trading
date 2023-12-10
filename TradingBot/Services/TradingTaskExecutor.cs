@@ -18,7 +18,7 @@ public sealed class TradingTaskExecutor
         _calendar = calendar;
         _investmentConfig = investmentConfig;
         _tradingTask = tradingTask;
-        _logger = logger;
+        _logger = logger.ForContext<TradingTaskExecutor>();
     }
 
     public async Task ExecuteAsync(CancellationToken token = default)

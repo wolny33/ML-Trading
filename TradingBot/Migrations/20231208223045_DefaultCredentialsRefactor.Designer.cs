@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TradingBot.Database;
 
@@ -10,9 +11,11 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231208223045_DefaultCredentialsRefactor")]
+    partial class DefaultCredentialsRefactor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.13");
@@ -29,29 +32,6 @@ namespace TradingBot.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("InvestmentConfiguration");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.StrategyParametersEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("MaxStocksBuyCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MinDaysDecreasing")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MinDaysIncreasing")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("TopGrowingSymbolsBuyRatio")
-                        .HasColumnType("REAL");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("StrategyParameters");
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.TestModeConfigEntity", b =>

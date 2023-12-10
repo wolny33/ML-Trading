@@ -66,6 +66,7 @@ public sealed class Program
         app.MapHealthChecks("/health").AllowAnonymous();
 
         await ApplyMigrationsAsync(app.Services);
+        await SetDefaultCredentials(app.Services);
 
         await app.RunAsync();
     }
@@ -131,9 +132,16 @@ public sealed class Program
         await context.Database.MigrateAsync();
     }
 
+    private static Task SetDefaultCredentials(IServiceProvider services)
+    {
+        var command = services.GetRequiredService<CredentialsCommand>();
+        return command.CreateDefaultUserAsync();
+    }
+
     private static void ConfigureConfiguration(IServiceCollection services, IConfiguration config)
     {
         services.Configure<AlpacaConfiguration>(config.GetSection(AlpacaConfiguration.SectionName));
+        services.Configure<SeedCredentialsConfiguration>(config.GetSection(SeedCredentialsConfiguration.SectionName));
     }
 
     private static void ConfigureServices(IServiceCollection services, IConfiguration config)

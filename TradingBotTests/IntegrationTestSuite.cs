@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
@@ -16,6 +17,9 @@ namespace TradingBotTests;
 
 public class IntegrationTestSuite : WebApplicationFactory<Program>
 {
+    public const string TestUsername = "test-user";
+    public const string TestPassword = "test-password";
+
     private readonly SqliteConnection _connection;
 
     public IntegrationTestSuite()
@@ -33,7 +37,14 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureServices(services =>
+        builder.ConfigureAppConfiguration(config =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["SeedCredentials:DefaultUsername"] = TestUsername,
+                ["SeedCredentials:DefaultPassword"] = TestPassword
+            });
+        }).ConfigureServices(services =>
         {
             services.RemoveAll<IAlpacaClientFactory>();
             var factory = Substitute.For<IAlpacaClientFactory>();
@@ -78,7 +89,7 @@ public class IntegrationTestSuite : WebApplicationFactory<Program>
 
     public FlurlClient CreateAuthenticatedClient()
     {
-        return CreateUnauthenticatedClient().WithBasicAuth("admin", "password");
+        return CreateUnauthenticatedClient().WithBasicAuth(TestUsername, TestPassword);
     }
 
     protected override void Dispose(bool disposing)
