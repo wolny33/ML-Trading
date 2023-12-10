@@ -33,6 +33,29 @@ namespace TradingBot.Migrations
 
                     b.ToTable("InvestmentConfiguration");
                 });
+            
+            modelBuilder.Entity("TradingBot.Database.Entities.StrategyParametersEntity", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("TEXT");
+
+                b.Property<int>("MaxStocksBuyCount")
+                    .HasColumnType("INTEGER");
+
+                b.Property<int>("MinDaysDecreasing")
+                    .HasColumnType("INTEGER");
+
+                b.Property<int>("MinDaysIncreasing")
+                    .HasColumnType("INTEGER");
+
+                b.Property<double>("TopGrowingSymbolsBuyRatio")
+                    .HasColumnType("REAL");
+
+                b.HasKey("Id");
+
+                b.ToTable("StrategyParameters");
+            });
 
             modelBuilder.Entity("TradingBot.Database.Entities.TestModeConfigEntity", b =>
                 {

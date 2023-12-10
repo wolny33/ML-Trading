@@ -112,6 +112,7 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
             CreationTimestamp = (Now - TimeSpan.FromDays(3)).ToUnixTimeMilliseconds(),
             MainCurrency = "USD",
             AvailableCash = 100,
+            BuyingPower = 400,
             EquityValue = 200
         },
         new AssetsStateEntity
@@ -120,6 +121,7 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
             CreationTimestamp = (Now - TimeSpan.FromDays(2)).ToUnixTimeMilliseconds(),
             MainCurrency = "USD",
             AvailableCash = 100,
+            BuyingPower = 400,
             EquityValue = 180
         },
         new AssetsStateEntity
@@ -128,6 +130,7 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
             CreationTimestamp = (Now - TimeSpan.FromDays(1)).ToUnixTimeMilliseconds(),
             MainCurrency = "USD",
             AvailableCash = 100,
+            BuyingPower = 400,
             EquityValue = 220
         }
     };

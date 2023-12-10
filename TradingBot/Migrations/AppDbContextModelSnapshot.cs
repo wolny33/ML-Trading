@@ -26,6 +26,9 @@ namespace TradingBot.Migrations
                     b.Property<double>("AvailableCash")
                         .HasColumnType("REAL");
 
+                    b.Property<double>("BuyingPower")
+                        .HasColumnType("REAL");
+
                     b.Property<long>("CreationTimestamp")
                         .HasColumnType("INTEGER");
 
@@ -245,14 +248,14 @@ namespace TradingBot.Migrations
                     b.Navigation("TradingTask");
                 });
 
-            modelBuilder.Entity("TradingBot.Database.Entities.TradingTaskEntity", b =>
-                {
-                    b.Navigation("TradingActions");
-                });
-
             modelBuilder.Entity("TradingBot.Database.Entities.AssetsStateEntity", b =>
                 {
                     b.Navigation("HeldPositions");
+                });
+
+            modelBuilder.Entity("TradingBot.Database.Entities.TradingTaskEntity", b =>
+                {
+                    b.Navigation("TradingActions");
                 });
 #pragma warning restore 612, 618
         }

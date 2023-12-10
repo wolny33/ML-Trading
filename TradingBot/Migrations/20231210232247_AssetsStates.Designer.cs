@@ -11,7 +11,7 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20231210173749_AssetsStates")]
+    [Migration("20231210232247_AssetsStates")]
     partial class AssetsStates
     {
         /// <inheritdoc />
@@ -27,6 +27,9 @@ namespace TradingBot.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<double>("AvailableCash")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("BuyingPower")
                         .HasColumnType("REAL");
 
                     b.Property<long>("CreationTimestamp")
@@ -93,6 +96,29 @@ namespace TradingBot.Migrations
                     b.HasIndex("AssetsStateId");
 
                     b.ToTable("Positions");
+                });
+
+            modelBuilder.Entity("TradingBot.Database.Entities.StrategyParametersEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxStocksBuyCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinDaysDecreasing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinDaysIncreasing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("TopGrowingSymbolsBuyRatio")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StrategyParameters");
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.TestModeConfigEntity", b =>
@@ -189,6 +215,7 @@ namespace TradingBot.Migrations
             modelBuilder.Entity("TradingBot.Database.Entities.UserCredentialsEntity", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("HashedPassword")
@@ -202,14 +229,6 @@ namespace TradingBot.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Credentials");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000000"),
-                            HashedPassword = "AQAAAAIAAYagAAAAEKYyNm9AKgWuGR19nYSNT/7HYWJDCeC63fZKh/MfFaIaNIMhTKXzHLRXjEQ2uX6Qog==",
-                            Username = "admin"
-                        });
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.PositionEntity", b =>

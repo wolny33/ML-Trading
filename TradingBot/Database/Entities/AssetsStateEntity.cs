@@ -13,6 +13,7 @@ public sealed class AssetsStateEntity
     public required string MainCurrency { get; init; }
     public required double EquityValue { get; init; }
     public required double AvailableCash { get; init; }
+    public required double BuyingPower { get; init; }
 
     [Required]
     public IList<PositionEntity> HeldPositions { get; init; } = new List<PositionEntity>();

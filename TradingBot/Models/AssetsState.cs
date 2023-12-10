@@ -14,6 +14,7 @@ public sealed record AssetsState(Assets Assets, DateTimeOffset CreatedAt)
             MainCurrency = Assets.Cash.MainCurrency,
             EquityValue = (double)Assets.EquityValue,
             AvailableCash = (double)Assets.Cash.AvailableAmount,
+            BuyingPower = (double)Assets.Cash.BuyingPower,
             HeldPositions = Assets.Positions.Values.Select(p => new PositionEntity
             {
                 Id = Guid.NewGuid(),
@@ -36,7 +37,8 @@ public sealed record AssetsState(Assets Assets, DateTimeOffset CreatedAt)
             Cash = new Cash
             {
                 MainCurrency = entity.MainCurrency,
-                AvailableAmount = (decimal)entity.AvailableCash
+                AvailableAmount = (decimal)entity.AvailableCash,
+                BuyingPower = (decimal)entity.BuyingPower
             },
             Positions = entity.HeldPositions.Select(p => new Position
             {

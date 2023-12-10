@@ -19,7 +19,8 @@ namespace TradingBot.Migrations
                     CreationTimestamp = table.Column<long>(type: "INTEGER", nullable: false),
                     MainCurrency = table.Column<string>(type: "TEXT", nullable: false),
                     EquityValue = table.Column<double>(type: "REAL", nullable: false),
-                    AvailableCash = table.Column<double>(type: "REAL", nullable: false)
+                    AvailableCash = table.Column<double>(type: "REAL", nullable: false),
+                    BuyingPower = table.Column<double>(type: "REAL", nullable: false)
                 },
                 constraints: table =>
                 {
