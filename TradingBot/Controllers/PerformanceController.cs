@@ -45,7 +45,7 @@ public sealed class PerformanceController : ControllerBase
         var states = await _assetsStateQuery.GetStatesFromRangeAsync(start, end, HttpContext.RequestAborted);
         return states.Select(s => new ReturnResponse
         {
-            Return = initial.Value != 0 ? (s.Assets.EquityValue - initial.Value) / initial.Value - 1 : 0,
+            Return = initial.Value != 0 ? (s.Assets.EquityValue - initial.Value) / initial.Value : 0,
             Time = s.CreatedAt
         }).ToList();
     }
