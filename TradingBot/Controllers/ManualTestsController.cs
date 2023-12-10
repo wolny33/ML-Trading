@@ -16,6 +16,7 @@ namespace TradingBot.Controllers;
 public sealed class ManualTestsController : ControllerBase
 {
     private readonly ITradingActionQuery _actionQuery;
+    private readonly IAssetsStateCommand _assetsStateCommand;
     private readonly IMarketDataSource _dataSource;
     private readonly IActionExecutor _executor;
     private readonly IPricePredictor _predictor;
@@ -23,7 +24,8 @@ public sealed class ManualTestsController : ControllerBase
     private readonly IStrategy _strategy;
 
     public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource, IActionExecutor executor,
-        ITradingActionQuery actionQuery, TradingTaskExecutor taskExecutor, IStrategy strategy)
+        ITradingActionQuery actionQuery, TradingTaskExecutor taskExecutor, IAssetsStateCommand assetsStateCommand,
+        IStrategy strategy)
     {
         _predictor = predictor;
         _dataSource = dataSource;
@@ -31,6 +33,7 @@ public sealed class ManualTestsController : ControllerBase
         _actionQuery = actionQuery;
         _taskExecutor = taskExecutor;
         _strategy = strategy;
+        _assetsStateCommand = assetsStateCommand;
     }
 
     [HttpGet]
@@ -101,6 +104,14 @@ public sealed class ManualTestsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost]
+    [Route("assets-states")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<ActionResult> SaveCurrentAssetsStateAsync()
+    {
+        await _assetsStateCommand.SaveCurrentAssetsAsync(HttpContext.RequestAborted);
+        return NoContent();
+    }
 }
 
 public sealed class TradingActionRequest : IValidatableObject
