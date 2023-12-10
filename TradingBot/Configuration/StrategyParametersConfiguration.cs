@@ -8,7 +8,7 @@ namespace TradingBot.Configuration
         public required int MaxStocksBuyCount { get; init; }
         public required int MinDaysDecreasing { get; init; }
         public required int MinDaysIncreasing { get; init; }
-        public required decimal TopGrowingSymbolsBuyRatio { get; init; }
+        public required double TopGrowingSymbolsBuyRatio { get; init; }
 
         public static StrategyParametersConfiguration FromEntity(StrategyParametersEntity entity)
         {
@@ -17,7 +17,7 @@ namespace TradingBot.Configuration
                 MaxStocksBuyCount = entity.MaxStocksBuyCount,
                 MinDaysDecreasing = entity.MinDaysDecreasing,
                 MinDaysIncreasing = entity.MinDaysIncreasing,
-                TopGrowingSymbolsBuyRatio = (decimal)entity.TopGrowingSymbolsBuyRatio
+                TopGrowingSymbolsBuyRatio = entity.TopGrowingSymbolsBuyRatio
             };
         }
         public StrategyParametersResponse ToResponse()

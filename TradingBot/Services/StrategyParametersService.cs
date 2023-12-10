@@ -8,7 +8,7 @@ namespace TradingBot.Services
     {
         public Task<StrategyParametersConfiguration> GetConfigurationAsync(CancellationToken token = default);
         public Task<StrategyParametersConfiguration> SetParametersAsync(int maxStocksBuyCount, int minDaysDecreasing,
-            int minDaysIncreasing, decimal topGrowingSymbolsBuyRatio, CancellationToken token = default);
+            int minDaysIncreasing, double topGrowingSymbolsBuyRatio, CancellationToken token = default);
     }
     public sealed class StrategyParametersService : IStrategyParametersService
     {
@@ -28,7 +28,7 @@ namespace TradingBot.Services
             return StrategyParametersConfiguration.FromEntity(entity);
         }
 
-        public async Task<StrategyParametersConfiguration> SetParametersAsync(int maxStocksBuyCount, int minDaysDecreasing, int minDaysIncreasing, decimal topGrowingSymbolsBuyRatio, CancellationToken token = default)
+        public async Task<StrategyParametersConfiguration> SetParametersAsync(int maxStocksBuyCount, int minDaysDecreasing, int minDaysIncreasing, double topGrowingSymbolsBuyRatio, CancellationToken token = default)
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync(token);
             var entity = await context.StrategyParameters.FirstOrDefaultAsync(token);
@@ -41,7 +41,7 @@ namespace TradingBot.Services
             entity.MaxStocksBuyCount = maxStocksBuyCount;
             entity.MinDaysDecreasing = minDaysDecreasing;
             entity.MinDaysIncreasing = minDaysIncreasing;
-            entity.TopGrowingSymbolsBuyRatio = (double)topGrowingSymbolsBuyRatio;
+            entity.TopGrowingSymbolsBuyRatio = topGrowingSymbolsBuyRatio;
             await context.SaveChangesAsync(token);
 
             return StrategyParametersConfiguration.FromEntity(entity);

@@ -11,5 +11,5 @@ public sealed class StrategyParametersRequest
     [Required]
     public required int MinDaysIncreasing { get; init; }
     [Required]
-    public required decimal TopGrowingSymbolsBuyRatio { get; init; }
+    public required double TopGrowingSymbolsBuyRatio { get; init; }
 }

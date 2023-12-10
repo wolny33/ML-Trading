@@ -38,7 +38,7 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
             MaxStocksBuyCount = 10,
             MinDaysDecreasing = 5,
             MinDaysIncreasing = 5,
-            TopGrowingSymbolsBuyRatio = 0.4m
+            TopGrowingSymbolsBuyRatio = 0.4
         });
     }
 
@@ -51,7 +51,7 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
             MaxStocksBuyCount = 12,
             MinDaysDecreasing = 3,
             MinDaysIncreasing = 3,
-            TopGrowingSymbolsBuyRatio = 0.5m
+            TopGrowingSymbolsBuyRatio = 0.5
         });
         var strategySettings = await response.GetJsonAsync<StrategyParametersResponse>();
 
@@ -60,7 +60,7 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
             MaxStocksBuyCount = 10,
             MinDaysDecreasing = 5,
             MinDaysIncreasing = 5,
-            TopGrowingSymbolsBuyRatio = 0.4m
+            TopGrowingSymbolsBuyRatio = 0.4
         });
 
         strategySettings.Should().BeEquivalentTo(new
@@ -68,7 +68,7 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
             MaxStocksBuyCount = 12,
             MinDaysDecreasing = 3,
             MinDaysIncreasing = 3,
-            TopGrowingSymbolsBuyRatio = 0.5m
+            TopGrowingSymbolsBuyRatio = 0.5
         });
     }
 

@@ -219,7 +219,7 @@ namespace TradingBotTests
                 MaxStocksBuyCount = 3,
                 MinDaysDecreasing = 3,
                 MinDaysIncreasing = 3,
-                TopGrowingSymbolsBuyRatio = 0.4m
+                TopGrowingSymbolsBuyRatio = 0.4
             };
         }
         [Fact]
@@ -236,46 +236,14 @@ namespace TradingBotTests
             var assetsData = Substitute.For<IAssetsDataSource>();
             assetsData.GetAssetsAsync().Returns(_assets);
 
-            var PLUGTradingData = new DailyTradingData
-            {
-                Date = today,
-                Open = 4.18417857989668846092m,
-                Close = 4.23420837104320526104m,
-                High = 4.44825740277767181508m,
-                Low = 4.1417857989668846092m,
-                Volume = 15.21453737735748290944m
-            };
+            var PLUGCurrentPrice = 4.1417857989668846092m;
+            var SOXSCurrentPrice = 8.84562028538435697771m;
 
             var marketData = Substitute.For<IMarketDataSource>();
-            marketData.GetDataForSingleSymbolAsync(new TradingSymbol("TSLA"), today, today).Returns(new List<DailyTradingData>
-            {
-                new DailyTradingData
-                {
-                    Date = today,
-                    Open = 238.405077066421508778432m,
-                    Close = 238.405077066421508778432m,
-                    High = 238.405077066421508778432m,
-                    Low = 238.405077066421508778432m,
-                    Volume = 238.405077066421508778432m
-                }
-            });
-            marketData.GetDataForSingleSymbolAsync(new TradingSymbol("MARA"), today, today).Returns(new List<DailyTradingData>
-            {
-                new DailyTradingData
-                {
-                    Date = today,
-                    Open = 15.21453737735748290944m,
-                    Close = 15.21453737735748290944m,
-                    High = 15.21453737735748290944m,
-                    Low = 15.21453737735748290944m,
-                    Volume = 15.21453737735748290944m
-                }
-            });
-            marketData.GetDataForSingleSymbolAsync(new TradingSymbol("SOXS"), today, today).Returns((List<DailyTradingData>?)null);
-            marketData.GetDataForSingleSymbolAsync(new TradingSymbol("PLUG"), today, today).Returns(new List<DailyTradingData>
-            {
-                PLUGTradingData
-            });
+            marketData.GetLastAvailablePriceForSymbolAsync(new TradingSymbol("TSLA")).Returns(238.405077066421508778432m);
+            marketData.GetLastAvailablePriceForSymbolAsync(new TradingSymbol("MARA")).Returns(15.21453737735748290944m);
+            marketData.GetLastAvailablePriceForSymbolAsync(new TradingSymbol("SOXS")).Returns(SOXSCurrentPrice);
+            marketData.GetLastAvailablePriceForSymbolAsync(new TradingSymbol("PLUG")).Returns(PLUGCurrentPrice);
 
             var strategyParameters = Substitute.For<IStrategyParametersService>();
             strategyParameters.GetConfigurationAsync().Returns(_strategyParameters);
@@ -295,23 +263,8 @@ namespace TradingBotTests
             }, options => options
                 .Excluding(x => x.Id));
 
-            var SOXSPrice = Math.Round(_predictions[new TradingSymbol("SOXS")].Prices[0].LowPrice +
-                (_predictions[new TradingSymbol("SOXS")].Prices[1].LowPrice - _predictions[new TradingSymbol("SOXS")].Prices[0].LowPrice) / 2, 2);
-            var SOXSQuantity = (int)(_assets.Cash.BuyingPower * _strategyParameters.TopGrowingSymbolsBuyRatio / SOXSPrice);
-            tradeActions.Should().ContainEquivalentOf(new TradingAction
-            {
-                Id = Arg.Any<Guid>(),
-                CreatedAt = time,
-                Price = SOXSPrice,
-                Quantity = SOXSQuantity,
-                Symbol = new TradingSymbol("SOXS"),
-                InForce = TimeInForce.Day,
-                OrderType = TradingBot.Models.OrderType.LimitBuy
-            }, options => options
-                .Excluding(x => x.Id));
-
-            var PLUGPrice = Math.Round(PLUGTradingData.Low + (_predictions[new TradingSymbol("PLUG")].Prices[0].LowPrice - PLUGTradingData.Low) / 2, 2);
-            var PLUGQuantity = (int)Math.Floor((_assets.Cash.BuyingPower - SOXSQuantity * SOXSPrice) / PLUGPrice);
+            var PLUGPrice = Math.Round((PLUGCurrentPrice + _predictions[new TradingSymbol("PLUG")].Prices[0].LowPrice) / 2, 2);
+            var PLUGQuantity = (int)Math.Floor((_assets.Cash.BuyingPower * (decimal)_strategyParameters.TopGrowingSymbolsBuyRatio) / PLUGPrice);
             tradeActions.Should().ContainEquivalentOf(new TradingAction
             {
                 Id = Arg.Any<Guid>(),
@@ -319,6 +272,20 @@ namespace TradingBotTests
                 Price = PLUGPrice,
                 Quantity = PLUGQuantity,
                 Symbol = new TradingSymbol("PLUG"),
+                InForce = TimeInForce.Day,
+                OrderType = TradingBot.Models.OrderType.LimitBuy
+            }, options => options
+                .Excluding(x => x.Id));
+
+            var SOXSPrice = Math.Round((SOXSCurrentPrice + _predictions[new TradingSymbol("SOXS")].Prices[0].LowPrice) / 2, 2);
+            var SOXSQuantity = (int)((_assets.Cash.BuyingPower - PLUGQuantity * PLUGPrice) / SOXSPrice);
+            tradeActions.Should().ContainEquivalentOf(new TradingAction
+            {
+                Id = Arg.Any<Guid>(),
+                CreatedAt = time,
+                Price = SOXSPrice,
+                Quantity = SOXSQuantity,
+                Symbol = new TradingSymbol("SOXS"),
                 InForce = TimeInForce.Day,
                 OrderType = TradingBot.Models.OrderType.LimitBuy
             }, options => options

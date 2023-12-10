@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using Alpaca.Markets;
 using Flurl.Http;
+using Microsoft.AspNetCore.Authentication;
 using TradingBot.Exceptions;
 using TradingBot.Models;
 using TradingBot.Services.AlpacaClients;
@@ -15,6 +16,7 @@ public interface IMarketDataSource
 
     Task<IReadOnlyList<DailyTradingData>?> GetDataForSingleSymbolAsync(TradingSymbol symbol, DateOnly start,
         DateOnly end, CancellationToken token = default);
+    Task<decimal?> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
 }
 
 public sealed class MarketDataSource : IMarketDataSource
@@ -22,12 +24,14 @@ public sealed class MarketDataSource : IMarketDataSource
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
+    private readonly ISystemClock _clock;
 
-    public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger)
+    public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger, ISystemClock clock)
     {
         _clientFactory = clientFactory;
         _assetsDataSource = assetsDataSource;
         _logger = logger.ForContext<MarketDataSource>();
+        _clock = clock;
     }
 
     public async Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesAsync(DateOnly start,
@@ -58,6 +62,26 @@ public sealed class MarketDataSource : IMarketDataSource
         var data = await SendBarsRequestAsync(symbol, start, end, client, token);
 
         return IsDataValid(data) ? data : null;
+    }
+
+    public async Task<decimal?> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default)
+    {
+        var lastWorkingDay = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
+        using var client = await _clientFactory.CreateMarketDataClientAsync(token);
+
+        if (lastWorkingDay.DayOfWeek == DayOfWeek.Saturday)
+            lastWorkingDay = lastWorkingDay.AddDays(-1);
+        else if (lastWorkingDay.DayOfWeek == DayOfWeek.Sunday)
+            lastWorkingDay = lastWorkingDay.AddDays(-2);
+        else
+        {
+            var todaysData = await client.GetLatestQuoteAsync(new LatestMarketDataRequest(symbol.Value), token);
+            if(todaysData != null && todaysData.AskPrice != 0 && todaysData.BidPrice != 0)
+                return (todaysData.AskPrice + todaysData.BidPrice) / 2;
+        }
+
+        var result = await GetDataForSingleSymbolAsync(symbol, lastWorkingDay, lastWorkingDay.AddDays(1), token);
+        return (result == null) ? null : result.First().Close;
     }
 
     private async Task<ISet<TradingSymbol>> SendValidSymbolsRequestAsync(CancellationToken token = default)
