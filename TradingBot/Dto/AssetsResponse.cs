@@ -39,4 +39,6 @@ public sealed class CashResponse
 
     [Required]
     public required decimal AvailableAmount { get; init; }
+    [Required]
+    public required decimal BuyingPower { get; init; }
 }

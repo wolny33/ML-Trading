@@ -31,11 +31,14 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
     public async Task ShouldGetStrategySettings()
     {
         using var client = _testSuite.CreateAuthenticatedClient();
-        var strategySettings = await client.Request("api", "strategy").GetJsonAsync<StrategySettingsResponse>();
+        var strategySettings = await client.Request("api", "strategy").GetJsonAsync<StrategyParametersResponse>();
 
         strategySettings.Should().BeEquivalentTo(new
         {
-            ImportantProperty = "value"
+            MaxStocksBuyCount = 10,
+            MinDaysDecreasing = 5,
+            MinDaysIncreasing = 5,
+            TopGrowingSymbolsBuyRatio = 0.4
         });
     }
 
@@ -45,13 +48,27 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
         using var client = _testSuite.CreateAuthenticatedClient();
         var response = await client.Request("api", "strategy").PutJsonAsync(new
         {
-            importantProperty = "new value"
+            MaxStocksBuyCount = 12,
+            MinDaysDecreasing = 3,
+            MinDaysIncreasing = 3,
+            TopGrowingSymbolsBuyRatio = 0.5
         });
-        var strategySettings = await response.GetJsonAsync<StrategySettingsResponse>();
+        var strategySettings = await response.GetJsonAsync<StrategyParametersResponse>();
+
+        await client.Request("api", "strategy").PutJsonAsync(new
+        {
+            MaxStocksBuyCount = 10,
+            MinDaysDecreasing = 5,
+            MinDaysIncreasing = 5,
+            TopGrowingSymbolsBuyRatio = 0.4
+        });
 
         strategySettings.Should().BeEquivalentTo(new
         {
-            ImportantProperty = "new value"
+            MaxStocksBuyCount = 12,
+            MinDaysDecreasing = 3,
+            MinDaysIncreasing = 3,
+            TopGrowingSymbolsBuyRatio = 0.5
         });
     }
 

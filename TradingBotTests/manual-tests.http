@@ -25,3 +25,8 @@ Content-Type: application/json
   "orderType": "LimitBuy",
   "inForce": "Day"
 }
+
+### Strategy results execution
+GET http://localhost:5000/manual-tests/strategy-results
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Type: application/json

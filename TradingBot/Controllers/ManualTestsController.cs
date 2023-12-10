@@ -20,15 +20,17 @@ public sealed class ManualTestsController : ControllerBase
     private readonly IActionExecutor _executor;
     private readonly IPricePredictor _predictor;
     private readonly TradingTaskExecutor _taskExecutor;
+    private readonly IStrategy _strategy;
 
     public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource, IActionExecutor executor,
-        ITradingActionQuery actionQuery, TradingTaskExecutor taskExecutor)
+        ITradingActionQuery actionQuery, TradingTaskExecutor taskExecutor, IStrategy strategy)
     {
         _predictor = predictor;
         _dataSource = dataSource;
         _executor = executor;
         _actionQuery = actionQuery;
         _taskExecutor = taskExecutor;
+        _strategy = strategy;
     }
 
     [HttpGet]
@@ -87,6 +89,18 @@ public sealed class ManualTestsController : ControllerBase
         await _taskExecutor.ExecuteAsync(HttpContext.RequestAborted);
         return NoContent();
     }
+
+    [HttpGet]
+    [Route("strategy-results")]
+    [ProducesResponseType(typeof(IReadOnlyList<TradingAction>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<TradingAction>>> GetStrategyResultsAsync()
+    {
+        var result = await _strategy.GetTradingActionsAsync(HttpContext.RequestAborted);
+
+        return Ok(result);
+    }
+
 }
 
 public sealed class TradingActionRequest : IValidatableObject
