@@ -104,6 +104,37 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
         }
     };
 
+    public IReadOnlyList<AssetsStateEntity> AssetsStates { get; } = new[]
+    {
+        new AssetsStateEntity
+        {
+            Id = Guid.NewGuid(),
+            CreationTimestamp = (Now - TimeSpan.FromDays(3)).ToUnixTimeMilliseconds(),
+            MainCurrency = "USD",
+            AvailableCash = 100,
+            BuyingPower = 400,
+            EquityValue = 200
+        },
+        new AssetsStateEntity
+        {
+            Id = Guid.NewGuid(),
+            CreationTimestamp = (Now - TimeSpan.FromDays(2)).ToUnixTimeMilliseconds(),
+            MainCurrency = "USD",
+            AvailableCash = 100,
+            BuyingPower = 400,
+            EquityValue = 180
+        },
+        new AssetsStateEntity
+        {
+            Id = Guid.NewGuid(),
+            CreationTimestamp = (Now - TimeSpan.FromDays(1)).ToUnixTimeMilliseconds(),
+            MainCurrency = "USD",
+            AvailableCash = 100,
+            BuyingPower = 400,
+            EquityValue = 220
+        }
+    };
+
     public Task InitializeAsync()
     {
         return ResetAsync();
@@ -128,7 +159,9 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
     {
         await using var context = await DbContextFactory.CreateDbContextAsync();
         await context.TradingActions.ExecuteDeleteAsync();
+        await context.AssetsStates.ExecuteDeleteAsync();
         context.TradingActions.AddRange(Actions);
+        context.AssetsStates.AddRange(AssetsStates);
         await context.SaveChangesAsync();
 
         TradingClientSubstitute.ClearReceivedCalls();
@@ -169,12 +202,29 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
     }
 
     [Fact]
-    public async Task ShouldReturnMockedReturnsData()
+    public async Task ShouldReturnCorrectReturnsData()
     {
         using var client = _testSuite.CreateAuthenticatedClient();
         var returns = await client.Request("api", "performance").GetJsonAsync<IReadOnlyList<ReturnResponse>>();
 
-        returns.Should().HaveCount(10).And.BeInAscendingOrder(r => r.Time);
+        returns.Should().BeEquivalentTo(new[]
+        {
+            new ReturnResponse
+            {
+                Return = 0,
+                Time = PerformanceTestSuite.Now - TimeSpan.FromDays(3)
+            },
+            new ReturnResponse
+            {
+                Return = -0.1m,
+                Time = PerformanceTestSuite.Now - TimeSpan.FromDays(2)
+            },
+            new ReturnResponse
+            {
+                Return = 0.1m,
+                Time = PerformanceTestSuite.Now - TimeSpan.FromDays(1)
+            }
+        });
     }
 
     [Fact]
@@ -184,12 +234,24 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
         var response = await client.AllowAnyHttpStatus().Request("api", "performance")
             .SetQueryParams(new
             {
-                start = "2023-11-22T11:19:00",
-                end = "2023-11-24T10:10:00"
+                start = "2023-11-29T17:00:00",
+                end = "2023-12-01T19:00:00"
             }).GetAsync();
         var returns = await response.GetJsonAsync<IReadOnlyList<ReturnResponse>>();
 
-        returns.Should().HaveCount(2).And.BeInAscendingOrder(r => r.Time);
+        returns.Should().BeEquivalentTo(new[]
+        {
+            new ReturnResponse
+            {
+                Return = -0.1m,
+                Time = PerformanceTestSuite.Now - TimeSpan.FromDays(2)
+            },
+            new ReturnResponse
+            {
+                Return = 0.1m,
+                Time = PerformanceTestSuite.Now - TimeSpan.FromDays(1)
+            }
+        });
     }
 
     [Fact]

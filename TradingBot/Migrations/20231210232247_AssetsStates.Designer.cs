@@ -11,14 +11,43 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20231208223045_DefaultCredentialsRefactor")]
-    partial class DefaultCredentialsRefactor
+    [Migration("20231210232247_AssetsStates")]
+    partial class AssetsStates
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.13");
+
+            modelBuilder.Entity("TradingBot.Database.Entities.AssetsStateEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("AvailableCash")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("BuyingPower")
+                        .HasColumnType("REAL");
+
+                    b.Property<long>("CreationTimestamp")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("EquityValue")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("MainCurrency")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreationTimestamp");
+
+                    b.ToTable("AssetsStates");
+                });
 
             modelBuilder.Entity("TradingBot.Database.Entities.InvestmentConfigEntity", b =>
                 {
@@ -33,29 +62,64 @@ namespace TradingBot.Migrations
 
                     b.ToTable("InvestmentConfiguration");
                 });
-            
+
+            modelBuilder.Entity("TradingBot.Database.Entities.PositionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AssetsStateId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("AvailableQuantity")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("AverageEntryPrice")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("MarketValue")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("Quantity")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SymbolId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetsStateId");
+
+                    b.ToTable("Positions");
+                });
+
             modelBuilder.Entity("TradingBot.Database.Entities.StrategyParametersEntity", b =>
-            {
-                b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
-                    .HasColumnType("TEXT");
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
 
-                b.Property<int>("MaxStocksBuyCount")
-                    .HasColumnType("INTEGER");
+                    b.Property<int>("MaxStocksBuyCount")
+                        .HasColumnType("INTEGER");
 
-                b.Property<int>("MinDaysDecreasing")
-                    .HasColumnType("INTEGER");
+                    b.Property<int>("MinDaysDecreasing")
+                        .HasColumnType("INTEGER");
 
-                b.Property<int>("MinDaysIncreasing")
-                    .HasColumnType("INTEGER");
+                    b.Property<int>("MinDaysIncreasing")
+                        .HasColumnType("INTEGER");
 
-                b.Property<double>("TopGrowingSymbolsBuyRatio")
-                    .HasColumnType("REAL");
+                    b.Property<double>("TopGrowingSymbolsBuyRatio")
+                        .HasColumnType("REAL");
 
-                b.HasKey("Id");
+                    b.HasKey("Id");
 
-                b.ToTable("StrategyParameters");
-            });
+                    b.ToTable("StrategyParameters");
+                });
 
             modelBuilder.Entity("TradingBot.Database.Entities.TestModeConfigEntity", b =>
                 {
@@ -167,6 +231,17 @@ namespace TradingBot.Migrations
                     b.ToTable("Credentials");
                 });
 
+            modelBuilder.Entity("TradingBot.Database.Entities.PositionEntity", b =>
+                {
+                    b.HasOne("TradingBot.Database.Entities.AssetsStateEntity", "AssetsState")
+                        .WithMany("HeldPositions")
+                        .HasForeignKey("AssetsStateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AssetsState");
+                });
+
             modelBuilder.Entity("TradingBot.Database.Entities.TradingActionEntity", b =>
                 {
                     b.HasOne("TradingBot.Database.Entities.TradingTaskEntity", "TradingTask")
@@ -174,6 +249,11 @@ namespace TradingBot.Migrations
                         .HasForeignKey("TradingTaskId");
 
                     b.Navigation("TradingTask");
+                });
+
+            modelBuilder.Entity("TradingBot.Database.Entities.AssetsStateEntity", b =>
+                {
+                    b.Navigation("HeldPositions");
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.TradingTaskEntity", b =>
