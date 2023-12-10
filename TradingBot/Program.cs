@@ -29,7 +29,11 @@ public sealed class Program
         ConfigureServices(builder.Services, builder.Configuration);
         ConfigureAuth(builder.Services);
 
-        builder.Services.AddQuartz(TradingTaskJob.RegisterJob);
+        builder.Services.AddQuartz(options =>
+        {
+            TradingTaskJob.RegisterJob(options);
+            AssetsStateJob.RegisterJob(options);
+        });
         builder.Services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
         builder.Services.AddControllers();
@@ -167,5 +171,7 @@ public sealed class Program
         services.AddTransient<ITradingActionCommand, TradingActionCommand>();
         services.AddTransient<ITradingTaskCommand, TradingTaskCommand>();
         services.AddTransient<ITradingTaskQuery, TradingTaskQuery>();
+        services.AddTransient<IAssetsStateCommand, AssetsStateCommand>();
+        services.AddTransient<IAssetsStateQuery, AssetsStateQuery>();
     }
 }

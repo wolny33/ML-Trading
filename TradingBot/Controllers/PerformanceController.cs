@@ -10,13 +10,16 @@ namespace TradingBot.Controllers;
 [ApiController]
 public sealed class PerformanceController : ControllerBase
 {
+    private readonly ITradingActionQuery _actionsQuery;
+    private readonly IAssetsStateQuery _assetsStateQuery;
     private readonly ISystemClock _clock;
-    private readonly ITradingActionQuery _query;
 
-    public PerformanceController(ITradingActionQuery query, ISystemClock clock)
+    public PerformanceController(ITradingActionQuery actionsQuery, ISystemClock clock,
+        IAssetsStateQuery assetsStateQuery)
     {
-        _query = query;
+        _actionsQuery = actionsQuery;
         _clock = clock;
+        _assetsStateQuery = assetsStateQuery;
     }
 
     /// <summary>
@@ -29,24 +32,22 @@ public sealed class PerformanceController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<ReturnsRequest>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IReadOnlyList<ReturnResponse> CheckPerformance([FromQuery] ReturnsRequest request)
+    public async Task<IReadOnlyList<ReturnResponse>> GetReturnsAsync([FromQuery] ReturnsRequest request)
     {
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
 
-        var first = start - start.TimeOfDay + TimeSpan.FromDays(1);
-        return Enumerable.Range(0, (int)(end - first).TotalDays + 1).Select(i =>
-            (Time: first + TimeSpan.FromDays(i), DailyChange: Random.Shared.NextDouble() * 0.6 - 0.3)).Aggregate(
-            new List<ReturnResponse>(),
-            (returns, change) =>
-            {
-                returns.Add(new ReturnResponse
-                {
-                    Return = ((returns.LastOrDefault()?.Return ?? 0) + 1) * (change.DailyChange + 1) - 1,
-                    Time = change.Time
-                });
-                return returns;
-            });
+        var initial = (await _assetsStateQuery.GetEarliestStateAsync(HttpContext.RequestAborted))?.Assets.EquityValue;
+        if (initial is null)
+            // There are no saved asset states to return
+            return Array.Empty<ReturnResponse>();
+
+        var states = await _assetsStateQuery.GetStatesFromRangeAsync(start, end, HttpContext.RequestAborted);
+        return states.Select(s => new ReturnResponse
+        {
+            Return = initial.Value != 0 ? (s.Assets.EquityValue - initial.Value) / initial.Value - 1 : 0,
+            Time = s.CreatedAt
+        }).ToList();
     }
 
     /// <summary>
@@ -67,8 +68,8 @@ public sealed class PerformanceController : ControllerBase
         var start = request.Start ?? end - TimeSpan.FromDays(10);
 
         var actions = request.Mocked
-            ? _query.CreateMockedTradingActions(start, end)
-            : await _query.GetTradingActionsAsync(start, end, HttpContext.RequestAborted);
+            ? _actionsQuery.CreateMockedTradingActions(start, end)
+            : await _actionsQuery.GetTradingActionsAsync(start, end, HttpContext.RequestAborted);
 
         return actions.Select(a => a.ToResponse()).ToList();
     }
@@ -88,7 +89,7 @@ public sealed class PerformanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TradingActionResponse>> GetTradeActionsAsync([FromRoute] Guid id)
     {
-        var result = await _query.GetTradingActionByIdAsync(id, HttpContext.RequestAborted);
+        var result = await _actionsQuery.GetTradingActionByIdAsync(id, HttpContext.RequestAborted);
         return result is not null ? result.ToResponse() : NotFound();
     }
 
