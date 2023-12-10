@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TradingBot.Database;
 
@@ -10,9 +11,11 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231210173749_AssetsStates")]
+    partial class AssetsStates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.13");
@@ -90,29 +93,6 @@ namespace TradingBot.Migrations
                     b.HasIndex("AssetsStateId");
 
                     b.ToTable("Positions");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.StrategyParametersEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("MaxStocksBuyCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MinDaysDecreasing")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MinDaysIncreasing")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("TopGrowingSymbolsBuyRatio")
-                        .HasColumnType("REAL");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("StrategyParameters");
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.TestModeConfigEntity", b =>
@@ -209,7 +189,6 @@ namespace TradingBot.Migrations
             modelBuilder.Entity("TradingBot.Database.Entities.UserCredentialsEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("HashedPassword")
@@ -223,6 +202,14 @@ namespace TradingBot.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Credentials");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000000"),
+                            HashedPassword = "AQAAAAIAAYagAAAAEKYyNm9AKgWuGR19nYSNT/7HYWJDCeC63fZKh/MfFaIaNIMhTKXzHLRXjEQ2uX6Qog==",
+                            Username = "admin"
+                        });
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.PositionEntity", b =>
@@ -245,14 +232,14 @@ namespace TradingBot.Migrations
                     b.Navigation("TradingTask");
                 });
 
-            modelBuilder.Entity("TradingBot.Database.Entities.TradingTaskEntity", b =>
-                {
-                    b.Navigation("TradingActions");
-                });
-
             modelBuilder.Entity("TradingBot.Database.Entities.AssetsStateEntity", b =>
                 {
                     b.Navigation("HeldPositions");
+                });
+
+            modelBuilder.Entity("TradingBot.Database.Entities.TradingTaskEntity", b =>
+                {
+                    b.Navigation("TradingActions");
                 });
 #pragma warning restore 612, 618
         }
