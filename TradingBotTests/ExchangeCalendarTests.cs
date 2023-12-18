@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authentication;
 using NSubstitute;
 using Serilog;
 using TradingBot.Services;
-using TradingBot.Services.AlpacaClients;
 
 namespace TradingBotTests;
 

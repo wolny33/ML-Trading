@@ -11,7 +11,7 @@ using NSubstitute;
 using Quartz;
 using TradingBot;
 using TradingBot.Database;
-using TradingBot.Services.AlpacaClients;
+using TradingBot.Services;
 
 namespace TradingBotTests;
 

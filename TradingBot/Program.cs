@@ -11,7 +11,6 @@ using TradingBot.Configuration;
 using TradingBot.Database;
 using TradingBot.Exceptions;
 using TradingBot.Services;
-using TradingBot.Services.AlpacaClients;
 
 namespace TradingBot;
 

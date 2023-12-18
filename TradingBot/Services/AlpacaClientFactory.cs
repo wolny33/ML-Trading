@@ -1,10 +1,9 @@
 ﻿using Alpaca.Markets;
-using Flurl.Http.Configuration;
 using Microsoft.Extensions.Options;
 using TradingBot.Configuration;
 using Environments = Alpaca.Markets.Environments;
 
-namespace TradingBot.Services.AlpacaClients;
+namespace TradingBot.Services;
 
 public interface IAlpacaClientFactory
 {
@@ -15,15 +14,12 @@ public interface IAlpacaClientFactory
 public sealed class AlpacaClientFactory : IAlpacaClientFactory
 {
     private readonly IOptionsMonitor<AlpacaConfiguration> _config;
-    private readonly IFlurlClientFactory _flurlClientFactory;
     private readonly ITestModeConfigService _testModeConfig;
 
-    public AlpacaClientFactory(IOptionsMonitor<AlpacaConfiguration> config, ITestModeConfigService testModeConfig,
-        IFlurlClientFactory flurlClientFactory)
+    public AlpacaClientFactory(IOptionsMonitor<AlpacaConfiguration> config, ITestModeConfigService testModeConfig)
     {
         _config = config;
         _testModeConfig = testModeConfig;
-        _flurlClientFactory = flurlClientFactory;
     }
 
     public async Task<IAlpacaDataClient> CreateMarketDataClientAsync(CancellationToken token = default)
