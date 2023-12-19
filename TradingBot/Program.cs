@@ -150,6 +150,9 @@ public sealed class Program
     private static void ConfigureServices(IServiceCollection services, IConfiguration config)
     {
         services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(GetConnectionString(config)));
+
+        services.AddMemoryCache();
+
         services.AddSingleton<IFlurlClientFactory, PerBaseUrlFlurlClientFactory>();
         services.AddSingleton<IAlpacaClientFactory, AlpacaClientFactory>();
 
@@ -172,5 +175,7 @@ public sealed class Program
         services.AddTransient<ITradingTaskQuery, TradingTaskQuery>();
         services.AddTransient<IAssetsStateCommand, AssetsStateCommand>();
         services.AddTransient<IAssetsStateQuery, AssetsStateQuery>();
+
+        services.AddSingleton<IMarketDataCache, MarketDataCache>();
     }
 }
