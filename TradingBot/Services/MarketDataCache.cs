@@ -9,10 +9,10 @@ public interface IMarketDataCache
 
     ISet<TradingSymbol>? TryGetValidSymbols();
 
-    void CacheDailySymbolData(TradingSymbol symbol, IEnumerable<DailyTradingData> data, DateOnly start,
+    void CacheDailySymbolData(TradingSymbol symbol, IReadOnlyList<DailyTradingData> data, DateOnly start,
         DateOnly end);
 
-    void CacheValidSymbols(IEnumerable<TradingSymbol> symbols);
+    void CacheValidSymbols(IReadOnlyList<TradingSymbol> symbols);
 }
 
 public sealed class MarketDataCache : IMarketDataCache
@@ -43,7 +43,7 @@ public sealed class MarketDataCache : IMarketDataCache
         return _validSymbols;
     }
 
-    public void CacheDailySymbolData(TradingSymbol symbol, IEnumerable<DailyTradingData> data, DateOnly start,
+    public void CacheDailySymbolData(TradingSymbol symbol, IReadOnlyList<DailyTradingData> data, DateOnly start,
         DateOnly end)
     {
         var dailyData = data.ToDictionary(d => d.Date);
@@ -51,7 +51,7 @@ public sealed class MarketDataCache : IMarketDataCache
             _cache.Set(new CacheKey(symbol, day), dailyData.TryGetValue(day, out var value) ? value : null);
     }
 
-    public void CacheValidSymbols(IEnumerable<TradingSymbol> symbols)
+    public void CacheValidSymbols(IReadOnlyList<TradingSymbol> symbols)
     {
         _validSymbols = symbols.ToHashSet();
     }

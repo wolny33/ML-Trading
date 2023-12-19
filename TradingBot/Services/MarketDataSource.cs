@@ -85,7 +85,7 @@ public sealed class MarketDataSource : IMarketDataSource
         if (_cache.TryGetValidSymbols() is { } cached) return cached;
 
         var validSymbols = await SendValidSymbolsRequestAsync(token);
-        _cache.CacheValidSymbols(validSymbols);
+        _cache.CacheValidSymbols(validSymbols.ToList());
         return validSymbols;
     }
 
