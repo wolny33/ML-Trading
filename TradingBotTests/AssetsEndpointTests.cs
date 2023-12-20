@@ -4,14 +4,12 @@ using Flurl.Http;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using TradingBot.Dto;
-using TradingBot.Services.AlpacaClients;
 
 namespace TradingBotTests;
 
 public sealed class AssetsTestSuite : IntegrationTestSuite
 {
-    protected override void SetUpAlpacaSubstitutes(IAlpacaDataClient dataClient, IAlpacaTradingClient tradingClient,
-        IAlpacaAssetsClient assetsClient)
+    protected override void SetUpAlpacaSubstitutes(IAlpacaDataClient dataClient, IAlpacaTradingClient tradingClient)
 
     {
         var account = Substitute.For<IAccount>();

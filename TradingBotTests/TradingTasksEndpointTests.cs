@@ -11,7 +11,6 @@ using NSubstitute;
 using TradingBot.Database.Entities;
 using TradingBot.Dto;
 using TradingBot.Models;
-using TradingBot.Services.AlpacaClients;
 using OrderType = TradingBot.Models.OrderType;
 
 namespace TradingBotTests;
@@ -93,8 +92,7 @@ public sealed class TradingTasksTestSuite : IntegrationTestSuite, IAsyncLifetime
         return DisposeAsync().AsTask();
     }
 
-    protected override void SetUpAlpacaSubstitutes(IAlpacaDataClient dataClient, IAlpacaTradingClient tradingClient,
-        IAlpacaAssetsClient assetsClient)
+    protected override void SetUpAlpacaSubstitutes(IAlpacaDataClient dataClient, IAlpacaTradingClient tradingClient)
     {
         var order = Substitute.For<IOrder>();
         order.OrderStatus.Returns(OrderStatus.Filled);

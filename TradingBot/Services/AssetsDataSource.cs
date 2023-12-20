@@ -2,7 +2,6 @@
 using Alpaca.Markets;
 using TradingBot.Exceptions;
 using TradingBot.Models;
-using TradingBot.Services.AlpacaClients;
 using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;

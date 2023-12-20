@@ -6,7 +6,6 @@ using TradingBot.Database;
 using TradingBot.Database.Entities;
 using TradingBot.Exceptions;
 using TradingBot.Models;
-using TradingBot.Services.AlpacaClients;
 using ILogger = Serilog.ILogger;
 using OrderType = TradingBot.Models.OrderType;
 

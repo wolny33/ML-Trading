@@ -1,10 +1,7 @@
 ﻿using System.Net.Sockets;
 using Alpaca.Markets;
-using Flurl.Http;
-using Microsoft.AspNetCore.Authentication;
 using TradingBot.Exceptions;
 using TradingBot.Models;
-using TradingBot.Services.AlpacaClients;
 using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
@@ -16,6 +13,7 @@ public interface IMarketDataSource
 
     Task<IReadOnlyList<DailyTradingData>?> GetDataForSingleSymbolAsync(TradingSymbol symbol, DateOnly start,
         DateOnly end, CancellationToken token = default);
+
     Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
 }
 
@@ -24,14 +22,12 @@ public sealed class MarketDataSource : IMarketDataSource
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
-    private readonly ISystemClock _clock;
 
-    public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger, ISystemClock clock)
+    public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger)
     {
         _clientFactory = clientFactory;
         _assetsDataSource = assetsDataSource;
         _logger = logger.ForContext<MarketDataSource>();
-        _clock = clock;
     }
 
     public async Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesAsync(DateOnly start,
@@ -64,7 +60,8 @@ public sealed class MarketDataSource : IMarketDataSource
         return IsDataValid(data) ? data : null;
     }
 
-    public async Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default)
+    public async Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol,
+        CancellationToken token = default)
     {
         using var client = await _clientFactory.CreateMarketDataClientAsync(token);
         try
@@ -87,17 +84,28 @@ public sealed class MarketDataSource : IMarketDataSource
 
     private async Task<ISet<TradingSymbol>> SendValidSymbolsRequestAsync(CancellationToken token = default)
     {
-        using var assetsClient = _clientFactory.CreateAvailableAssetsClient();
+        using var tradingClient = await _clientFactory.CreateTradingClientAsync(token);
 
         try
         {
-            var availableAssets = await assetsClient.GetAvailableAssetsAsync(token);
-            return availableAssets.Where(a => a is { Fractionable: true, Tradable: true })
+            var availableAssets = await tradingClient.ListAssetsAsync(
+                new AssetsRequest
+                {
+                    AssetClass = AssetClass.UsEquity,
+                    AssetStatus = AssetStatus.Active
+                }, token);
+            return availableAssets.Where(a => a is { Fractionable: true, IsTradable: true })
                 .Select(a => new TradingSymbol(a.Symbol)).ToHashSet();
         }
-        catch (FlurlHttpException e)
+        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
         {
-            _logger.Error(e, "Alpaca call failed");
+            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
+            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
+        }
+        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
+                                      or TaskCanceledException)
+        {
+            _logger.Error(e, "Alpaca request failed");
             throw new AlpacaCallFailedException(e);
         }
     }
@@ -111,12 +119,26 @@ public sealed class MarketDataSource : IMarketDataSource
         var held = (await _assetsDataSource.GetAssetsAsync(token)).Positions.Keys.ToList();
         _logger.Debug("Retrieved held tokens: {Tokens}", held.Select(t => t.Value).ToList());
 
-        var active =
-            (await dataClient.ListMostActiveStocksByVolumeAsync(maxRequestSize, token)).Select(a =>
-                new TradingSymbol(a.Symbol));
-        _logger.Debug("Retrieved most active tokens");
+        try
+        {
+            var active =
+                (await dataClient.ListMostActiveStocksByVolumeAsync(maxRequestSize, token)).Select(a =>
+                    new TradingSymbol(a.Symbol));
+            _logger.Debug("Retrieved most active tokens");
 
-        return held.Concat(active).Distinct();
+            return held.Concat(active).Distinct();
+        }
+        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
+        {
+            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
+            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
+        }
+        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
+                                      or TaskCanceledException)
+        {
+            _logger.Error(e, "Alpaca request failed");
+            throw new AlpacaCallFailedException(e);
+        }
     }
 
     private async Task<IReadOnlyList<DailyTradingData>> SendBarsRequestAsync(TradingSymbol symbol,
