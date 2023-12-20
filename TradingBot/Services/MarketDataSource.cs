@@ -39,9 +39,8 @@ public sealed class MarketDataSource : IMarketDataSource
         _logger.Debug("Getting prices from {Start} to {End}", start, end);
 
         var valid = await GetValidSymbolsAsync(token);
-        _logger.Debug("Retrieved {Count} valid trading symbols", valid.Count);
-
         var interestingValidSymbols = (await SendInterestingSymbolsRequestsAsync(token)).Where(s => valid.Contains(s));
+
         return await interestingValidSymbols.Chunk(15)
             .ToAsyncEnumerable()
             .SelectManyAwait(async chunk =>
@@ -82,10 +81,16 @@ public sealed class MarketDataSource : IMarketDataSource
 
     private async Task<ISet<TradingSymbol>> GetValidSymbolsAsync(CancellationToken token = default)
     {
-        if (_cache.TryGetValidSymbols() is { } cached) return cached;
+        if (_cache.TryGetValidSymbols() is { } cached)
+        {
+            _logger.Debug("Retrieved {Count} valid trading symbols from cache", cached.Count);
+            return cached;
+        }
 
         var validSymbols = await SendValidSymbolsRequestAsync(token);
         _cache.CacheValidSymbols(validSymbols.ToList());
+
+        _logger.Debug("Retrieved {Count} valid trading symbols from Alpaca", validSymbols.Count);
         return validSymbols;
     }
 
@@ -128,10 +133,9 @@ public sealed class MarketDataSource : IMarketDataSource
 
         try
         {
-            var active =
-                (await dataClient.ListMostActiveStocksByVolumeAsync(maxRequestSize, token)).Select(a =>
-                    new TradingSymbol(a.Symbol));
-            _logger.Debug("Retrieved most active tokens");
+            var active = (await dataClient.ListMostActiveStocksByVolumeAsync(maxRequestSize, token))
+                .Select(a => new TradingSymbol(a.Symbol)).ToList();
+            _logger.Debug("Retrieved most active tokens: {Active}", active);
 
             return held.Concat(active).Distinct();
         }
@@ -151,10 +155,15 @@ public sealed class MarketDataSource : IMarketDataSource
     private async Task<TradingSymbolData> GetSymbolDataAsync(TradingSymbol symbol, DateOnly start, DateOnly end,
         CancellationToken token = default)
     {
-        if (_cache.TryGetCachedData(symbol, start, end) is { } cached) return new TradingSymbolData(symbol, cached);
+        if (_cache.TryGetCachedData(symbol, start, end) is { } cached)
+        {
+            _logger.Verbose("Retrieved {Token} data between {Start} and {End} from cache", symbol.Value, start, end);
+            return new TradingSymbolData(symbol, cached);
+        }
 
         var bars = await SendBarsRequestAsync(symbol, start, end, token);
         _cache.CacheDailySymbolData(symbol, bars, start, end);
+        _logger.Verbose("Retrieved {Token} data between {Start} and {End} from Alpaca", symbol.Value, start, end);
         return new TradingSymbolData(symbol, bars);
     }
 
