@@ -56,5 +56,5 @@ public sealed class MarketDataCache : IMarketDataCache
         _validSymbols = symbols.ToHashSet();
     }
 
-    private sealed record CacheKey(TradingSymbol Symbol, DateOnly Date);
+    internal sealed record CacheKey(TradingSymbol Symbol, DateOnly Date);
 }
