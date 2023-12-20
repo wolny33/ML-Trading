@@ -151,7 +151,7 @@ public sealed class Program
     {
         services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(GetConnectionString(config)));
 
-        services.AddMemoryCache();
+        services.AddMemoryCache(options => options.TrackStatistics = true);
 
         services.AddSingleton<IFlurlClientFactory, PerBaseUrlFlurlClientFactory>();
         services.AddSingleton<IAlpacaClientFactory, AlpacaClientFactory>();

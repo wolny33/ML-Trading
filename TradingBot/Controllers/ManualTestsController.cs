@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Alpaca.Markets;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using TradingBot.Dto;
 using TradingBot.Models;
 using TradingBot.Services;
@@ -19,13 +20,14 @@ public sealed class ManualTestsController : ControllerBase
     private readonly IAssetsStateCommand _assetsStateCommand;
     private readonly IMarketDataSource _dataSource;
     private readonly IActionExecutor _executor;
+    private readonly IMemoryCache _memoryCache;
     private readonly IPricePredictor _predictor;
-    private readonly TradingTaskExecutor _taskExecutor;
     private readonly IStrategy _strategy;
+    private readonly TradingTaskExecutor _taskExecutor;
 
     public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource, IActionExecutor executor,
         ITradingActionQuery actionQuery, TradingTaskExecutor taskExecutor, IAssetsStateCommand assetsStateCommand,
-        IStrategy strategy)
+        IStrategy strategy, IMemoryCache memoryCache)
     {
         _predictor = predictor;
         _dataSource = dataSource;
@@ -33,6 +35,7 @@ public sealed class ManualTestsController : ControllerBase
         _actionQuery = actionQuery;
         _taskExecutor = taskExecutor;
         _strategy = strategy;
+        _memoryCache = memoryCache;
         _assetsStateCommand = assetsStateCommand;
     }
 
@@ -111,6 +114,16 @@ public sealed class ManualTestsController : ControllerBase
     {
         await _assetsStateCommand.SaveCurrentAssetsAsync(HttpContext.RequestAborted);
         return NoContent();
+    }
+
+    [HttpGet]
+    [Route("cache-stats")]
+    [ProducesResponseType(typeof(MemoryCacheStatistics), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<MemoryCacheStatistics> GetCacheStats()
+    {
+        if (_memoryCache.GetCurrentStatistics() is { } stats) return stats;
+        return NotFound();
     }
 }
 
