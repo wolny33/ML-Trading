@@ -1,7 +1,5 @@
-﻿using System.Net.Sockets;
-using Alpaca.Markets;
+﻿using Alpaca.Markets;
 using Microsoft.AspNetCore.Authentication;
-using TradingBot.Exceptions;
 using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
@@ -37,24 +35,10 @@ public sealed class ExchangeCalendar : IExchangeCalendar
     {
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var todayEst = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now.UtcDateTime, GetEstTimeZone()));
-
-        try
-        {
-            var result =
-                await client.ListIntervalCalendarAsync(new CalendarRequest(todayEst, todayEst.AddDays(1)), token);
-            return result.AsEnumerable().FirstOrDefault();
-        }
-        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
-        {
-            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
-            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
-        }
-        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
-                                      or TaskCanceledException)
-        {
-            _logger.Error(e, "Alpaca request failed");
-            throw new AlpacaCallFailedException(e);
-        }
+        var result =
+            await client.ListIntervalCalendarAsync(new CalendarRequest(todayEst, todayEst.AddDays(1)), token)
+                .ExecuteWithErrorHandling(_logger);
+        return result.AsEnumerable().FirstOrDefault();
     }
 
     private static TimeZoneInfo GetEstTimeZone()

@@ -1,13 +1,11 @@
-﻿using System.Net;
-using System.Threading.Channels;
-using Alpaca.Markets;
+﻿using System.Threading.Channels;
 using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
 
 public interface IAlpacaCallQueue
 {
-    Task<T> SendRequestWithRetriesAsync<T>(Func<Task<T>> request);
+    Task<T> SendRequestWithRetriesAsync<T>(Func<Task<T>> request) where T : class;
 }
 
 public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
@@ -15,7 +13,7 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
     private readonly ILogger _logger;
     private readonly Channel<QueuedAlpacaCall> _queuedCalls = Channel.CreateUnbounded<QueuedAlpacaCall>();
     private readonly Task _queueProcessingTask;
-    private bool _isOutOfRequests;
+    private bool _hasCallsRemaining;
 
     public AlpacaCallQueue(ILogger logger)
     {
@@ -23,19 +21,12 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
         _queueProcessingTask = ProcessQueueAsync();
     }
 
-    public async Task<T> SendRequestWithRetriesAsync<T>(Func<Task<T>> request)
+    public async Task<T> SendRequestWithRetriesAsync<T>(Func<Task<T>> request) where T : class
     {
-        if (_isOutOfRequests) return await QueueCallAsync(request);
+        if (_hasCallsRemaining && await request().ReturnNullOnRequestLimit() is { } result) return result;
 
-        try
-        {
-            return await request();
-        }
-        catch (RestClientErrorException e) when (e.HttpStatusCode == HttpStatusCode.TooManyRequests)
-        {
-            _isOutOfRequests = true;
-            return await QueueCallAsync(request);
-        }
+        _hasCallsRemaining = false;
+        return await QueueCallAsync(request);
     }
 
     public async ValueTask DisposeAsync()
@@ -44,7 +35,7 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
         await _queueProcessingTask;
     }
 
-    private async Task<T> QueueCallAsync<T>(Func<Task<T>> request)
+    private async Task<T> QueueCallAsync<T>(Func<Task<T>> request) where T : class
     {
         var queued = new QueuedAlpacaCall<T>(request, new TaskCompletionSource<T>());
         _queuedCalls.Writer.TryWrite(queued);
@@ -70,15 +61,15 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
 
     private async Task RetryCallAsync(QueuedAlpacaCall nextCall)
     {
-        if (_isOutOfRequests) await Task.Delay(TimeSpan.FromSeconds(10));
+        if (!_hasCallsRemaining) await Task.Delay(TimeSpan.FromSeconds(10));
 
         if (await nextCall.RetryAsync())
         {
-            _isOutOfRequests = false;
+            _hasCallsRemaining = true;
             return;
         }
 
-        _isOutOfRequests = true;
+        _hasCallsRemaining = false;
         _queuedCalls.Writer.TryWrite(nextCall);
     }
 
@@ -88,20 +79,13 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
     }
 
     private sealed record QueuedAlpacaCall<T>
-        (Func<Task<T>> Request, TaskCompletionSource<T> TaskSource) : QueuedAlpacaCall
+        (Func<Task<T>> Request, TaskCompletionSource<T> TaskSource) : QueuedAlpacaCall where T : class
     {
         public override async Task<bool> RetryAsync()
         {
-            try
-            {
-                var response = await Request();
-                TaskSource.SetResult(response);
-                return true;
-            }
-            catch (RestClientErrorException e) when (e.HttpStatusCode == HttpStatusCode.TooManyRequests)
-            {
-                return false;
-            }
+            if (await Request().ReturnNullOnRequestLimit() is not { } result) return false;
+            TaskSource.SetResult(result);
+            return true;
         }
     }
 }

@@ -1,6 +1,4 @@
-﻿using System.Net.Sockets;
-using Alpaca.Markets;
-using TradingBot.Exceptions;
+﻿using Alpaca.Markets;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 
@@ -90,24 +88,9 @@ public sealed class AssetsDataSource : IAssetsDataSource
         CancellationToken token = default)
     {
         _logger.Debug("Sending requests to Alpaca");
-
-        try
-        {
-            var account = await client.GetAccountAsync(token);
-            var positions = await client.ListPositionsAsync(token);
-            return new AlpacaResponses(account, positions);
-        }
-        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
-        {
-            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
-            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
-        }
-        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
-                                      or TaskCanceledException)
-        {
-            _logger.Error(e, "Alpaca request failed");
-            throw new AlpacaCallFailedException(e);
-        }
+        var account = await client.GetAccountAsync(token).ExecuteWithErrorHandling(_logger);
+        var positions = await client.ListPositionsAsync(token).ExecuteWithErrorHandling(_logger);
+        return new AlpacaResponses(account, positions);
     }
 
     private sealed record AlpacaResponses(IAccount Account, IReadOnlyList<IPosition> Positions);
