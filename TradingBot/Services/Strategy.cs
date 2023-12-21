@@ -54,7 +54,7 @@ public sealed class Strategy : IStrategy
             var currentPrice = await GetCurrentPrice(symbol, token);
             closingPrices.Add(currentPrice);
 
-            closingPrices.AddRange(prediction.Value.Prices.Select(dailyPrice => dailyPrice.ClosingPrice).ToList());    
+            closingPrices.AddRange(prediction.Value.Prices.Select(dailyPrice => dailyPrice.ClosingPrice).ToList());
 
             if (IsPriceDecreasing(closingPrices, strategyParameters.MinDaysDecreasing) && assets.Positions.TryGetValue(symbol, out var position) && position.AvailableQuantity > 0)
             {
@@ -62,7 +62,7 @@ public sealed class Strategy : IStrategy
             }
             else if (IsPriceIncreasing(closingPrices, strategyParameters.MinDaysIncreasing))
             {
-                growthRates.Add(new AverageGrowthRate(symbol, CalculateAverageGrowthRate(closingPrices, strategyParameters.MinDaysIncreasing), 
+                growthRates.Add(new AverageGrowthRate(symbol, CalculateAverageGrowthRate(closingPrices, strategyParameters.MinDaysIncreasing),
                     CalculateBuyLimitPrice(prediction, currentPrice)));
             }
         }

@@ -10,13 +10,20 @@ public interface IAlpacaCallQueue
 
 public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
 {
+    private readonly Func<TimeSpan, Task> _delay;
     private readonly ILogger _logger;
     private readonly Channel<QueuedAlpacaCall> _queuedCalls = Channel.CreateUnbounded<QueuedAlpacaCall>();
     private readonly Task _queueProcessingTask;
-    private bool _hasCallsRemaining;
+    private bool _hasCallsRemaining = true;
 
-    public AlpacaCallQueue(ILogger logger)
+    public AlpacaCallQueue(ILogger logger) : this(logger, Task.Delay)
     {
+    }
+
+    // This constructor allows controlling time-related functionalities in unit tests
+    internal AlpacaCallQueue(ILogger logger, Func<TimeSpan, Task> delay)
+    {
+        _delay = delay;
         _logger = logger;
         _queueProcessingTask = ProcessQueueAsync();
     }
@@ -26,7 +33,7 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
         if (_hasCallsRemaining && await request().ReturnNullOnRequestLimit() is { } result) return result;
 
         _hasCallsRemaining = false;
-        return await QueueCallAsync(request);
+        return await EnqueueCallAsync(request);
     }
 
     public async ValueTask DisposeAsync()
@@ -35,7 +42,7 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
         await _queueProcessingTask;
     }
 
-    private async Task<T> QueueCallAsync<T>(Func<Task<T>> request) where T : class
+    private async Task<T> EnqueueCallAsync<T>(Func<Task<T>> request) where T : class
     {
         var queued = new QueuedAlpacaCall<T>(request, new TaskCompletionSource<T>());
         _queuedCalls.Writer.TryWrite(queued);
@@ -61,7 +68,7 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
 
     private async Task RetryCallAsync(QueuedAlpacaCall nextCall)
     {
-        if (!_hasCallsRemaining) await Task.Delay(TimeSpan.FromSeconds(10));
+        if (!_hasCallsRemaining) await _delay(TimeSpan.FromSeconds(10));
 
         if (await nextCall.RetryAsync())
         {
