@@ -177,5 +177,6 @@ public sealed class Program
         services.AddTransient<IAssetsStateQuery, AssetsStateQuery>();
 
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
+        services.AddSingleton<IAlpacaCallQueue, AlpacaCallQueue>();
     }
 }
