@@ -17,17 +17,19 @@ public interface IActionExecutor
 
 public sealed class ActionExecutor : IActionExecutor
 {
+    private readonly IAlpacaCallQueue _callQueue;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
     private readonly IStrategy _strategy;
     private readonly ITradingTaskDetailsUpdater _tradingTask;
 
     public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ILogger logger,
-        ITradingTaskDetailsUpdater tradingTask)
+        ITradingTaskDetailsUpdater tradingTask, IAlpacaCallQueue callQueue)
     {
         _strategy = strategy;
         _clientFactory = clientFactory;
         _tradingTask = tradingTask;
+        _callQueue = callQueue;
         _logger = logger.ForContext<ActionExecutor>();
     }
 
@@ -41,8 +43,9 @@ public sealed class ActionExecutor : IActionExecutor
     {
         _logger.Debug("Executing action {@Action}", action);
         using var client = await _clientFactory.CreateTradingClientAsync(token);
-        var order = await PostOrderAsync(CreateRequestForAction(action), client, token)
-            .ExecuteWithErrorHandling(_logger);
+        var order = await _callQueue.SendRequestWithRetriesAsync(() =>
+            PostOrderAsync(CreateRequestForAction(action), client, token)
+                .ExecuteWithErrorHandling(_logger));
         await _tradingTask.SaveAndLinkSuccessfulActionAsync(action, order.OrderId, token);
     }
 

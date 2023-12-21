@@ -234,7 +234,7 @@ namespace TradingBotTests
             predictior.GetPredictionsAsync().Returns(_predictions);
 
             var assetsData = Substitute.For<IAssetsDataSource>();
-            assetsData.GetAssetsAsync().Returns(_assets);
+            assetsData.GetCurrentAssetsAsync().Returns(_assets);
 
             var PLUGCurrentPrice = 4.1417857989668846092m;
             var SOXSCurrentPrice = 8.84562028538435697771m;

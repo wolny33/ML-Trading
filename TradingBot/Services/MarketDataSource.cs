@@ -19,15 +19,17 @@ public sealed class MarketDataSource : IMarketDataSource
 {
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IMarketDataCache _cache;
+    private readonly IAlpacaCallQueue _callQueue;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
 
     public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger,
-        IMarketDataCache cache)
+        IMarketDataCache cache, IAlpacaCallQueue callQueue)
     {
         _clientFactory = clientFactory;
         _assetsDataSource = assetsDataSource;
         _cache = cache;
+        _callQueue = callQueue;
         _logger = logger.ForContext<MarketDataSource>();
     }
 
@@ -82,12 +84,13 @@ public sealed class MarketDataSource : IMarketDataSource
     private async Task<ISet<TradingSymbol>> SendValidSymbolsRequestAsync(CancellationToken token = default)
     {
         using var tradingClient = await _clientFactory.CreateTradingClientAsync(token);
-        var availableAssets = await tradingClient.ListAssetsAsync(
-            new AssetsRequest
-            {
-                AssetClass = AssetClass.UsEquity,
-                AssetStatus = AssetStatus.Active
-            }, token).ExecuteWithErrorHandling(_logger);
+        var assetsRequest = new AssetsRequest
+        {
+            AssetClass = AssetClass.UsEquity,
+            AssetStatus = AssetStatus.Active
+        };
+        var availableAssets = await _callQueue.SendRequestWithRetriesAsync(() =>
+            tradingClient.ListAssetsAsync(assetsRequest, token).ExecuteWithErrorHandling(_logger));
         return availableAssets.Where(a => a is { Fractionable: true, IsTradable: true })
             .Select(a => new TradingSymbol(a.Symbol)).ToHashSet();
     }
@@ -98,10 +101,11 @@ public sealed class MarketDataSource : IMarketDataSource
         const int maxRequestSize = 100;
         using var dataClient = await _clientFactory.CreateMarketDataClientAsync(token);
 
-        var held = (await _assetsDataSource.GetAssetsAsync(token)).Positions.Keys.ToList();
+        var held = (await _assetsDataSource.GetCurrentAssetsAsync(token)).Positions.Keys.ToList();
         _logger.Debug("Retrieved held tokens: {Tokens}", held.Select(t => t.Value).ToList());
-        var active = (await dataClient.ListMostActiveStocksByVolumeAsync(maxRequestSize, token)
-                .ExecuteWithErrorHandling(_logger))
+        var active = (await _callQueue.SendRequestWithRetriesAsync(() => dataClient
+                .ListMostActiveStocksByVolumeAsync(maxRequestSize, token)
+                .ExecuteWithErrorHandling(_logger)))
             .Select(a => new TradingSymbol(a.Symbol)).ToList();
         _logger.Debug("Retrieved most active tokens: {Active}", active);
 
@@ -135,9 +139,9 @@ public sealed class MarketDataSource : IMarketDataSource
 
         _logger.Verbose("Sending bars request for token {Token} in interval {Start} to {End}", symbol.Value, start,
             end);
-        var bars = await client
+        var bars = await _callQueue.SendRequestWithRetriesAsync(() => client
             .ListHistoricalBarsAsync(new HistoricalBarsRequest(symbol.Value, barTimeFrame, interval), token)
-            .ExecuteWithErrorHandling(_logger);
+            .ExecuteWithErrorHandling(_logger));
 
         return bars.Items.Select(b => new DailyTradingData
         {

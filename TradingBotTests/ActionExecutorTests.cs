@@ -31,7 +31,8 @@ public sealed class ActionExecutorTests
         _strategy = Substitute.For<IStrategy>();
         _tradingTask = Substitute.For<ITradingTaskDetailsUpdater>();
         var logger = Substitute.For<ILogger>();
-        _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask);
+        var callQueue = new CallQueueMock();
+        _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask, callQueue);
     }
 
     [Fact]
@@ -62,8 +63,10 @@ public sealed class ActionExecutorTests
             order.Duration == TimeInForce.Day &&
             order.LimitPrice == null
         ), Arg.Any<CancellationToken>());
-        await _tradingTask.Received(1).SaveAndLinkSuccessfulActionAsync(actions[0], _actionId, Arg.Any<CancellationToken>());
-        await _tradingTask.Received(1).SaveAndLinkSuccessfulActionAsync(actions[1], _actionId, Arg.Any<CancellationToken>());
+        await _tradingTask.Received(1)
+            .SaveAndLinkSuccessfulActionAsync(actions[0], _actionId, Arg.Any<CancellationToken>());
+        await _tradingTask.Received(1)
+            .SaveAndLinkSuccessfulActionAsync(actions[1], _actionId, Arg.Any<CancellationToken>());
     }
 
     [Fact]

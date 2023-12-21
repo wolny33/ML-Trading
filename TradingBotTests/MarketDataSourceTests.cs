@@ -28,7 +28,8 @@ public sealed class MarketDataSourceTests
 
         _assetsDataSource = Substitute.For<IAssetsDataSource>();
         var logger = Substitute.For<ILogger>();
-        _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache);
+        var callQueue = new CallQueueMock();
+        _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue);
     }
 
     [Fact]
@@ -196,7 +197,7 @@ public sealed class MarketDataSourceTests
 
         _dataClient.ListMostActiveStocksByVolumeAsync(100, Arg.Any<CancellationToken>()).Returns(activeStocksResponse);
 
-        _assetsDataSource.GetAssetsAsync().Returns(new Assets
+        _assetsDataSource.GetCurrentAssetsAsync().Returns(new Assets
         {
             Cash = new Cash
             {
