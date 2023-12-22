@@ -33,7 +33,8 @@ public static class AlpacaClientExtensions
         }
     }
 
-    public static async Task<T?> ReturnNullOnRequestLimit<T>(this Task<T> alpacaCall) where T : class
+    public static async Task<T?> ReturnNullOnRequestLimit<T>(this Task<T> alpacaCall, ILogger? logger = null)
+        where T : class
     {
         try
         {
@@ -41,6 +42,7 @@ public static class AlpacaClientExtensions
         }
         catch (RestClientErrorException e) when (e.HttpStatusCode == HttpStatusCode.TooManyRequests)
         {
+            logger?.Debug("Alpaca call failed because request limit was reached");
             return null;
         }
     }

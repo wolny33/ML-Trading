@@ -5,7 +5,7 @@ namespace TradingBot.Services;
 
 public interface IAlpacaCallQueue
 {
-    Task<T> SendRequestWithRetriesAsync<T>(Func<Task<T>> request) where T : class;
+    Task<T> SendRequestWithRetriesAsync<T>(Func<Task<T>> request, ILogger? logger = null) where T : class;
 }
 
 public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
@@ -28,12 +28,17 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
         _queueProcessingTask = ProcessQueueAsync();
     }
 
-    public async Task<T> SendRequestWithRetriesAsync<T>(Func<Task<T>> request) where T : class
+    public async Task<T> SendRequestWithRetriesAsync<T>(Func<Task<T>> request, ILogger? logger = null) where T : class
     {
-        if (_hasCallsRemaining && await request().ReturnNullOnRequestLimit() is { } result) return result;
+        if (_hasCallsRemaining && await request().ReturnNullOnRequestLimit() is { } result)
+        {
+            _logger.Verbose("Alpaca call completed without retries");
+            return result;
+        }
 
+        _logger.Verbose("Alpaca call was enqueued");
         _hasCallsRemaining = false;
-        return await EnqueueCallAsync(request);
+        return await EnqueueCallAsync(request, logger);
     }
 
     public async ValueTask DisposeAsync()
@@ -42,9 +47,9 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
         await _queueProcessingTask;
     }
 
-    private async Task<T> EnqueueCallAsync<T>(Func<Task<T>> request) where T : class
+    private async Task<T> EnqueueCallAsync<T>(Func<Task<T>> request, ILogger? logger) where T : class
     {
-        var queued = new QueuedAlpacaCall<T>(request, new TaskCompletionSource<T>());
+        var queued = new QueuedAlpacaCall<T>(request, new TaskCompletionSource<T>(), logger);
         _queuedCalls.Writer.TryWrite(queued);
         return await queued.TaskSource.Task;
     }
@@ -68,14 +73,21 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
 
     private async Task RetryCallAsync(QueuedAlpacaCall nextCall)
     {
-        if (!_hasCallsRemaining) await _delay(TimeSpan.FromSeconds(10));
+        if (!_hasCallsRemaining)
+        {
+            _logger.Debug("No Alpaca calls available - call will be retried after delay");
+            await _delay(TimeSpan.FromSeconds(10));
+        }
 
+        _logger.Verbose("Retrying Alpaca call");
         if (await nextCall.RetryAsync())
         {
+            _logger.Verbose("Alpaca call retry was successful");
             _hasCallsRemaining = true;
             return;
         }
 
+        _logger.Verbose("Alpaca call retry failed");
         _hasCallsRemaining = false;
         _queuedCalls.Writer.TryWrite(nextCall);
     }
@@ -85,12 +97,18 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
         public abstract Task<bool> RetryAsync();
     }
 
-    private sealed record QueuedAlpacaCall<T>
-        (Func<Task<T>> Request, TaskCompletionSource<T> TaskSource) : QueuedAlpacaCall where T : class
+    private sealed record QueuedAlpacaCall<T>(Func<Task<T>> Request, TaskCompletionSource<T> TaskSource,
+        ILogger? Logger = null) : QueuedAlpacaCall where T : class
     {
         public override async Task<bool> RetryAsync()
         {
-            if (await Request().ReturnNullOnRequestLimit() is not { } result) return false;
+            if (await Request().ReturnNullOnRequestLimit() is not { } result)
+            {
+                Logger?.Debug("Alpaca call retry failed - it was returned to the queue");
+                return false;
+            }
+
+            Logger?.Debug("Alpaca call retry succeeded");
             TaskSource.SetResult(result);
             return true;
         }

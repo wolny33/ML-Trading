@@ -61,8 +61,9 @@ public sealed class MarketDataSource : IMarketDataSource
         CancellationToken token = default)
     {
         using var client = await _clientFactory.CreateMarketDataClientAsync(token);
-        var latestTradeData = await client.GetLatestTradeAsync(new LatestMarketDataRequest(symbol.Value), token)
-            .ExecuteWithErrorHandling(_logger);
+        var latestTradeData = await _callQueue.SendRequestWithRetriesAsync(() => client
+            .GetLatestTradeAsync(new LatestMarketDataRequest(symbol.Value), token)
+            .ExecuteWithErrorHandling(_logger));
         return latestTradeData.Price;
     }
 
@@ -90,7 +91,7 @@ public sealed class MarketDataSource : IMarketDataSource
             AssetStatus = AssetStatus.Active
         };
         var availableAssets = await _callQueue.SendRequestWithRetriesAsync(() =>
-            tradingClient.ListAssetsAsync(assetsRequest, token).ExecuteWithErrorHandling(_logger));
+            tradingClient.ListAssetsAsync(assetsRequest, token).ExecuteWithErrorHandling(_logger), _logger);
         return availableAssets.Where(a => a is { Fractionable: true, IsTradable: true })
             .Select(a => new TradingSymbol(a.Symbol)).ToHashSet();
     }
@@ -105,7 +106,7 @@ public sealed class MarketDataSource : IMarketDataSource
         _logger.Debug("Retrieved held tokens: {Tokens}", held.Select(t => t.Value).ToList());
         var active = (await _callQueue.SendRequestWithRetriesAsync(() => dataClient
                 .ListMostActiveStocksByVolumeAsync(maxRequestSize, token)
-                .ExecuteWithErrorHandling(_logger)))
+                .ExecuteWithErrorHandling(_logger), _logger))
             .Select(a => new TradingSymbol(a.Symbol)).ToList();
         _logger.Debug("Retrieved most active tokens: {Active}", active);
 

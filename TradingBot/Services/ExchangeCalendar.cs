@@ -11,14 +11,17 @@ public interface IExchangeCalendar
 
 public sealed class ExchangeCalendar : IExchangeCalendar
 {
+    private readonly IAlpacaCallQueue _callQueue;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ISystemClock _clock;
     private readonly ILogger _logger;
 
-    public ExchangeCalendar(ISystemClock clock, IAlpacaClientFactory clientFactory, ILogger logger)
+    public ExchangeCalendar(ISystemClock clock, IAlpacaClientFactory clientFactory, ILogger logger,
+        IAlpacaCallQueue callQueue)
     {
         _clock = clock;
         _clientFactory = clientFactory;
+        _callQueue = callQueue;
         _logger = logger.ForContext<ExchangeCalendar>();
     }
 
@@ -36,8 +39,9 @@ public sealed class ExchangeCalendar : IExchangeCalendar
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var todayEst = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now.UtcDateTime, GetEstTimeZone()));
         var result =
-            await client.ListIntervalCalendarAsync(new CalendarRequest(todayEst, todayEst.AddDays(1)), token)
-                .ExecuteWithErrorHandling(_logger);
+            await _callQueue.SendRequestWithRetriesAsync(() => client
+                .ListIntervalCalendarAsync(new CalendarRequest(todayEst, todayEst.AddDays(1)), token)
+                .ExecuteWithErrorHandling(_logger), _logger);
         return result.AsEnumerable().FirstOrDefault();
     }
 

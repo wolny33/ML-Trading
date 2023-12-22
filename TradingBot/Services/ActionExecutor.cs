@@ -10,8 +10,7 @@ namespace TradingBot.Services;
 
 public interface IActionExecutor
 {
-    public Task ExecuteTradingActionsAsync(CancellationToken token = default);
-
+    Task ExecuteTradingActionsAsync(CancellationToken token = default);
     Task ExecuteActionAsync(TradingAction action, CancellationToken token = default);
 }
 

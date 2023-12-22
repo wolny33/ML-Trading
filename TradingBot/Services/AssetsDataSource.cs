@@ -136,9 +136,9 @@ public sealed class AssetsDataSource : IAssetsDataSource
         _logger.Debug("Sending requests to Alpaca");
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var account = await _callQueue.SendRequestWithRetriesAsync(() =>
-            client.GetAccountAsync(token).ExecuteWithErrorHandling(_logger));
+            client.GetAccountAsync(token).ExecuteWithErrorHandling(_logger), _logger);
         var positions = await _callQueue.SendRequestWithRetriesAsync(() =>
-            client.ListPositionsAsync(token).ExecuteWithErrorHandling(_logger));
+            client.ListPositionsAsync(token).ExecuteWithErrorHandling(_logger), _logger);
         return new AlpacaResponses(account, positions);
     }
 
