@@ -24,7 +24,7 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
     internal AlpacaCallQueue(ILogger logger, Func<TimeSpan, Task> delay)
     {
         _delay = delay;
-        _logger = logger;
+        _logger = logger.ForContext<AlpacaCallQueue>();
         _queueProcessingTask = ProcessQueueAsync();
     }
 

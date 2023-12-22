@@ -1,4 +1,5 @@
-﻿using Alpaca.Markets;
+﻿using System.Diagnostics.CodeAnalysis;
+using Alpaca.Markets;
 using Microsoft.AspNetCore.Authentication;
 using ILogger = Serilog.ILogger;
 
@@ -34,14 +35,15 @@ public sealed class ExchangeCalendar : IExchangeCalendar
         return nextTradingDay.Trading.OpenEst - now <= TimeSpan.FromDays(1);
     }
 
+    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<IIntervalCalendar?> SendCalendarRequestAsync(DateTimeOffset now, CancellationToken token)
     {
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var todayEst = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now.UtcDateTime, GetEstTimeZone()));
         var result =
             await _callQueue.SendRequestWithRetriesAsync(() => client
-                .ListIntervalCalendarAsync(new CalendarRequest(todayEst, todayEst.AddDays(1)), token)
-                .ExecuteWithErrorHandling(_logger), _logger);
+                    .ListIntervalCalendarAsync(new CalendarRequest(todayEst, todayEst.AddDays(1)), token), _logger)
+                .ExecuteWithErrorHandling(_logger);
         return result.AsEnumerable().FirstOrDefault();
     }
 

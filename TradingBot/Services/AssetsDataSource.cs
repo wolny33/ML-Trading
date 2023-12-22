@@ -1,4 +1,5 @@
-﻿using Alpaca.Markets;
+﻿using System.Diagnostics.CodeAnalysis;
+using Alpaca.Markets;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 
@@ -126,17 +127,18 @@ public sealed class AssetsDataSource : IAssetsDataSource
         _logger.Debug("Sending requests to Alpaca");
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var account = await client.GetAccountAsync(token).ExecuteWithErrorHandling(_logger).ReturnNullOnRequestLimit();
-        var positions = await client.ListPositionsAsync(token).ExecuteWithErrorHandling(_logger)
-            .ReturnNullOnRequestLimit();
+        var positions = await client.ListPositionsAsync(token).ReturnNullOnRequestLimit(_logger)
+            .ExecuteWithErrorHandling(_logger);
         return account is not null && positions is not null ? new AlpacaResponses(account, positions) : null;
     }
 
+    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<AlpacaResponses> SendRequestsWithRetriesAsync(CancellationToken token = default)
     {
         _logger.Debug("Sending requests to Alpaca");
         using var client = await _clientFactory.CreateTradingClientAsync(token);
-        var account = await _callQueue.SendRequestWithRetriesAsync(() =>
-            client.GetAccountAsync(token).ExecuteWithErrorHandling(_logger), _logger);
+        var account = await _callQueue.SendRequestWithRetriesAsync(() => client.GetAccountAsync(token), _logger)
+            .ExecuteWithErrorHandling(_logger);
         var positions = await _callQueue.SendRequestWithRetriesAsync(() =>
             client.ListPositionsAsync(token).ExecuteWithErrorHandling(_logger), _logger);
         return new AlpacaResponses(account, positions);

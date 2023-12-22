@@ -117,8 +117,8 @@ public sealed class TradingActionQuery : ITradingActionQuery
 
         _logger.Verbose("Updating action {Id}: {Action}", entity.Id, entity);
 
-        var response = await client.GetOrderAsync(entity.AlpacaId.Value, token).ExecuteWithErrorHandling(_logger)
-            .ReturnNullOnRequestLimit();
+        var response = await client.GetOrderAsync(entity.AlpacaId.Value, token).ReturnNullOnRequestLimit(_logger)
+            .ExecuteWithErrorHandling(_logger);
         if (response is null)
         {
             _logger.Debug("Action {Id} was not updated because Alpaca request limit was hit", entity.Id);
