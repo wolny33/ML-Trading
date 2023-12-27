@@ -17,7 +17,7 @@ public sealed class ActionExecutorTests
     private readonly DateTimeOffset _now = new(2023, 12, 1, 20, 15, 0, TimeSpan.Zero);
     private readonly IStrategy _strategy;
     private readonly IAlpacaTradingClient _tradingClient = Substitute.For<IAlpacaTradingClient>();
-    private readonly ITradingTaskDetailsUpdater _tradingTask;
+    private readonly ICurrentTradingTask _tradingTask;
 
     public ActionExecutorTests()
     {
@@ -29,7 +29,7 @@ public sealed class ActionExecutorTests
         clientFactory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClient);
 
         _strategy = Substitute.For<IStrategy>();
-        _tradingTask = Substitute.For<ITradingTaskDetailsUpdater>();
+        _tradingTask = Substitute.For<ICurrentTradingTask>();
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
         _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask, callQueue);

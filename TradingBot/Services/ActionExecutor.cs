@@ -20,10 +20,10 @@ public sealed class ActionExecutor : IActionExecutor
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
     private readonly IStrategy _strategy;
-    private readonly ITradingTaskDetailsUpdater _tradingTask;
+    private readonly ICurrentTradingTask _tradingTask;
 
     public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ILogger logger,
-        ITradingTaskDetailsUpdater tradingTask, IAlpacaCallQueue callQueue)
+        ICurrentTradingTask tradingTask, IAlpacaCallQueue callQueue)
     {
         _strategy = strategy;
         _clientFactory = clientFactory;

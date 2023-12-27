@@ -9,10 +9,10 @@ public sealed class TradingTaskExecutor
     private readonly IExchangeCalendar _calendar;
     private readonly IInvestmentConfigService _investmentConfig;
     private readonly ILogger _logger;
-    private readonly ITradingTaskDetailsUpdater _tradingTask;
+    private readonly ICurrentTradingTask _tradingTask;
 
     public TradingTaskExecutor(IActionExecutor actionExecutor, IExchangeCalendar calendar,
-        IInvestmentConfigService investmentConfig, ITradingTaskDetailsUpdater tradingTask, ILogger logger)
+        IInvestmentConfigService investmentConfig, ICurrentTradingTask tradingTask, ILogger logger)
     {
         _actionExecutor = actionExecutor;
         _calendar = calendar;
@@ -25,7 +25,7 @@ public sealed class TradingTaskExecutor
     {
         try
         {
-            await _tradingTask.StartNewAsync(token);
+            await _tradingTask.StartAsync(token);
 
             if (!(await _investmentConfig.GetConfigurationAsync(token)).Enabled)
             {

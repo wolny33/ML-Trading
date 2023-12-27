@@ -10,9 +10,9 @@ namespace TradingBot.Services;
 /// <remarks>
 ///     This service must be registered as 'scoped' to correctly link details
 /// </remarks>
-public interface ITradingTaskDetailsUpdater
+public interface ICurrentTradingTask
 {
-    Task StartNewAsync(CancellationToken token = default);
+    Task StartAsync(CancellationToken token = default);
     Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default);
     Task SaveAndLinkErroredActionAsync(TradingAction action, Error error, CancellationToken token = default);
     Task FinishSuccessfullyAsync(CancellationToken token = default);
@@ -21,14 +21,14 @@ public interface ITradingTaskDetailsUpdater
     Task MarkAsErroredAsync(Error error, CancellationToken token = default);
 }
 
-public sealed class TradingTaskDetailsUpdater : ITradingTaskDetailsUpdater
+public sealed class CurrentTradingTask : ICurrentTradingTask
 {
     private readonly ISystemClock _clock;
     private readonly ITradingTaskCommand _taskCommand;
     private readonly ITradingActionCommand _tradingActionCommand;
     private Guid? _currentTradingTaskId;
 
-    public TradingTaskDetailsUpdater(ITradingActionCommand tradingActionCommand, ITradingTaskCommand taskCommand,
+    public CurrentTradingTask(ITradingActionCommand tradingActionCommand, ITradingTaskCommand taskCommand,
         ISystemClock clock)
     {
         _tradingActionCommand = tradingActionCommand;
@@ -36,7 +36,7 @@ public sealed class TradingTaskDetailsUpdater : ITradingTaskDetailsUpdater
         _clock = clock;
     }
 
-    public async Task StartNewAsync(CancellationToken token = default)
+    public async Task StartAsync(CancellationToken token = default)
     {
         _currentTradingTaskId = await _taskCommand.CreateNewAsync(_clock.UtcNow, token);
     }

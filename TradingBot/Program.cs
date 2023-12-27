@@ -162,7 +162,7 @@ public sealed class Program
         services.AddScoped<IStrategy, Strategy>();
         services.AddScoped<IActionExecutor, ActionExecutor>();
         services.AddScoped<IExchangeCalendar, ExchangeCalendar>();
-        services.AddScoped<ITradingTaskDetailsUpdater, TradingTaskDetailsUpdater>();
+        services.AddScoped<ICurrentTradingTask, CurrentTradingTask>();
         services.AddScoped<TradingTaskExecutor>();
 
         services.AddTransient<CredentialsCommand>();

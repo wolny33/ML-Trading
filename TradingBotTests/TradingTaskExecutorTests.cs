@@ -13,9 +13,9 @@ public sealed class TradingTaskExecutorTests
 {
     private readonly IActionExecutor _actionExecutor;
     private readonly IExchangeCalendar _calendar;
+    private readonly ICurrentTradingTask _currentTradingTask;
     private readonly IInvestmentConfigService _investmentConfig;
     private readonly TradingTaskExecutor _taskExecutor;
-    private readonly ITradingTaskDetailsUpdater _tradingTaskUpdater;
 
     public TradingTaskExecutorTests()
     {
@@ -28,11 +28,11 @@ public sealed class TradingTaskExecutorTests
         _calendar = Substitute.For<IExchangeCalendar>();
         _calendar.DoesTradingOpenInNext24HoursAsync(Arg.Any<CancellationToken>()).Returns(true);
 
-        _tradingTaskUpdater = Substitute.For<ITradingTaskDetailsUpdater>();
+        _currentTradingTask = Substitute.For<ICurrentTradingTask>();
         var logger = Substitute.For<ILogger>();
 
         _taskExecutor =
-            new TradingTaskExecutor(_actionExecutor, _calendar, _investmentConfig, _tradingTaskUpdater, logger);
+            new TradingTaskExecutor(_actionExecutor, _calendar, _investmentConfig, _currentTradingTask, logger);
     }
 
     [Fact]
@@ -42,11 +42,11 @@ public sealed class TradingTaskExecutorTests
 
         Received.InOrder(() =>
         {
-            _tradingTaskUpdater.StartNewAsync(Arg.Any<CancellationToken>());
+            _currentTradingTask.StartAsync(Arg.Any<CancellationToken>());
             _investmentConfig.GetConfigurationAsync(Arg.Any<CancellationToken>());
             _calendar.DoesTradingOpenInNext24HoursAsync(Arg.Any<CancellationToken>());
             _actionExecutor.ExecuteTradingActionsAsync(Arg.Any<CancellationToken>());
-            _tradingTaskUpdater.FinishSuccessfullyAsync(Arg.Any<CancellationToken>());
+            _currentTradingTask.FinishSuccessfullyAsync(Arg.Any<CancellationToken>());
         });
     }
 
@@ -60,9 +60,9 @@ public sealed class TradingTaskExecutorTests
 
         Received.InOrder(() =>
         {
-            _tradingTaskUpdater.StartNewAsync(Arg.Any<CancellationToken>());
+            _currentTradingTask.StartAsync(Arg.Any<CancellationToken>());
             _investmentConfig.GetConfigurationAsync(Arg.Any<CancellationToken>());
-            _tradingTaskUpdater.MarkAsDisabledFromConfigAsync(Arg.Any<CancellationToken>());
+            _currentTradingTask.MarkAsDisabledFromConfigAsync(Arg.Any<CancellationToken>());
         });
 
         await _actionExecutor.DidNotReceive().ExecuteTradingActionsAsync(Arg.Any<CancellationToken>());
@@ -77,10 +77,10 @@ public sealed class TradingTaskExecutorTests
 
         Received.InOrder(() =>
         {
-            _tradingTaskUpdater.StartNewAsync(Arg.Any<CancellationToken>());
+            _currentTradingTask.StartAsync(Arg.Any<CancellationToken>());
             _investmentConfig.GetConfigurationAsync(Arg.Any<CancellationToken>());
             _calendar.DoesTradingOpenInNext24HoursAsync(Arg.Any<CancellationToken>());
-            _tradingTaskUpdater.MarkAsExchangeClosedAsync(Arg.Any<CancellationToken>());
+            _currentTradingTask.MarkAsExchangeClosedAsync(Arg.Any<CancellationToken>());
         });
 
         await _actionExecutor.DidNotReceive().ExecuteTradingActionsAsync(Arg.Any<CancellationToken>());
@@ -97,16 +97,16 @@ public sealed class TradingTaskExecutorTests
 
         Received.InOrder(() =>
         {
-            _tradingTaskUpdater.StartNewAsync(Arg.Any<CancellationToken>());
+            _currentTradingTask.StartAsync(Arg.Any<CancellationToken>());
             _investmentConfig.GetConfigurationAsync(Arg.Any<CancellationToken>());
             _calendar.DoesTradingOpenInNext24HoursAsync(Arg.Any<CancellationToken>());
             _actionExecutor.ExecuteTradingActionsAsync(Arg.Any<CancellationToken>());
-            _tradingTaskUpdater.MarkAsErroredAsync(
+            _currentTradingTask.MarkAsErroredAsync(
                 Arg.Is<Error>(e => e.Code == exception.GetError().Code && e.Message == exception.GetError().Message),
                 Arg.Any<CancellationToken>());
         });
 
-        await _tradingTaskUpdater.DidNotReceive().FinishSuccessfullyAsync(Arg.Any<CancellationToken>());
+        await _currentTradingTask.DidNotReceive().FinishSuccessfullyAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -119,15 +119,15 @@ public sealed class TradingTaskExecutorTests
 
         Received.InOrder(() =>
         {
-            _tradingTaskUpdater.StartNewAsync(Arg.Any<CancellationToken>());
+            _currentTradingTask.StartAsync(Arg.Any<CancellationToken>());
             _investmentConfig.GetConfigurationAsync(Arg.Any<CancellationToken>());
             _calendar.DoesTradingOpenInNext24HoursAsync(Arg.Any<CancellationToken>());
             _actionExecutor.ExecuteTradingActionsAsync(Arg.Any<CancellationToken>());
-            _tradingTaskUpdater.MarkAsErroredAsync(
+            _currentTradingTask.MarkAsErroredAsync(
                 Arg.Is<Error>(e => e.Code == "unknown" && e.Message == exception.Message),
                 Arg.Any<CancellationToken>());
         });
 
-        await _tradingTaskUpdater.DidNotReceive().FinishSuccessfullyAsync(Arg.Any<CancellationToken>());
+        await _currentTradingTask.DidNotReceive().FinishSuccessfullyAsync(Arg.Any<CancellationToken>());
     }
 }
