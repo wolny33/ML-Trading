@@ -12,6 +12,7 @@ namespace TradingBot.Services;
 /// </remarks>
 public interface ICurrentTradingTask
 {
+    Guid? CurrentBacktestId { get; }
     Task StartAsync(CancellationToken token = default);
     Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default);
     Task SaveAndLinkErroredActionAsync(TradingAction action, Error error, CancellationToken token = default);
@@ -19,6 +20,7 @@ public interface ICurrentTradingTask
     Task MarkAsDisabledFromConfigAsync(CancellationToken token = default);
     Task MarkAsExchangeClosedAsync(CancellationToken token = default);
     Task MarkAsErroredAsync(Error error, CancellationToken token = default);
+    DateOnly GetTaskDay();
 }
 
 public sealed class CurrentTradingTask : ICurrentTradingTask

@@ -27,7 +27,8 @@ public sealed class TradingTaskExecutor
         {
             await _tradingTask.StartAsync(token);
 
-            if (!(await _investmentConfig.GetConfigurationAsync(token)).Enabled)
+            if (_tradingTask.CurrentBacktestId is null &&
+                !(await _investmentConfig.GetConfigurationAsync(token)).Enabled)
             {
                 _logger.Information("Automatic investing is disabled in configuration - no actions were taken");
                 await _tradingTask.MarkAsDisabledFromConfigAsync(token);

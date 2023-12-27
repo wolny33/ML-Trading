@@ -9,6 +9,10 @@ public interface IMarketDataCache
 
     ISet<TradingSymbol>? TryGetValidSymbols();
 
+    IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForDay(DateOnly day);
+
+    decimal? GetLastCachedPrice(TradingSymbol symbol, DateOnly day);
+
     void CacheDailySymbolData(TradingSymbol symbol, IReadOnlyList<DailyTradingData> data, DateOnly start,
         DateOnly end);
 
@@ -43,6 +47,29 @@ public sealed class MarketDataCache : IMarketDataCache
         return _validSymbols;
     }
 
+    public IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForDay(DateOnly day)
+    {
+        return _validSymbols?
+                   .Select(s => new SymbolWithData(
+                       s, _cache.TryGetValue<DailyTradingData?>(new CacheKey(s, day), out var data) ? data : null
+                   ))
+                   .Where(d => d.Data is not null)
+                   .OrderBy(d => d.Data!.Volume)
+                   .Select(d => d.Symbol)
+               ?? throw new InvalidOperationException("Valid symbols were not cached");
+    }
+
+    public decimal? GetLastCachedPrice(TradingSymbol symbol, DateOnly day)
+    {
+        DailyTradingData? data;
+        do
+        {
+            if (!_cache.TryGetValue<DailyTradingData?>(new CacheKey(symbol, day), out data)) return null;
+        } while (data is null);
+
+        return data.Close;
+    }
+
     public void CacheDailySymbolData(TradingSymbol symbol, IReadOnlyList<DailyTradingData> data, DateOnly start,
         DateOnly end)
     {
@@ -57,4 +84,6 @@ public sealed class MarketDataCache : IMarketDataCache
     }
 
     internal sealed record CacheKey(TradingSymbol Symbol, DateOnly Date);
+
+    private sealed record SymbolWithData(TradingSymbol Symbol, DailyTradingData? Data);
 }

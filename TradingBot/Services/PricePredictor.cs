@@ -1,6 +1,5 @@
 ﻿using Flurl.Http;
 using Flurl.Http.Configuration;
-using Microsoft.AspNetCore.Authentication;
 using Newtonsoft.Json;
 using TradingBot.Exceptions;
 using TradingBot.Models;
@@ -18,24 +17,24 @@ public interface IPricePredictor
 
 public sealed class PricePredictor : IPricePredictor
 {
-    private readonly ISystemClock _clock;
     private readonly IFlurlClientFactory _flurlFactory;
     private readonly ILogger _logger;
     private readonly IMarketDataSource _marketData;
+    private readonly ICurrentTradingTask _tradingTask;
 
-    public PricePredictor(IMarketDataSource marketData, ISystemClock clock, IFlurlClientFactory flurlFactory,
-        ILogger logger)
+    public PricePredictor(IMarketDataSource marketData, IFlurlClientFactory flurlFactory, ILogger logger,
+        ICurrentTradingTask tradingTask)
     {
         _marketData = marketData;
-        _clock = clock;
         _flurlFactory = flurlFactory;
+        _tradingTask = tradingTask;
         _logger = logger.ForContext<PricePredictor>();
     }
 
     public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default)
     {
         const int requiredDays = 11;
-        var today = DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
+        var today = _tradingTask.GetTaskDay();
 
         _logger.Debug("Getting predictions for {Today}", today);
         var marketData = await _marketData.GetPricesAsync(SubtractWorkDays(today, 2 * requiredDays), today, token);
