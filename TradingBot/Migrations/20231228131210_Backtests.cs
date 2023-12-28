@@ -50,6 +50,11 @@ namespace TradingBot.Migrations
                 table: "AssetsStates",
                 column: "BacktestId");
 
+            migrationBuilder.CreateIndex(
+                name: "IX_Backtests_ExecutionStartTimestamp",
+                table: "Backtests",
+                column: "ExecutionStartTimestamp");
+
             migrationBuilder.AddForeignKey(
                 name: "FK_AssetsStates_Backtests_BacktestId",
                 table: "AssetsStates",

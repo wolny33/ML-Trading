@@ -78,6 +78,8 @@ namespace TradingBot.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ExecutionStartTimestamp");
+
                     b.ToTable("Backtests");
                 });
 

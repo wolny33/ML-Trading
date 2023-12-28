@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 using TradingBot.Models;
 
 namespace TradingBot.Database.Entities;
 
+[Index(nameof(ExecutionStartTimestamp))]
 public sealed class BacktestEntity
 {
     [Key]
