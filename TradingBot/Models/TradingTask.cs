@@ -13,10 +13,11 @@ public sealed class TradingTask
     public required DateTimeOffset? FinishedAt { get; init; }
     public required TradingTaskState State { get; init; }
     public required string StateDetails { get; init; }
+    public required Guid? BacktestId { get; init; }
 
     public static TradingTask FromEntity(TradingTaskEntity entity)
     {
-        return new()
+        return new TradingTask
         {
             Id = entity.Id,
             StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(entity.StartTimestamp),
@@ -25,7 +26,8 @@ public sealed class TradingTask
                     ? DateTimeOffset.FromUnixTimeMilliseconds(entity.EndTimestamp.Value)
                     : null,
             State = entity.State,
-            StateDetails = entity.StateDetails
+            StateDetails = entity.StateDetails,
+            BacktestId = entity.BacktestId
         };
     }
 
@@ -37,7 +39,8 @@ public sealed class TradingTask
             StartedAt = StartedAt,
             FinishedAt = FinishedAt,
             State = State.ToString(),
-            StateDetails = StateDetails
+            StateDetails = StateDetails,
+            BacktestId = BacktestId
         };
     }
 }

@@ -2,7 +2,7 @@
 
 namespace TradingBot.Models;
 
-public sealed record AssetsState(Assets Assets, DateTimeOffset CreatedAt)
+public sealed record AssetsState(Assets Assets, DateTimeOffset CreatedAt, Guid? BacktestId)
 {
     public AssetsStateEntity ToEntity()
     {
@@ -25,7 +25,8 @@ public sealed record AssetsState(Assets Assets, DateTimeOffset CreatedAt)
                 AverageEntryPrice = (double)p.AverageEntryPrice,
                 MarketValue = (double)p.MarketValue,
                 Quantity = (double)p.Quantity
-            }).ToList()
+            }).ToList(),
+            BacktestId = BacktestId
         };
     }
 
@@ -49,6 +50,6 @@ public sealed record AssetsState(Assets Assets, DateTimeOffset CreatedAt)
                 MarketValue = (decimal)p.MarketValue,
                 Quantity = (decimal)p.Quantity
             }).ToDictionary(p => p.Symbol)
-        }, DateTimeOffset.FromUnixTimeMilliseconds(entity.CreationTimestamp));
+        }, DateTimeOffset.FromUnixTimeMilliseconds(entity.CreationTimestamp), entity.BacktestId);
     }
 }

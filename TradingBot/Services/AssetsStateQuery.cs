@@ -26,7 +26,8 @@ public sealed class AssetsStateQuery : IAssetsStateQuery
     public async Task<AssetsState?> GetEarliestStateAsync(CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.AssetsStates.Include(s => s.HeldPositions).OrderBy(s => s.CreationTimestamp)
+        var entity = await context.AssetsStates.Include(s => s.HeldPositions).Where(s => s.BacktestId == null)
+            .OrderBy(s => s.CreationTimestamp)
             .FirstOrDefaultAsync(token);
         return entity is null ? null : AssetsState.FromEntity(entity);
     }
@@ -35,6 +36,7 @@ public sealed class AssetsStateQuery : IAssetsStateQuery
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entity = await context.AssetsStates.Include(s => s.HeldPositions)
+            .Where(s => s.BacktestId == null)
             .OrderByDescending(s => s.CreationTimestamp)
             .FirstOrDefaultAsync(token);
         return entity is null ? null : AssetsState.FromEntity(entity);
@@ -45,6 +47,7 @@ public sealed class AssetsStateQuery : IAssetsStateQuery
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entities = await context.AssetsStates.Include(s => s.HeldPositions)
+            .Where(s => s.BacktestId == null)
             .OrderByDescending(s => s.CreationTimestamp).Where(s =>
                 s.CreationTimestamp >= start.ToUnixTimeMilliseconds() &&
                 s.CreationTimestamp <= end.ToUnixTimeMilliseconds())

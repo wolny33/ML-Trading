@@ -175,8 +175,11 @@ public sealed class Program
         services.AddTransient<ITradingTaskQuery, TradingTaskQuery>();
         services.AddTransient<IAssetsStateCommand, AssetsStateCommand>();
         services.AddTransient<IAssetsStateQuery, AssetsStateQuery>();
+        services.AddTransient<IBacktestCommand, BacktestCommand>();
 
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
         services.AddSingleton<IAlpacaCallQueue, AlpacaCallQueue>();
+
+        services.AddTransient<BacktestExecutor>();
     }
 }

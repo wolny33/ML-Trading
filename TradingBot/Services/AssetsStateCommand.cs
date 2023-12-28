@@ -33,7 +33,7 @@ public sealed class AssetsStateCommand : IAssetsStateCommand
         var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
 
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        context.AssetsStates.Add(new AssetsState(assets, _clock.UtcNow).ToEntity());
+        context.AssetsStates.Add(new AssetsState(assets, _clock.UtcNow, null).ToEntity());
         await context.SaveChangesAsync(token);
 
         _logger.Information("Successfully saved current assets information");

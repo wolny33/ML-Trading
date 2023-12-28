@@ -21,6 +21,7 @@ public interface ICurrentTradingTask
     Task MarkAsExchangeClosedAsync(CancellationToken token = default);
     Task MarkAsErroredAsync(Error error, CancellationToken token = default);
     DateOnly GetTaskDay();
+    void SetBacktestDetails(Guid backtestId, DateOnly day);
 }
 
 public sealed class CurrentTradingTask : ICurrentTradingTask
@@ -28,6 +29,7 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
     private readonly ISystemClock _clock;
     private readonly ITradingTaskCommand _taskCommand;
     private readonly ITradingActionCommand _tradingActionCommand;
+    private BacktestDetails? _backtestDetails;
     private Guid? _currentTradingTaskId;
 
     public CurrentTradingTask(ITradingActionCommand tradingActionCommand, ITradingTaskCommand taskCommand,
@@ -38,9 +40,11 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
         _clock = clock;
     }
 
+    public Guid? CurrentBacktestId => _backtestDetails?.Id;
+
     public async Task StartAsync(CancellationToken token = default)
     {
-        _currentTradingTaskId = await _taskCommand.CreateNewAsync(_clock.UtcNow, token);
+        _currentTradingTaskId = await _taskCommand.CreateNewAsync(_clock.UtcNow, CurrentBacktestId, token);
     }
 
     public Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default)
@@ -76,6 +80,16 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
             $"Trading task failed with error code {error.Code}: {error.Message}", token);
     }
 
+    public DateOnly GetTaskDay()
+    {
+        return _backtestDetails?.Day ?? DateOnly.FromDateTime(_clock.UtcNow.LocalDateTime);
+    }
+
+    public void SetBacktestDetails(Guid backtestId, DateOnly day)
+    {
+        _backtestDetails = new BacktestDetails(backtestId, day);
+    }
+
     private Task EndWithStateAsync(TradingTaskState state, string description, CancellationToken token)
     {
         if (_currentTradingTaskId is not { } taskId)
@@ -84,4 +98,6 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
         return _taskCommand.SetStateAndEndAsync(taskId,
             new TradingTaskCompletionDetails(_clock.UtcNow, state, description), token);
     }
+
+    private sealed record BacktestDetails(Guid Id, DateOnly Day);
 }
