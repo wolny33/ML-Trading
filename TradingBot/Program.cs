@@ -181,5 +181,6 @@ public sealed class Program
         services.AddSingleton<IAlpacaCallQueue, AlpacaCallQueue>();
 
         services.AddTransient<BacktestExecutor>();
+        services.AddSingleton<IBacktestAssets, BacktestAssets>();
     }
 }

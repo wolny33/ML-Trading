@@ -7,32 +7,38 @@ namespace TradingBot.Services;
 
 public interface IBacktestExecutor
 {
-    Task ExecuteAsync(DateOnly start, DateOnly end);
+    Task ExecuteAsync(DateOnly start, DateOnly end, decimal initialCash);
 }
 
 public sealed class BacktestExecutor : IBacktestExecutor
 {
+    private readonly IAssetsStateCommand _assetsStateCommand;
+    private readonly IBacktestAssets _backtestAssets;
     private readonly IBacktestCommand _backtestCommand;
     private readonly ISystemClock _clock;
     private readonly ILogger _logger;
     private readonly IServiceScopeFactory _scopeFactory;
 
     public BacktestExecutor(IServiceScopeFactory scopeFactory, ILogger logger, IBacktestCommand backtestCommand,
-        ISystemClock clock)
+        ISystemClock clock, IBacktestAssets backtestAssets, IAssetsStateCommand assetsStateCommand)
     {
         _scopeFactory = scopeFactory;
         _backtestCommand = backtestCommand;
         _clock = clock;
+        _backtestAssets = backtestAssets;
+        _assetsStateCommand = assetsStateCommand;
         _logger = logger.ForContext<BacktestExecutor>();
     }
 
-    public async Task ExecuteAsync(DateOnly start, DateOnly end)
+    public async Task ExecuteAsync(DateOnly start, DateOnly end, decimal initialCash)
     {
         var backtestId = await _backtestCommand.CreateNewAsync(start, end, _clock.UtcNow);
+        _backtestAssets.InitializeForId(backtestId, initialCash);
+        await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId, start);
 
         try
         {
-            for (var day = start; day <= end; day = day.AddDays(1))
+            for (var day = start; day < end; day = day.AddDays(1))
             {
                 using var scope = _scopeFactory.CreateScope();
 
@@ -41,7 +47,8 @@ public sealed class BacktestExecutor : IBacktestExecutor
 
                 var taskExecutor = scope.ServiceProvider.GetRequiredService<TradingTaskExecutor>();
                 await taskExecutor.ExecuteAsync();
-                // TODO: save state
+
+                await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId, day.AddDays(1));
             }
 
             await _backtestCommand.SetStateAndEndAsync(backtestId,
