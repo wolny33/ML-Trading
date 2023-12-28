@@ -13,6 +13,7 @@ public interface IBacktestExecutor
 public sealed class BacktestExecutor : IBacktestExecutor
 {
     private readonly IAssetsStateCommand _assetsStateCommand;
+    private readonly IBacktestActionExecutor _backtestActionExecutor;
     private readonly IBacktestAssets _backtestAssets;
     private readonly IBacktestCommand _backtestCommand;
     private readonly ISystemClock _clock;
@@ -20,13 +21,15 @@ public sealed class BacktestExecutor : IBacktestExecutor
     private readonly IServiceScopeFactory _scopeFactory;
 
     public BacktestExecutor(IServiceScopeFactory scopeFactory, ILogger logger, IBacktestCommand backtestCommand,
-        ISystemClock clock, IBacktestAssets backtestAssets, IAssetsStateCommand assetsStateCommand)
+        ISystemClock clock, IBacktestAssets backtestAssets, IAssetsStateCommand assetsStateCommand,
+        IBacktestActionExecutor backtestActionExecutor)
     {
         _scopeFactory = scopeFactory;
         _backtestCommand = backtestCommand;
         _clock = clock;
         _backtestAssets = backtestAssets;
         _assetsStateCommand = assetsStateCommand;
+        _backtestActionExecutor = backtestActionExecutor;
         _logger = logger.ForContext<BacktestExecutor>();
     }
 
@@ -47,6 +50,7 @@ public sealed class BacktestExecutor : IBacktestExecutor
 
                 var taskExecutor = scope.ServiceProvider.GetRequiredService<TradingTaskExecutor>();
                 await taskExecutor.ExecuteAsync();
+                _backtestActionExecutor.ExecuteQueuedActionsForBacktest(backtestId);
 
                 await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId, day.AddDays(1));
             }

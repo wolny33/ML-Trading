@@ -10,6 +10,7 @@ public interface ITradingActionCommand
     Task SaveActionWithAlpacaIdAsync(TradingAction action, Guid alpacaId, Guid? taskId,
         CancellationToken token = default);
 
+    Task SaveBacktestActionAsync(TradingAction action, Guid? taskId, CancellationToken token = default);
     Task SaveActionWithErrorAsync(TradingAction action, Error error, Guid? taskId, CancellationToken token = default);
 }
 
@@ -29,6 +30,17 @@ public sealed class TradingActionCommand : ITradingActionCommand
 
         var entity = action.ToEntity();
         entity.AlpacaId = alpacaId;
+        entity.TradingTaskId = taskId;
+
+        context.TradingActions.Add(entity);
+        await context.SaveChangesAsync(token);
+    }
+
+    public async Task SaveBacktestActionAsync(TradingAction action, Guid? taskId, CancellationToken token = default)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+
+        var entity = action.ToEntity();
         entity.TradingTaskId = taskId;
 
         context.TradingActions.Add(entity);

@@ -15,6 +15,7 @@ public interface ICurrentTradingTask
     Guid? CurrentBacktestId { get; }
     Task StartAsync(CancellationToken token = default);
     Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default);
+    Task SaveAndLinkBacktestActionAsync(TradingAction action, CancellationToken token = default);
     Task SaveAndLinkErroredActionAsync(TradingAction action, Error error, CancellationToken token = default);
     Task FinishSuccessfullyAsync(CancellationToken token = default);
     Task MarkAsDisabledFromConfigAsync(CancellationToken token = default);
@@ -50,6 +51,15 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
     public Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default)
     {
         return _tradingActionCommand.SaveActionWithAlpacaIdAsync(action, alpacaId, _currentTradingTaskId, token);
+    }
+
+    public Task SaveAndLinkBacktestActionAsync(TradingAction action, CancellationToken token = default)
+    {
+        if (CurrentBacktestId is null)
+            throw new InvalidOperationException(
+                "Backtest trading actions cannot be saved if trading task is not part of a backtest");
+
+        return _tradingActionCommand.SaveBacktestActionAsync(action, _currentTradingTaskId, token);
     }
 
     public Task SaveAndLinkErroredActionAsync(TradingAction action, Error error, CancellationToken token = default)

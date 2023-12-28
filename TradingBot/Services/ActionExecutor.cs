@@ -16,6 +16,7 @@ public interface IActionExecutor
 
 public sealed class ActionExecutor : IActionExecutor
 {
+    private readonly IBacktestActionExecutor _backtestActionExecutor;
     private readonly IAlpacaCallQueue _callQueue;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
@@ -23,12 +24,13 @@ public sealed class ActionExecutor : IActionExecutor
     private readonly ICurrentTradingTask _tradingTask;
 
     public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ILogger logger,
-        ICurrentTradingTask tradingTask, IAlpacaCallQueue callQueue)
+        ICurrentTradingTask tradingTask, IAlpacaCallQueue callQueue, IBacktestActionExecutor backtestActionExecutor)
     {
         _strategy = strategy;
         _clientFactory = clientFactory;
         _tradingTask = tradingTask;
         _callQueue = callQueue;
+        _backtestActionExecutor = backtestActionExecutor;
         _logger = logger.ForContext<ActionExecutor>();
     }
 
@@ -40,12 +42,25 @@ public sealed class ActionExecutor : IActionExecutor
 
     public async Task ExecuteActionAsync(TradingAction action, CancellationToken token = default)
     {
+        if (_tradingTask.CurrentBacktestId is { } backtestId)
+        {
+            _backtestActionExecutor.PostActionForBacktest(action, backtestId);
+            await _tradingTask.SaveAndLinkBacktestActionAsync(action, token);
+            return;
+        }
+
+        var alpacaId = await PostActionToAlpacaAsync(action, token);
+        await _tradingTask.SaveAndLinkSuccessfulActionAsync(action, alpacaId, token);
+    }
+
+    private async Task<Guid> PostActionToAlpacaAsync(TradingAction action, CancellationToken token)
+    {
         _logger.Debug("Executing action {@Action}", action);
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         var order = await _callQueue.SendRequestWithRetriesAsync(() =>
             PostOrderAsync(CreateRequestForAction(action), client, token)
                 .ExecuteWithErrorHandling(_logger));
-        await _tradingTask.SaveAndLinkSuccessfulActionAsync(action, order.OrderId, token);
+        return order.OrderId;
     }
 
     private async Task ExecuteActionAndHandleErrorsAsync(TradingAction action, CancellationToken token)
