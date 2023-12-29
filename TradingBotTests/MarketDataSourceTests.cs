@@ -25,11 +25,15 @@ public sealed class MarketDataSourceTests
         clientFactory.CreateMarketDataClientAsync(Arg.Any<CancellationToken>()).Returns(_dataClient);
 
         _marketDataCache = Substitute.For<IMarketDataCache>();
-
         _assetsDataSource = Substitute.For<IAssetsDataSource>();
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
-        _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue);
+
+        var tradingTask = Substitute.For<ICurrentTradingTask>();
+        tradingTask.CurrentBacktestId.Returns((Guid?)null);
+
+        _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
+            tradingTask);
     }
 
     [Fact]

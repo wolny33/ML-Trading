@@ -24,9 +24,14 @@ public sealed class ExchangeCalendarTests
         var clientFactory = Substitute.For<IAlpacaClientFactory>();
         clientFactory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClient);
 
+        var tradingTask = Substitute.For<ICurrentTradingTask>();
+        tradingTask.CurrentBacktestId.Returns((Guid?)null);
+
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
-        _calendar = new ExchangeCalendar(clock, clientFactory, logger, callQueue);
+        var cache = Substitute.For<IMarketDataCache>();
+
+        _calendar = new ExchangeCalendar(clock, clientFactory, logger, callQueue, tradingTask, cache);
     }
 
     [Fact]

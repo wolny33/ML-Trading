@@ -28,11 +28,14 @@ public sealed class ActionExecutorTests
         var clientFactory = Substitute.For<IAlpacaClientFactory>();
         clientFactory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClient);
 
-        _strategy = Substitute.For<IStrategy>();
         _tradingTask = Substitute.For<ICurrentTradingTask>();
+        _tradingTask.CurrentBacktestId.Returns((Guid?)null);
+
+        _strategy = Substitute.For<IStrategy>();
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
-        _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask, callQueue);
+        var backtestAssets = Substitute.For<IBacktestAssets>();
+        _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask, callQueue, backtestAssets);
     }
 
     [Fact]
