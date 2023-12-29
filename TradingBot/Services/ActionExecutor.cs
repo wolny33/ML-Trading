@@ -16,7 +16,7 @@ public interface IActionExecutor
 
 public sealed class ActionExecutor : IActionExecutor
 {
-    private readonly IBacktestActionExecutor _backtestActionExecutor;
+    private readonly IBacktestAssets _backtestAssets;
     private readonly IAlpacaCallQueue _callQueue;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
@@ -24,13 +24,13 @@ public sealed class ActionExecutor : IActionExecutor
     private readonly ICurrentTradingTask _tradingTask;
 
     public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ILogger logger,
-        ICurrentTradingTask tradingTask, IAlpacaCallQueue callQueue, IBacktestActionExecutor backtestActionExecutor)
+        ICurrentTradingTask tradingTask, IAlpacaCallQueue callQueue, IBacktestAssets backtestAssets)
     {
         _strategy = strategy;
         _clientFactory = clientFactory;
         _tradingTask = tradingTask;
         _callQueue = callQueue;
-        _backtestActionExecutor = backtestActionExecutor;
+        _backtestAssets = backtestAssets;
         _logger = logger.ForContext<ActionExecutor>();
     }
 
@@ -44,7 +44,7 @@ public sealed class ActionExecutor : IActionExecutor
     {
         if (_tradingTask.CurrentBacktestId is { } backtestId)
         {
-            _backtestActionExecutor.PostActionForBacktest(action, backtestId);
+            _backtestAssets.PostActionForBacktest(action, backtestId);
             await _tradingTask.SaveAndLinkBacktestActionAsync(action, token);
             return;
         }

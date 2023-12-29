@@ -182,6 +182,5 @@ public sealed class Program
 
         services.AddTransient<BacktestExecutor>();
         services.AddSingleton<IBacktestAssets, BacktestAssets>();
-        services.AddSingleton<IBacktestActionExecutor, BacktestActionExecutor>();
     }
 }
