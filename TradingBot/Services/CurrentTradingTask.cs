@@ -22,6 +22,7 @@ public interface ICurrentTradingTask
     Task MarkAsExchangeClosedAsync(CancellationToken token = default);
     Task MarkAsErroredAsync(Error error, CancellationToken token = default);
     DateOnly GetTaskDay();
+    DateTimeOffset GetTaskTime();
     void SetBacktestDetails(Guid backtestId, DateOnly day);
 }
 
@@ -93,6 +94,12 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
     public DateOnly GetTaskDay()
     {
         return _backtestDetails?.Day ?? DateOnly.FromDateTime(_clock.UtcNow.LocalDateTime);
+    }
+
+    public DateTimeOffset GetTaskTime()
+    {
+        return new DateTimeOffset(GetTaskDay().ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.FromHours(12))),
+            TimeSpan.Zero);
     }
 
     public void SetBacktestDetails(Guid backtestId, DateOnly day)
