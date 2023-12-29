@@ -59,7 +59,7 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
             throw new InvalidOperationException(
                 "Backtest trading actions cannot be saved if trading task is not part of a backtest");
 
-        return _tradingActionCommand.SaveBacktestActionAsync(action, _currentTradingTaskId, token);
+        return _tradingActionCommand.SaveSuccessfulBacktestActionAsync(action, _currentTradingTaskId, token);
     }
 
     public Task SaveAndLinkErroredActionAsync(TradingAction action, Error error, CancellationToken token = default)

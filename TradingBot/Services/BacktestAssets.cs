@@ -18,13 +18,15 @@ public interface IBacktestAssets
 
 public sealed class BacktestAssets : IBacktestAssets
 {
+    private readonly ITradingActionCommand _actionCommand;
     private readonly ConcurrentDictionary<Guid, Assets> _assets = new();
     private readonly ConcurrentDictionary<Guid, List<TradingAction>> _queuedActions = new();
     private readonly IServiceScopeFactory _scopeFactory;
 
-    public BacktestAssets(IServiceScopeFactory scopeFactory)
+    public BacktestAssets(IServiceScopeFactory scopeFactory, ITradingActionCommand actionCommand)
     {
         _scopeFactory = scopeFactory;
+        _actionCommand = actionCommand;
     }
 
     public void InitializeForId(Guid backtestId, decimal initialCash)
@@ -93,8 +95,11 @@ public sealed class BacktestAssets : IBacktestAssets
             var symbolData = (await marketDataSource.GetDataForSingleSymbolAsync(action.Symbol, day, day))
                 ?.AsEnumerable().FirstOrDefault();
             if (symbolData is null)
-                // TODO: cancel action in db
+            {
+                await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
+                    new BacktestActionState(OrderStatus.Expired, action.CreatedAt.AddDays(1)));
                 continue;
+            }
 
             var shouldExecute = action.OrderType switch
             {
@@ -105,8 +110,11 @@ public sealed class BacktestAssets : IBacktestAssets
                 _ => throw new UnreachableException()
             };
             if (!shouldExecute)
-                // TODO: cancel action in db
+            {
+                await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
+                    new BacktestActionState(OrderStatus.Expired, action.CreatedAt.AddDays(1)));
                 continue;
+            }
 
             var isFullyFilled = action.OrderType switch
             {
@@ -121,7 +129,17 @@ public sealed class BacktestAssets : IBacktestAssets
                 _ => throw new UnreachableException()
             };
 
-            // TODO: Update action's state in db
+            await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
+                new BacktestActionState(
+                    isFullyFilled ? OrderStatus.Filled : OrderStatus.PartiallyFilled,
+                    action.CreatedAt,
+                    action.OrderType switch
+                    {
+                        OrderType.LimitSell or OrderType.LimitBuy => action.Price!.Value,
+                        OrderType.MarketSell or OrderType.MarketBuy => symbolData.Open,
+                        _ => throw new UnreachableException()
+                    }
+                ));
         }
     }
 
