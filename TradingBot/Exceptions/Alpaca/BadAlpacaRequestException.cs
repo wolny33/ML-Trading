@@ -5,12 +5,19 @@ namespace TradingBot.Exceptions.Alpaca;
 
 public sealed class BadAlpacaRequestException : UnsuccessfulAlpacaResponseException
 {
-    private readonly RequestValidationException _exception;
+    private readonly string _message;
+    private readonly string _propertyName;
 
-    public BadAlpacaRequestException(RequestValidationException exception) : base("bad-alpaca-request",
-        $"Validation failed for property '{exception.PropertyName}': {exception.Message}")
+    public BadAlpacaRequestException(RequestValidationException exception) : this(exception.PropertyName,
+        exception.Message)
     {
-        _exception = exception;
+    }
+
+    public BadAlpacaRequestException(string propertyName, string message) : base("bad-alpaca-request",
+        $"Validation failed for property '{propertyName}': {message}")
+    {
+        _propertyName = propertyName;
+        _message = message;
         StatusCode = StatusCodes.Status400BadRequest;
     }
 
@@ -18,7 +25,7 @@ public sealed class BadAlpacaRequestException : UnsuccessfulAlpacaResponseExcept
     {
         return new ValidationProblemDetails(new Dictionary<string, string[]>
         {
-            [_exception.PropertyName] = new[] { _exception.Message }
+            [_propertyName] = new[] { _message }
         });
     }
 }

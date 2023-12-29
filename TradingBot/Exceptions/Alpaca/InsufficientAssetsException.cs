@@ -5,7 +5,7 @@ namespace TradingBot.Exceptions.Alpaca;
 
 public sealed partial class InsufficientAssetsException : UnsuccessfulAlpacaResponseException
 {
-    private InsufficientAssetsException() : base("insufficient-assets",
+    public InsufficientAssetsException() : base("insufficient-assets",
         "Requested asset amount in sell order is greater than available amount")
     {
         StatusCode = StatusCodes.Status422UnprocessableEntity;

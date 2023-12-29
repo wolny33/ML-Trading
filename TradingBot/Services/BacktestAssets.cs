@@ -1,7 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using Alpaca.Markets;
+using TradingBot.Exceptions.Alpaca;
 using TradingBot.Models;
+using OrderType = TradingBot.Models.OrderType;
 
 namespace TradingBot.Services;
 
@@ -52,14 +55,10 @@ public sealed class BacktestAssets : IBacktestAssets
 
     public void PostActionForBacktest(TradingAction action, Guid backtestId)
     {
-        if (!_assets.TryGetValue(backtestId, out _))
+        if (!_assets.TryGetValue(backtestId, out var assets))
             throw new InvalidOperationException($"Assets were not initialized for backtest {backtestId}");
 
-        // TODO: Validate action
-        // If enough buying power/assets
-        // If symbol exists
-        // If fractional orders are market+day
-        // Quantity > 0
+        ValidateAction(action, assets);
 
         switch (action.OrderType)
         {
@@ -123,6 +122,26 @@ public sealed class BacktestAssets : IBacktestAssets
             };
 
             // TODO: Update action's state in db
+        }
+    }
+
+    private static void ValidateAction(TradingAction action, Assets assets)
+    {
+        if (action.Quantity <= 0) throw new BadAlpacaRequestException("Quantity", "Quantity must be positive");
+
+        if ((int)action.Quantity != action.Quantity &&
+            (action.OrderType is not (OrderType.MarketBuy or OrderType.MarketSell) ||
+             action.InForce != TimeInForce.Day))
+            throw new InvalidFractionalOrderException();
+
+        switch (action.OrderType)
+        {
+            case OrderType.LimitBuy when assets.Cash.AvailableAmount < action.Quantity * action.Price:
+                throw new InsufficientFundsException();
+            case OrderType.LimitSell or OrderType.MarketSell when
+                !assets.Positions.TryGetValue(action.Symbol, out var position) ||
+                position.AvailableQuantity < action.Quantity:
+                throw new InsufficientAssetsException();
         }
     }
 
@@ -250,6 +269,12 @@ public sealed class BacktestAssets : IBacktestAssets
         if (positions.TryGetValue(symbol, out var position))
         {
             var result = positions.Values.ToDictionary(p => p.Symbol);
+            if (position.Quantity + change == 0)
+            {
+                result.Remove(symbol);
+                return result;
+            }
+
             result[symbol] = new Position
             {
                 Symbol = symbol,

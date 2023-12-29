@@ -5,7 +5,7 @@ namespace TradingBot.Exceptions.Alpaca;
 
 public sealed partial class InvalidFractionalOrderException : UnsuccessfulAlpacaResponseException
 {
-    private InvalidFractionalOrderException() : base("invalid-fractional-order",
+    public InvalidFractionalOrderException() : base("invalid-fractional-order",
         "Fractional orders must be 'Market' orders and have duration 'Day'")
     {
         StatusCode = StatusCodes.Status422UnprocessableEntity;
