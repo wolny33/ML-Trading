@@ -34,11 +34,12 @@ public sealed class BacktestExecutor : IBacktestExecutor
     {
         var backtestId = await _backtestCommand.CreateNewAsync(start, end, _clock.UtcNow);
         _backtestAssets.InitializeForId(backtestId, initialCash);
-        await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId, start);
+        await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId,
+            new DateTimeOffset(start.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero)), TimeSpan.Zero));
 
         try
         {
-            for (var day = start; day < end; day = day.AddDays(1))
+            for (var day = start; day <= end; day = day.AddDays(1))
             {
                 using var scope = _scopeFactory.CreateScope();
 
@@ -49,7 +50,7 @@ public sealed class BacktestExecutor : IBacktestExecutor
                 await taskExecutor.ExecuteAsync();
                 await _backtestAssets.ExecuteQueuedActionsForBacktestAsync(backtestId, day);
 
-                await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId, day.AddDays(1));
+                await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId, task.GetTaskTime().AddHours(1));
             }
 
             await _backtestCommand.SetStateAndEndAsync(backtestId,

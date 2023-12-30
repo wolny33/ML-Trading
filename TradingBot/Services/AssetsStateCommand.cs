@@ -9,7 +9,7 @@ namespace TradingBot.Services;
 public interface IAssetsStateCommand
 {
     Task SaveCurrentAssetsAsync(CancellationToken token = default);
-    Task SaveAssetsForBacktestWithIdAsync(Guid id, DateOnly day, CancellationToken token = default);
+    Task SaveAssetsForBacktestWithIdAsync(Guid id, DateTimeOffset time, CancellationToken token = default);
 }
 
 public sealed class AssetsStateCommand : IAssetsStateCommand
@@ -38,11 +38,9 @@ public sealed class AssetsStateCommand : IAssetsStateCommand
         _logger.Information("Successfully saved current assets information");
     }
 
-    public Task SaveAssetsForBacktestWithIdAsync(Guid id, DateOnly day, CancellationToken token = default)
+    public Task SaveAssetsForBacktestWithIdAsync(Guid id, DateTimeOffset time, CancellationToken token = default)
     {
-        return SaveAssetsStateAsync(
-            new AssetsState(_backtestAssets.GetForBacktestWithId(id),
-                new DateTimeOffset(day.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero))), id), token);
+        return SaveAssetsStateAsync(new AssetsState(_backtestAssets.GetForBacktestWithId(id), time, id), token);
     }
 
     private async Task SaveAssetsStateAsync(AssetsState state, CancellationToken token)

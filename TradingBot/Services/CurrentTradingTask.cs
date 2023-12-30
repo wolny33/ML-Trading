@@ -98,7 +98,8 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
 
     public DateTimeOffset GetTaskTime()
     {
-        return new DateTimeOffset(GetTaskDay().ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.FromHours(12))),
+        // Since we use today's market data, backtest trading task is executed after trading hours
+        return new DateTimeOffset(GetTaskDay().ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.FromHours(20))),
             TimeSpan.Zero);
     }
 
