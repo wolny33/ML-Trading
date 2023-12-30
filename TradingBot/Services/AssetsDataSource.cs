@@ -49,7 +49,11 @@ public sealed class AssetsDataSource : IAssetsDataSource
 
     public async Task<Assets> GetCurrentAssetsAsync(CancellationToken token = default)
     {
-        if (_tradingTask.CurrentBacktestId is { } backtestId) return _backtestAssets.GetForBacktestWithId(backtestId);
+        if (_tradingTask.CurrentBacktestId is { } backtestId)
+        {
+            _logger.Verbose("Backtest is active - getting assets for current backtest");
+            return _backtestAssets.GetForBacktestWithId(backtestId);
+        }
 
         _logger.Debug("Getting current assets data");
         var (account, positions) = await SendRequestsWithRetriesAsync(token);

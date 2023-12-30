@@ -33,7 +33,10 @@ public sealed class ExchangeCalendar : IExchangeCalendar
     public async Task<bool> DoesTradingOpenInNext24HoursAsync(CancellationToken token = default)
     {
         if (_tradingTask.CurrentBacktestId is not null)
+        {
+            _logger.Verbose("Backtest is active - checking if there is any symbol data for given day in cache");
             return _cache.GetMostActiveCachedSymbolsForDay(_tradingTask.GetTaskDay()).Any();
+        }
 
         var now = _clock.UtcNow;
         var nextTradingDay = await SendCalendarRequestAsync(now, token);

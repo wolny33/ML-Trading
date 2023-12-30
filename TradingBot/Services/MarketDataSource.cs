@@ -67,10 +67,14 @@ public sealed class MarketDataSource : IMarketDataSource
         CancellationToken token = default)
     {
         if (_tradingTask.CurrentBacktestId is not null)
+        {
+            _logger.Verbose("Backtest is active - getting last price for {Symbol} from cache", symbol);
             return _cache.GetLastCachedPrice(symbol, _tradingTask.GetTaskDay()) ??
                    throw new InvalidOperationException(
                        $"Last price for '{symbol.Value}' could not be retrieved from cache");
+        }
 
+        _logger.Verbose("Getting last price for {Symbol} from Alpaca", symbol);
         return await SendLastTradeRequestAsync(symbol, token);
     }
 

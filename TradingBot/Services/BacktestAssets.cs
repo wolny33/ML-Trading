@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Alpaca.Markets;
 using TradingBot.Exceptions.Alpaca;
 using TradingBot.Models;
+using ILogger = Serilog.ILogger;
 using OrderType = TradingBot.Models.OrderType;
 
 namespace TradingBot.Services;
@@ -19,14 +20,17 @@ public interface IBacktestAssets
 public sealed class BacktestAssets : IBacktestAssets
 {
     private readonly ITradingActionCommand _actionCommand;
-    private readonly ConcurrentDictionary<Guid, Assets> _assets = new();
-    private readonly ConcurrentDictionary<Guid, List<TradingAction>> _queuedActions = new();
+    private readonly ILogger _logger;
     private readonly IServiceScopeFactory _scopeFactory;
 
-    public BacktestAssets(IServiceScopeFactory scopeFactory, ITradingActionCommand actionCommand)
+    private readonly ConcurrentDictionary<Guid, Assets> _assets = new();
+    private readonly ConcurrentDictionary<Guid, List<TradingAction>> _queuedActions = new();
+
+    public BacktestAssets(IServiceScopeFactory scopeFactory, ITradingActionCommand actionCommand, ILogger logger)
     {
         _scopeFactory = scopeFactory;
         _actionCommand = actionCommand;
+        _logger = logger.ForContext<BacktestAssets>();
     }
 
     public void InitializeForId(Guid backtestId, decimal initialCash)
@@ -45,6 +49,8 @@ public sealed class BacktestAssets : IBacktestAssets
             },
             Positions = ImmutableDictionary<TradingSymbol, Position>.Empty
         };
+
+        _logger.Debug("Assets were initialized for backtest {Id} (initial cash: {Initial})", backtestId, initialCash);
     }
 
     public Assets GetForBacktestWithId(Guid backtestId)
@@ -75,75 +81,118 @@ public sealed class BacktestAssets : IBacktestAssets
         if (!_queuedActions.ContainsKey(backtestId)) _queuedActions[backtestId] = new List<TradingAction>();
 
         _queuedActions[backtestId].Add(action);
+
+        _logger.Verbose("Trading action '{Details}' ({ActionId}) was posted for backtest {Id}",
+            action.GetReadableString(), action.Id, backtestId);
     }
 
     public async Task ExecuteQueuedActionsForBacktestAsync(Guid backtestId, DateOnly day)
     {
-        if (!_queuedActions.TryGetValue(backtestId, out var actions) || !actions.Any()) return;
+        if (!_queuedActions.TryGetValue(backtestId, out var actions) || !actions.Any())
+        {
+            _logger.Debug("No actions were posted for backtest {Id} for {Day}", backtestId, day);
+            return;
+        }
 
+        using var scope = _scopeFactory.CreateScope();
+        var marketDataSource = scope.ServiceProvider.GetRequiredService<IMarketDataSource>();
+
+        foreach (var action in SortQueuedActions(actions))
+        {
+            if (await GetTodayDataForSymbolAsync(action.Symbol, day, marketDataSource) is not { } symbolData)
+            {
+                _logger.Warning("{Symbol} market data was missing for {Day}", action.Symbol, day);
+                await ExpireActionAsync(action);
+                continue;
+            }
+
+            if (!WillActionExecute(action, symbolData))
+            {
+                _logger.Verbose("Action '{Details}' ({Id}) was not executed", action.GetReadableString(), action.Id);
+                await ExpireActionAsync(action);
+                continue;
+            }
+
+            await ExecuteActionAndUpdateStateAsync(backtestId, action, symbolData);
+        }
+    }
+
+    private async Task ExpireActionAsync(TradingAction action)
+    {
+        await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
+            new BacktestActionState(OrderStatus.Expired, action.CreatedAt.AddDays(1)));
+    }
+
+    private static async Task<DailyTradingData?> GetTodayDataForSymbolAsync(TradingSymbol symbol, DateOnly day,
+        IMarketDataSource marketDataSource)
+    {
+        var symbolData = await marketDataSource.GetDataForSingleSymbolAsync(symbol, day, day);
+        return symbolData?.Count switch
+        {
+            null => null,
+            1 => symbolData[0],
+            _ => throw new UnreachableException()
+        };
+    }
+
+    private async Task ExecuteActionAndUpdateStateAsync(Guid backtestId, TradingAction action,
+        DailyTradingData symbolData)
+    {
+        var isFullyFilled = action.OrderType switch
+        {
+            OrderType.LimitSell => SellAsset(
+                new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value), backtestId),
+            OrderType.LimitBuy => LimitBuyAsset(
+                new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value), backtestId),
+            OrderType.MarketSell => SellAsset(
+                new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open), backtestId),
+            OrderType.MarketBuy => MarketBuyAsset(
+                new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open), backtestId),
+            _ => throw new UnreachableException()
+        };
+
+        await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
+            new BacktestActionState(
+                isFullyFilled ? OrderStatus.Filled : OrderStatus.PartiallyFilled,
+                action.CreatedAt.AddHours(12),
+                action.OrderType switch
+                {
+                    OrderType.LimitSell or OrderType.LimitBuy => action.Price!.Value,
+                    OrderType.MarketSell or OrderType.MarketBuy => symbolData.Open,
+                    _ => throw new UnreachableException()
+                }
+            ));
+    }
+
+    private static bool WillActionExecute(TradingAction action, DailyTradingData symbolData)
+    {
+        return action.OrderType switch
+        {
+            OrderType.MarketBuy or OrderType.MarketSell => true,
+            OrderType.LimitBuy => symbolData.Low <= action.Price,
+            OrderType.LimitSell => symbolData.High >= action.Price,
+            _ => throw new UnreachableException()
+        };
+    }
+
+    /// <summary>
+    ///     Sorts queued actions to simulate execution order
+    /// </summary>
+    /// <remarks>
+    ///     Market orders are placed first, in the order they were queued. Limit orders are shuffled randomly and placed
+    ///     after market orders.
+    /// </remarks>
+    private static List<TradingAction> SortQueuedActions(IReadOnlyList<TradingAction> actions)
+    {
         var marketActions = actions.Where(a => a.OrderType is OrderType.MarketBuy or OrderType.MarketSell);
         var limitActions = actions.Where(a => a.OrderType is OrderType.LimitBuy or OrderType.LimitSell)
             .OrderBy(_ => Random.Shared.NextDouble());
 
         var sortedActions = marketActions.Concat(limitActions).ToList();
-
-        using var scope = _scopeFactory.CreateScope();
-        var marketDataSource = scope.ServiceProvider.GetRequiredService<IMarketDataSource>();
-
-        foreach (var action in sortedActions)
-        {
-            var symbolData = (await marketDataSource.GetDataForSingleSymbolAsync(action.Symbol, day, day))
-                ?.AsEnumerable().FirstOrDefault();
-            if (symbolData is null)
-            {
-                await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
-                    new BacktestActionState(OrderStatus.Expired, action.CreatedAt.AddDays(1)));
-                continue;
-            }
-
-            var shouldExecute = action.OrderType switch
-            {
-                // TODO: Include spread change
-                OrderType.MarketBuy or OrderType.MarketSell => true,
-                OrderType.LimitBuy => symbolData.Low <= action.Price,
-                OrderType.LimitSell => symbolData.High >= action.Price,
-                _ => throw new UnreachableException()
-            };
-            if (!shouldExecute)
-            {
-                await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
-                    new BacktestActionState(OrderStatus.Expired, action.CreatedAt.AddDays(1)));
-                continue;
-            }
-
-            var isFullyFilled = action.OrderType switch
-            {
-                OrderType.LimitSell => SellAsset(
-                    new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value), backtestId),
-                OrderType.LimitBuy => LimitBuyAsset(
-                    new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value), backtestId),
-                OrderType.MarketSell => SellAsset(
-                    new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open), backtestId),
-                OrderType.MarketBuy => MarketBuyAsset(
-                    new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open), backtestId),
-                _ => throw new UnreachableException()
-            };
-
-            await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
-                new BacktestActionState(
-                    isFullyFilled ? OrderStatus.Filled : OrderStatus.PartiallyFilled,
-                    action.CreatedAt,
-                    action.OrderType switch
-                    {
-                        OrderType.LimitSell or OrderType.LimitBuy => action.Price!.Value,
-                        OrderType.MarketSell or OrderType.MarketBuy => symbolData.Open,
-                        _ => throw new UnreachableException()
-                    }
-                ));
-        }
+        return sortedActions;
     }
 
-    private static void ValidateAction(TradingAction action, Assets assets)
+    private void ValidateAction(TradingAction action, Assets assets)
     {
         if (action.Quantity <= 0) throw new BadAlpacaRequestException("Quantity", "Quantity must be positive");
 
@@ -161,6 +210,9 @@ public sealed class BacktestAssets : IBacktestAssets
                 position.AvailableQuantity < action.Quantity:
                 throw new InsufficientAssetsException();
         }
+
+        _logger.Verbose("Trading action {Details} ({ActionId}) was successfully validated", action.GetReadableString(),
+            action.Id);
     }
 
     private bool LimitBuyAsset(BacktestTradeDetails details, Guid backtestId)
@@ -180,6 +232,9 @@ public sealed class BacktestAssets : IBacktestAssets
             Positions = newPositions
         };
         _assets[backtestId] = newAssets;
+
+        _logger.Verbose("{Amount} {Symbol} was bought with a limit order at {Price}", details.Amount, details.Symbol,
+            details.Price);
 
         return true;
     }
@@ -205,6 +260,13 @@ public sealed class BacktestAssets : IBacktestAssets
         };
         _assets[backtestId] = newAssets;
 
+        _logger.Verbose("{Amount} {Symbol} was bought with a market order at {Price}", correctedAmount, details.Symbol,
+            details.Price);
+
+        if (correctedAmount != details.Amount)
+            _logger.Debug("Market buy action was not fully filled ({FilledAmount} out of {RequestedAmount})",
+                correctedAmount, details.Amount);
+
         return correctedAmount == details.Amount;
     }
 
@@ -226,6 +288,8 @@ public sealed class BacktestAssets : IBacktestAssets
         };
         _assets[backtestId] = newAssets;
 
+        _logger.Verbose("{Amount} {Symbol} was sold at {Price}", details.Amount, details.Symbol, details.Price);
+
         return true;
     }
 
@@ -233,7 +297,7 @@ public sealed class BacktestAssets : IBacktestAssets
     {
         var assets = _assets[backtestId];
         if (!assets.Positions.TryGetValue(symbol, out var position) || position.AvailableQuantity < amount)
-            throw new InvalidOperationException("Not enough asset amount to execute requested action");
+            throw new UnreachableException("Not enough asset amount to reserve - action validation failed");
 
         var newPositions = assets.Positions.Values.ToDictionary(p => p.Symbol);
         newPositions[symbol] = new Position
@@ -258,13 +322,15 @@ public sealed class BacktestAssets : IBacktestAssets
             Positions = newPositions
         };
         _assets[backtestId] = newAssets;
+
+        _logger.Verbose("{Amount} of {Symbol} was reserved in backtest {Id}", amount, symbol.Value, backtestId);
     }
 
     private void ReserveCash(decimal amount, Guid backtestId)
     {
         var assets = _assets[backtestId];
         if (assets.Cash.AvailableAmount < amount)
-            throw new InvalidOperationException("Not enough money to execute requested action");
+            throw new UnreachableException("Not enough money to reserve - action validation failed");
 
         var newAssets = new Assets
         {
@@ -279,6 +345,8 @@ public sealed class BacktestAssets : IBacktestAssets
             Positions = assets.Positions
         };
         _assets[backtestId] = newAssets;
+
+        _logger.Verbose("{Amount} USD was reserved in backtest {Id}", amount, backtestId);
     }
 
     private static IReadOnlyDictionary<TradingSymbol, Position> UpdateAsset(
@@ -307,7 +375,7 @@ public sealed class BacktestAssets : IBacktestAssets
             return result;
         }
 
-        if (change < 0) throw new UnreachableException("Cannot sell not owned assets");
+        if (change < 0) throw new UnreachableException("Cannot sell not owned assets - action validation failed");
 
         return positions.Values.Append(new Position
         {

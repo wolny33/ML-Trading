@@ -150,4 +150,13 @@ public sealed class TradingAction
             OrderType = OrderType.LimitSell
         };
     }
+
+    /// <summary>
+    ///     Returns readable representation of action for logging purposes
+    /// </summary>
+    public string GetReadableString()
+    {
+        return $"{OrderType.ToString()} {Quantity} {Symbol.Value}" +
+               $"{(OrderType is OrderType.LimitBuy or OrderType.LimitSell ? $" @ {Price}" : string.Empty)}";
+    }
 }
