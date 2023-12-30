@@ -44,7 +44,7 @@ public sealed class ActionExecutor : IActionExecutor
     {
         if (_tradingTask.CurrentBacktestId is { } backtestId)
         {
-            _backtestAssets.PostActionForBacktest(action, backtestId);
+            await _backtestAssets.PostActionForBacktestAsync(action, backtestId, _tradingTask.GetTaskDay());
             await _tradingTask.SaveAndLinkBacktestActionAsync(action, token);
             return;
         }

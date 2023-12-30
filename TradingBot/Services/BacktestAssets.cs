@@ -13,22 +13,24 @@ public interface IBacktestAssets
 {
     void InitializeForId(Guid backtestId, decimal initialCash);
     Assets GetForBacktestWithId(Guid backtestId);
-    void PostActionForBacktest(TradingAction action, Guid backtestId);
+    Task PostActionForBacktestAsync(TradingAction action, Guid backtestId, DateOnly day);
     Task ExecuteQueuedActionsForBacktestAsync(Guid backtestId, DateOnly day, CancellationToken token = default);
 }
 
-public sealed class BacktestAssets : IBacktestAssets
+public sealed class BacktestAssets : IBacktestAssets, IDisposable
 {
     private readonly ITradingActionCommand _actionCommand;
 
     private readonly ConcurrentDictionary<Guid, Assets> _assets = new();
     private readonly ILogger _logger;
+    private readonly IMarketDataSource _marketDataSource;
     private readonly ConcurrentDictionary<Guid, List<TradingAction>> _queuedActions = new();
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IServiceScope _scope;
 
     public BacktestAssets(IServiceScopeFactory scopeFactory, ITradingActionCommand actionCommand, ILogger logger)
     {
-        _scopeFactory = scopeFactory;
+        _scope = scopeFactory.CreateScope();
+        _marketDataSource = _scope.ServiceProvider.GetRequiredService<IMarketDataSource>();
         _actionCommand = actionCommand;
         _logger = logger.ForContext<BacktestAssets>();
     }
@@ -61,12 +63,13 @@ public sealed class BacktestAssets : IBacktestAssets
         return assets;
     }
 
-    public void PostActionForBacktest(TradingAction action, Guid backtestId)
+    public async Task PostActionForBacktestAsync(TradingAction action, Guid backtestId, DateOnly day)
     {
         if (!_assets.TryGetValue(backtestId, out var assets))
             throw new InvalidOperationException($"Assets were not initialized for backtest {backtestId}");
 
-        ValidateAction(action, assets);
+        var symbolData = await GetTodayDataForSymbolAsync(action.Symbol, day);
+        ValidateAction(action, assets, symbolData);
 
         switch (action.OrderType)
         {
@@ -75,6 +78,10 @@ public sealed class BacktestAssets : IBacktestAssets
                 break;
             case OrderType.LimitBuy:
                 ReserveCash(action.Quantity * action.Price!.Value, backtestId);
+                break;
+            case OrderType.MarketBuy:
+                if (symbolData is not null)
+                    ReserveCash(action.Quantity * symbolData.Open, backtestId);
                 break;
         }
 
@@ -95,22 +102,19 @@ public sealed class BacktestAssets : IBacktestAssets
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var marketDataSource = scope.ServiceProvider.GetRequiredService<IMarketDataSource>();
-
         foreach (var action in SortQueuedActions(actions).TakeWhile(_ => !token.IsCancellationRequested))
         {
-            if (await GetTodayDataForSymbolAsync(action.Symbol, day, marketDataSource) is not { } symbolData)
+            if (await GetTodayDataForSymbolAsync(action.Symbol, day) is not { } symbolData)
             {
                 _logger.Warning("{Symbol} market data was missing for {Day}", action.Symbol, day);
-                await ExpireActionAsync(action);
+                await ExpireActionAsync(action, backtestId);
                 continue;
             }
 
             if (!WillActionExecute(action, symbolData))
             {
                 _logger.Verbose("Action '{Details}' ({Id}) was not executed", action.GetReadableString(), action.Id);
-                await ExpireActionAsync(action);
+                await ExpireActionAsync(action, backtestId);
                 continue;
             }
 
@@ -118,16 +122,37 @@ public sealed class BacktestAssets : IBacktestAssets
         }
     }
 
-    private async Task ExpireActionAsync(TradingAction action)
+    public void Dispose()
     {
+        _scope.Dispose();
+    }
+
+    private async Task ExpireActionAsync(TradingAction action, Guid backtestId)
+    {
+        switch (action.OrderType)
+        {
+            case OrderType.LimitSell or OrderType.MarketSell:
+                FreeReservedAssets(action.Symbol, action.Quantity, backtestId);
+                break;
+            case OrderType.LimitBuy:
+                FreeReservedCash(action.Quantity * action.Price!.Value, backtestId);
+                break;
+            case OrderType.MarketBuy:
+                // Cash is not reserved for market buy orders that won't execute
+                // (because they can only be skipped if there is no market data for requested symbol for that
+                // day, so we don't know how much money to reserve)
+                break;
+            default:
+                throw new UnreachableException();
+        }
+
         await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
             new BacktestActionState(OrderStatus.Expired, action.CreatedAt.AddDays(1)));
     }
 
-    private static async Task<DailyTradingData?> GetTodayDataForSymbolAsync(TradingSymbol symbol, DateOnly day,
-        IMarketDataSource marketDataSource)
+    private async Task<DailyTradingData?> GetTodayDataForSymbolAsync(TradingSymbol symbol, DateOnly day)
     {
-        var symbolData = await marketDataSource.GetDataForSingleSymbolAsync(symbol, day, day);
+        var symbolData = await _marketDataSource.GetDataForSingleSymbolAsync(symbol, day, day);
         return symbolData?.Count switch
         {
             null => null,
@@ -139,22 +164,30 @@ public sealed class BacktestAssets : IBacktestAssets
     private async Task ExecuteActionAndUpdateStateAsync(Guid backtestId, TradingAction action,
         DailyTradingData symbolData)
     {
-        var isFullyFilled = action.OrderType switch
+        switch (action.OrderType)
         {
-            OrderType.LimitSell => SellAsset(
-                new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value), backtestId),
-            OrderType.LimitBuy => LimitBuyAsset(
-                new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value), backtestId),
-            OrderType.MarketSell => SellAsset(
-                new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open), backtestId),
-            OrderType.MarketBuy => MarketBuyAsset(
-                new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open), backtestId),
-            _ => throw new UnreachableException()
-        };
+            case OrderType.LimitSell:
+                SellAsset(new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value),
+                    backtestId);
+                break;
+            case OrderType.LimitBuy:
+                LimitBuyAsset(new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value),
+                    backtestId);
+                break;
+            case OrderType.MarketSell:
+                SellAsset(new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open), backtestId);
+                break;
+            case OrderType.MarketBuy:
+                MarketBuyAsset(new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open),
+                    backtestId);
+                break;
+            default:
+                throw new UnreachableException();
+        }
 
         await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
             new BacktestActionState(
-                isFullyFilled ? OrderStatus.Filled : OrderStatus.PartiallyFilled,
+                OrderStatus.Filled,
                 action.CreatedAt.AddHours(12),
                 action.OrderType switch
                 {
@@ -192,7 +225,7 @@ public sealed class BacktestAssets : IBacktestAssets
         return marketActions.Concat(limitActions).ToList();
     }
 
-    private void ValidateAction(TradingAction action, Assets assets)
+    private void ValidateAction(TradingAction action, Assets assets, DailyTradingData? symbolData)
     {
         if (action.Quantity <= 0) throw new BadAlpacaRequestException("Quantity", "Quantity must be positive");
 
@@ -209,13 +242,16 @@ public sealed class BacktestAssets : IBacktestAssets
                 !assets.Positions.TryGetValue(action.Symbol, out var position) ||
                 position.AvailableQuantity < action.Quantity:
                 throw new InsufficientAssetsException();
+            case OrderType.MarketBuy when symbolData is not null &&
+                                          assets.Cash.AvailableAmount < action.Quantity * symbolData.Open:
+                throw new InsufficientFundsException();
         }
 
         _logger.Verbose("Trading action {Details} ({ActionId}) was successfully validated", action.GetReadableString(),
             action.Id);
     }
 
-    private bool LimitBuyAsset(BacktestTradeDetails details, Guid backtestId)
+    private void LimitBuyAsset(BacktestTradeDetails details, Guid backtestId)
     {
         var assets = _assets[backtestId];
         var newPositions = UpdateAsset(assets.Positions, details.Symbol, details.Amount, details.Price);
@@ -235,42 +271,31 @@ public sealed class BacktestAssets : IBacktestAssets
 
         _logger.Verbose("{Amount} {Symbol} was bought with a limit order at {Price}", details.Amount, details.Symbol,
             details.Price);
-
-        return true;
     }
 
-    private bool MarketBuyAsset(BacktestTradeDetails details, Guid backtestId)
+    private void MarketBuyAsset(BacktestTradeDetails details, Guid backtestId)
     {
         var assets = _assets[backtestId];
-        var correctedAmount = assets.Cash.BuyingPower / details.Price < details.Amount
-            ? assets.Cash.BuyingPower / details.Price
-            : details.Amount;
-        var newPositions = UpdateAsset(assets.Positions, details.Symbol, correctedAmount, details.Price);
+        var newPositions = UpdateAsset(assets.Positions, details.Symbol, details.Amount, details.Price);
         var newAssets = new Assets
         {
             EquityValue = newPositions.Values.Aggregate(0m, (sum, position) => sum + position.MarketValue) +
-                assets.Cash.AvailableAmount - correctedAmount * details.Price,
+                assets.Cash.AvailableAmount - details.Amount * details.Price,
             Cash = new Cash
             {
                 MainCurrency = assets.Cash.MainCurrency,
                 AvailableAmount = assets.Cash.AvailableAmount,
-                BuyingPower = assets.Cash.BuyingPower - correctedAmount * details.Price
+                BuyingPower = assets.Cash.BuyingPower - details.Amount * details.Price
             },
             Positions = newPositions
         };
         _assets[backtestId] = newAssets;
 
-        _logger.Verbose("{Amount} {Symbol} was bought with a market order at {Price}", correctedAmount, details.Symbol,
+        _logger.Verbose("{Amount} {Symbol} was bought with a market order at {Price}", details.Amount, details.Symbol,
             details.Price);
-
-        if (correctedAmount != details.Amount)
-            _logger.Debug("Market buy action was not fully filled ({FilledAmount} out of {RequestedAmount})",
-                correctedAmount, details.Amount);
-
-        return correctedAmount == details.Amount;
     }
 
-    private bool SellAsset(BacktestTradeDetails details, Guid backtestId)
+    private void SellAsset(BacktestTradeDetails details, Guid backtestId)
     {
         var assets = _assets[backtestId];
         var newPositions = UpdateAsset(assets.Positions, details.Symbol, -details.Amount, details.Price);
@@ -289,8 +314,6 @@ public sealed class BacktestAssets : IBacktestAssets
         _assets[backtestId] = newAssets;
 
         _logger.Verbose("{Amount} {Symbol} was sold at {Price}", details.Amount, details.Symbol, details.Price);
-
-        return true;
     }
 
     private void ReserveAsset(TradingSymbol symbol, decimal amount, Guid backtestId)
@@ -347,6 +370,62 @@ public sealed class BacktestAssets : IBacktestAssets
         _assets[backtestId] = newAssets;
 
         _logger.Verbose("{Amount} USD was reserved in backtest {Id}", amount, backtestId);
+    }
+
+    private void FreeReservedAssets(TradingSymbol symbol, decimal amount, Guid backtestId)
+    {
+        var assets = _assets[backtestId];
+        if (!assets.Positions.TryGetValue(symbol, out var position) ||
+            position.AvailableQuantity + amount > position.Quantity)
+            throw new UnreachableException("Assets cannot be freed");
+
+        var newPositions = assets.Positions.Values.ToDictionary(p => p.Symbol);
+        newPositions[symbol] = new Position
+        {
+            Symbol = symbol,
+            SymbolId = position.SymbolId,
+            Quantity = position.Quantity,
+            AvailableQuantity = position.AvailableQuantity + amount,
+            MarketValue = position.MarketValue,
+            AverageEntryPrice = position.AverageEntryPrice
+        };
+
+        var newAssets = new Assets
+        {
+            EquityValue = assets.EquityValue,
+            Cash = new Cash
+            {
+                MainCurrency = assets.Cash.MainCurrency,
+                AvailableAmount = assets.Cash.AvailableAmount,
+                BuyingPower = assets.Cash.BuyingPower
+            },
+            Positions = newPositions
+        };
+        _assets[backtestId] = newAssets;
+
+        _logger.Verbose("{Amount} of {Symbol} was freed in backtest {Id}", amount, symbol.Value, backtestId);
+    }
+
+    private void FreeReservedCash(decimal amount, Guid backtestId)
+    {
+        var assets = _assets[backtestId];
+        if (assets.Cash.AvailableAmount + amount > assets.Cash.BuyingPower)
+            throw new UnreachableException("Money cannot be freed");
+
+        var newAssets = new Assets
+        {
+            EquityValue = assets.EquityValue,
+            Cash = new Cash
+            {
+                MainCurrency = assets.Cash.MainCurrency,
+                AvailableAmount = assets.Cash.AvailableAmount + amount,
+                BuyingPower = assets.Cash.BuyingPower
+            },
+            Positions = assets.Positions
+        };
+        _assets[backtestId] = newAssets;
+
+        _logger.Verbose("{Amount} USD was freed in backtest {Id}", amount, backtestId);
     }
 
     private static IReadOnlyDictionary<TradingSymbol, Position> UpdateAsset(
