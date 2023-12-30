@@ -1,4 +1,5 @@
 ﻿using TradingBot.Database.Entities;
+using TradingBot.Dto;
 
 namespace TradingBot.Models;
 
@@ -51,5 +52,14 @@ public sealed record AssetsState(Assets Assets, DateTimeOffset CreatedAt, Guid? 
                 Quantity = (decimal)p.Quantity
             }).ToDictionary(p => p.Symbol)
         }, DateTimeOffset.FromUnixTimeMilliseconds(entity.CreationTimestamp), entity.BacktestId);
+    }
+
+    public AssetsStateResponse ToResponse()
+    {
+        return new AssetsStateResponse
+        {
+            Assets = Assets.ToResponse(),
+            CreatedAt = CreatedAt
+        };
     }
 }
