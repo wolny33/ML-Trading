@@ -14,17 +14,17 @@ public interface IBacktestAssets
     void InitializeForId(Guid backtestId, decimal initialCash);
     Assets GetForBacktestWithId(Guid backtestId);
     void PostActionForBacktest(TradingAction action, Guid backtestId);
-    Task ExecuteQueuedActionsForBacktestAsync(Guid backtestId, DateOnly day);
+    Task ExecuteQueuedActionsForBacktestAsync(Guid backtestId, DateOnly day, CancellationToken token = default);
 }
 
 public sealed class BacktestAssets : IBacktestAssets
 {
     private readonly ITradingActionCommand _actionCommand;
-    private readonly ILogger _logger;
-    private readonly IServiceScopeFactory _scopeFactory;
 
     private readonly ConcurrentDictionary<Guid, Assets> _assets = new();
+    private readonly ILogger _logger;
     private readonly ConcurrentDictionary<Guid, List<TradingAction>> _queuedActions = new();
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public BacktestAssets(IServiceScopeFactory scopeFactory, ITradingActionCommand actionCommand, ILogger logger)
     {
@@ -86,7 +86,8 @@ public sealed class BacktestAssets : IBacktestAssets
             action.GetReadableString(), action.Id, backtestId);
     }
 
-    public async Task ExecuteQueuedActionsForBacktestAsync(Guid backtestId, DateOnly day)
+    public async Task ExecuteQueuedActionsForBacktestAsync(Guid backtestId, DateOnly day,
+        CancellationToken token = default)
     {
         if (!_queuedActions.TryGetValue(backtestId, out var actions) || !actions.Any())
         {
@@ -97,7 +98,7 @@ public sealed class BacktestAssets : IBacktestAssets
         using var scope = _scopeFactory.CreateScope();
         var marketDataSource = scope.ServiceProvider.GetRequiredService<IMarketDataSource>();
 
-        foreach (var action in SortQueuedActions(actions))
+        foreach (var action in SortQueuedActions(actions).TakeWhile(_ => !token.IsCancellationRequested))
         {
             if (await GetTodayDataForSymbolAsync(action.Symbol, day, marketDataSource) is not { } symbolData)
             {
@@ -182,14 +183,13 @@ public sealed class BacktestAssets : IBacktestAssets
     ///     Market orders are placed first, in the order they were queued. Limit orders are shuffled randomly and placed
     ///     after market orders.
     /// </remarks>
-    private static List<TradingAction> SortQueuedActions(IReadOnlyList<TradingAction> actions)
+    private static IReadOnlyList<TradingAction> SortQueuedActions(IReadOnlyList<TradingAction> actions)
     {
         var marketActions = actions.Where(a => a.OrderType is OrderType.MarketBuy or OrderType.MarketSell);
         var limitActions = actions.Where(a => a.OrderType is OrderType.LimitBuy or OrderType.LimitSell)
             .OrderBy(_ => Random.Shared.NextDouble());
 
-        var sortedActions = marketActions.Concat(limitActions).ToList();
-        return sortedActions;
+        return marketActions.Concat(limitActions).ToList();
     }
 
     private void ValidateAction(TradingAction action, Assets assets)

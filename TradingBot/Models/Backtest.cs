@@ -48,5 +48,6 @@ public enum BacktestState
 {
     Running,
     Finished,
-    Error
+    Error,
+    Cancelled
 }

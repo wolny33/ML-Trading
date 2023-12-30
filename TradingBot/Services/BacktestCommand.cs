@@ -7,7 +7,7 @@ namespace TradingBot.Services;
 
 public interface IBacktestCommand
 {
-    Task<Guid> CreateNewAsync(DateOnly start, DateOnly end, DateTimeOffset simulationStart,
+    Task<Guid> CreateNewAsync(DateOnly start, DateOnly end, DateTimeOffset simulationStart, Guid? id = null,
         CancellationToken token = default);
 
     Task SetStateAndEndAsync(Guid backtestId, BacktestCompletionDetails details, CancellationToken token = default);
@@ -22,13 +22,13 @@ public sealed class BacktestCommand : IBacktestCommand
         _dbContextFactory = dbContextFactory;
     }
 
-    public async Task<Guid> CreateNewAsync(DateOnly start, DateOnly end, DateTimeOffset executionStart,
+    public async Task<Guid> CreateNewAsync(DateOnly start, DateOnly end, DateTimeOffset executionStart, Guid? id = null,
         CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var backtest = new BacktestEntity
         {
-            Id = Guid.NewGuid(),
+            Id = id ?? Guid.NewGuid(),
             SimulationStart = start,
             SimulationEnd = end,
             ExecutionStartTimestamp = executionStart.ToUnixTimeMilliseconds(),

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Authentication;
 using TradingBot.Exceptions;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
@@ -7,7 +8,9 @@ namespace TradingBot.Services;
 
 public interface IBacktestExecutor
 {
-    Task ExecuteAsync(DateOnly start, DateOnly end, decimal initialCash);
+    Guid StartNew(BacktestDetails details);
+    Task ExecuteAsync(BacktestDetails details, Guid id, CancellationToken token = default);
+    Task CancelBacktestAsync(Guid id);
 }
 
 public sealed class BacktestExecutor : IBacktestExecutor
@@ -15,6 +18,8 @@ public sealed class BacktestExecutor : IBacktestExecutor
     private readonly IAssetsStateCommand _assetsStateCommand;
     private readonly IBacktestAssets _backtestAssets;
     private readonly IBacktestCommand _backtestCommand;
+
+    private readonly ConcurrentDictionary<Guid, RunningBacktest> _backtests = new();
     private readonly ISystemClock _clock;
     private readonly ILogger _logger;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -30,41 +35,67 @@ public sealed class BacktestExecutor : IBacktestExecutor
         _logger = logger.ForContext<BacktestExecutor>();
     }
 
-    public async Task ExecuteAsync(DateOnly start, DateOnly end, decimal initialCash)
+    public Guid StartNew(BacktestDetails details)
     {
-        var backtestId = await _backtestCommand.CreateNewAsync(start, end, _clock.UtcNow);
-        _logger.Information("Started new backtest with ID {Id}, from {Start} to {End}", backtestId, start, end);
+        var id = Guid.NewGuid();
+        var tokenSource = new CancellationTokenSource();
+        _backtests[id] = new RunningBacktest(ExecuteAsync(details, id, tokenSource.Token), tokenSource);
 
-        _backtestAssets.InitializeForId(backtestId, initialCash);
+        return id;
+    }
+
+    public async Task ExecuteAsync(BacktestDetails details, Guid id, CancellationToken token = default)
+    {
+        var backtestId = await _backtestCommand.CreateNewAsync(details.Start, details.End, _clock.UtcNow, id, token);
+        _logger.Information("Started new backtest with ID {Id}, from {Start} to {End}", backtestId, details.Start,
+            details.End);
+
+        _backtestAssets.InitializeForId(backtestId, details.InitialCash);
         await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId,
-            new DateTimeOffset(start.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero)), TimeSpan.Zero));
+            new DateTimeOffset(details.Start.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero)), TimeSpan.Zero), token);
 
         try
         {
-            for (var day = start; day < end; day = day.AddDays(1))
+            for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {
-                _logger.Debug("Executing day {Day} for backtest {Id}", day, backtestId);
-                using var scope = _scopeFactory.CreateScope();
+                if (token.IsCancellationRequested) await CancelAsync(backtestId);
 
+                _logger.Debug("Executing day {Day} for backtest {Id}", day, backtestId);
+
+                using var scope = _scopeFactory.CreateScope();
                 var task = scope.ServiceProvider.GetRequiredService<ICurrentTradingTask>();
                 task.SetBacktestDetails(backtestId, day);
 
                 var taskExecutor = scope.ServiceProvider.GetRequiredService<TradingTaskExecutor>();
-                await taskExecutor.ExecuteAsync();
-                await _backtestAssets.ExecuteQueuedActionsForBacktestAsync(backtestId, day.AddDays(1));
+                await taskExecutor.ExecuteAsync(token);
+                await _backtestAssets.ExecuteQueuedActionsForBacktestAsync(backtestId, day.AddDays(1), token);
 
-                await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId, task.GetTaskTime().AddHours(1));
+                await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId, task.GetTaskTime().AddHours(1),
+                    token);
             }
 
             _logger.Information("Backtest {Id} finished successfully", backtestId);
             await _backtestCommand.SetStateAndEndAsync(backtestId,
-                new BacktestCompletionDetails(_clock.UtcNow, BacktestState.Finished, "Finished successfully"));
+                new BacktestCompletionDetails(_clock.UtcNow, BacktestState.Finished, "Finished successfully"),
+                CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+            await CancelAsync(backtestId);
         }
         catch (Exception e)
         {
-            _logger.Error(e, "Backtest {Id} (from {Start} to {End}) has failed", backtestId, start, end);
+            _logger.Error(e, "Backtest {Id} (from {Start} to {End}) has failed", backtestId, details.Start,
+                details.End);
             await EndWithErrorAsync(backtestId, e);
         }
+    }
+
+    public async Task CancelBacktestAsync(Guid id)
+    {
+        if (!_backtests.Remove(id, out var backtest)) return;
+
+        await backtest.DisposeAsync();
     }
 
     private Task EndWithErrorAsync(Guid id, Exception exception)
@@ -72,6 +103,25 @@ public sealed class BacktestExecutor : IBacktestExecutor
         var error = (exception as ResponseException)?.GetError() ?? new Error("unknown", exception.Message);
         return _backtestCommand.SetStateAndEndAsync(id,
             new BacktestCompletionDetails(_clock.UtcNow, BacktestState.Error,
-                $"Backtest failed with error code {error.Code}: {error.Message}"));
+                $"Backtest failed with error code {error.Code}: {error.Message}"), CancellationToken.None);
+    }
+
+    private Task CancelAsync(Guid id)
+    {
+        return _backtestCommand.SetStateAndEndAsync(id,
+            new BacktestCompletionDetails(_clock.UtcNow, BacktestState.Cancelled, "Backtest was cancelled"),
+            CancellationToken.None);
+    }
+
+    private sealed record RunningBacktest(Task BacktestTask, CancellationTokenSource TokenSource) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            TokenSource.Cancel();
+            await BacktestTask;
+            TokenSource.Dispose();
+        }
     }
 }
+
+public sealed record BacktestDetails(DateOnly Start, DateOnly End, decimal InitialCash);
