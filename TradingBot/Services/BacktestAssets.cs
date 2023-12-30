@@ -23,14 +23,15 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
 
     private readonly ConcurrentDictionary<Guid, Assets> _assets = new();
     private readonly ILogger _logger;
-    private readonly IMarketDataSource _marketDataSource;
+    private readonly Lazy<IMarketDataSource> _marketDataSource;
     private readonly ConcurrentDictionary<Guid, List<TradingAction>> _queuedActions = new();
-    private readonly IServiceScope _scope;
+    private readonly Lazy<IServiceScope> _scope;
 
     public BacktestAssets(IServiceScopeFactory scopeFactory, ITradingActionCommand actionCommand, ILogger logger)
     {
-        _scope = scopeFactory.CreateScope();
-        _marketDataSource = _scope.ServiceProvider.GetRequiredService<IMarketDataSource>();
+        _scope = new Lazy<IServiceScope>(scopeFactory.CreateScope);
+        _marketDataSource =
+            new Lazy<IMarketDataSource>(() => _scope.Value.ServiceProvider.GetRequiredService<IMarketDataSource>());
         _actionCommand = actionCommand;
         _logger = logger.ForContext<BacktestAssets>();
     }
@@ -124,7 +125,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
 
     public void Dispose()
     {
-        _scope.Dispose();
+        if (_scope.IsValueCreated) _scope.Value.Dispose();
     }
 
     private async Task ExpireActionAsync(TradingAction action, Guid backtestId)
@@ -152,7 +153,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
 
     private async Task<DailyTradingData?> GetTodayDataForSymbolAsync(TradingSymbol symbol, DateOnly day)
     {
-        var symbolData = await _marketDataSource.GetDataForSingleSymbolAsync(symbol, day, day);
+        var symbolData = await _marketDataSource.Value.GetDataForSingleSymbolAsync(symbol, day, day);
         return symbolData?.Count switch
         {
             null => null,

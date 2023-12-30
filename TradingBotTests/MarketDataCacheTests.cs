@@ -198,4 +198,28 @@ public sealed class MarketDataCacheTests
         _marketDataCache.TryGetCachedData(new TradingSymbol("TKN1"), _today.AddDays(-2), _today.AddDays(-1)).Should()
             .BeEquivalentTo(new[] { yesterday });
     }
+
+    [Fact]
+    public void ShouldCorrectlyReturnMostActiveCachedSymbols()
+    {
+        throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void ShouldCorrectlyReturnLastCachedPriceForSymbol()
+    {
+        throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void ShouldCorrectlyReturnLastCachedPriceForSymbolIfMostRecentDayIsNull()
+    {
+        throw new NotImplementedException();
+    }
+
+    [Fact]
+    public void ShouldReturnNullIfThereIsNoCachedData()
+    {
+        throw new NotImplementedException();
+    }
 }

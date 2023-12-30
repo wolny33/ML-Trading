@@ -140,6 +140,18 @@ public sealed class ExchangeCalendarTests
             Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public Task ShouldReturnTrueInBacktestIfThereIsCachedSymbolDataForToday()
+    {
+        throw new NotImplementedException();
+    }
+
+    [Fact]
+    public Task ShouldReturnFalseInBacktestIfThereIsNoCachedSymbolDataForToday()
+    {
+        throw new NotImplementedException();
+    }
+
     private sealed record IntervalCalendar(OpenClose Trading, OpenClose Session) : IIntervalCalendar
     {
         public static IntervalCalendar WithTradingInterval(DateOnly date, TimeOnly open, TimeOnly close)

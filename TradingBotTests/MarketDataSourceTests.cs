@@ -124,6 +124,12 @@ public sealed class MarketDataSourceTests
     }
 
     [Fact]
+    public Task ShouldGetMostActiveSymbolsFromCacheInBacktest()
+    {
+        throw new NotImplementedException();
+    }
+
+    [Fact]
     public async Task ShouldCorrectlyReturnPricesForSingleSymbol()
     {
         SetUpResponses();
@@ -160,6 +166,12 @@ public sealed class MarketDataSourceTests
         var result = await _marketDataSource.GetLastAvailablePriceForSymbolAsync(new TradingSymbol("TKN6"));
 
         result.Should().Be(10m);
+    }
+
+    [Fact]
+    public Task ShouldReturnClosePriceFromCacheInBacktest()
+    {
+        throw new NotImplementedException();
     }
 
     private void SetUpResponses()

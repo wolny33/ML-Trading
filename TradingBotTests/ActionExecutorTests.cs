@@ -96,4 +96,10 @@ public sealed class ActionExecutorTests
                 e.Message == "Validation failed for property 'quantity': quantity must be positive"),
             Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public Task ShouldNotPostActionsToAlpacaInBacktest()
+    {
+        throw new NotImplementedException();
+    }
 }

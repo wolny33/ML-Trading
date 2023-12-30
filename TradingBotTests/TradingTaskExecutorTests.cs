@@ -69,6 +69,24 @@ public sealed class TradingTaskExecutorTests
     }
 
     [Fact]
+    public async Task ShouldExecuteTaskInBacktestIfInvestmentIsDisabled()
+    {
+        _investmentConfig.GetConfigurationAsync(Arg.Any<CancellationToken>())
+            .Returns(new InvestmentConfiguration { Enabled = false });
+        _currentTradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
+
+        await _taskExecutor.ExecuteAsync();
+
+        Received.InOrder(() =>
+        {
+            _currentTradingTask.StartAsync(Arg.Any<CancellationToken>());
+            _calendar.DoesTradingOpenInNext24HoursAsync(Arg.Any<CancellationToken>());
+            _actionExecutor.ExecuteTradingActionsAsync(Arg.Any<CancellationToken>());
+            _currentTradingTask.FinishSuccessfullyAsync(Arg.Any<CancellationToken>());
+        });
+    }
+
+    [Fact]
     public async Task ShouldNotExecuteTaskIfExchangeDoesNotOpenSoon()
     {
         _calendar.DoesTradingOpenInNext24HoursAsync(Arg.Any<CancellationToken>()).Returns(false);
