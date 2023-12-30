@@ -23,4 +23,7 @@ public sealed class BacktestResponse
 
     [Required]
     public required string StateDetails { get; init; }
+
+    [Required]
+    public required double TotalReturn { get; init; }
 }

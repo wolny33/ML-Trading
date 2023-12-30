@@ -12,6 +12,7 @@ public sealed class Backtest
     public DateTimeOffset? ExecutionEnd { get; init; }
     public required BacktestState State { get; init; }
     public required string StateDetails { get; init; }
+    public required double TotalReturn { get; init; }
 
     public static Backtest FromEntity(BacktestEntity entity)
     {
@@ -25,8 +26,20 @@ public sealed class Backtest
                 ? DateTimeOffset.FromUnixTimeMilliseconds(entity.ExecutionEndTimestamp.Value)
                 : null,
             State = entity.State,
-            StateDetails = entity.StateDetails
+            StateDetails = entity.StateDetails,
+            TotalReturn = CalculateTotalReturn(entity.AssetsStates.AsReadOnly())
         };
+    }
+
+    private static double CalculateTotalReturn(IReadOnlyList<AssetsStateEntity> assets)
+    {
+        var first = assets.MinBy(a => a.CreationTimestamp);
+        var last = assets.MaxBy(a => a.CreationTimestamp);
+
+        if (first?.EquityValue is { } startValue && last?.EquityValue is { } endValue)
+            return (endValue - startValue) / startValue;
+
+        return 0;
     }
 
     public BacktestResponse ToResponse()
@@ -39,7 +52,8 @@ public sealed class Backtest
             ExecutionStart = ExecutionStart,
             ExecutionEnd = ExecutionEnd,
             State = State.ToString(),
-            StateDetails = StateDetails
+            StateDetails = StateDetails,
+            TotalReturn = TotalReturn
         };
     }
 }

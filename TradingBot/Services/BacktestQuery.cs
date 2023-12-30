@@ -29,9 +29,10 @@ public sealed class BacktestQuery : IBacktestQuery
         CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entities = await context.Backtests.Where(b =>
-            b.ExecutionStartTimestamp >= start.ToUnixTimeMilliseconds() &&
-            b.ExecutionStartTimestamp <= end.ToUnixTimeMilliseconds()).ToListAsync(token);
+        var entities = await context.Backtests.Include(b => b.AssetsStates)
+            .Where(b => b.ExecutionStartTimestamp >= start.ToUnixTimeMilliseconds() &&
+                        b.ExecutionStartTimestamp <= end.ToUnixTimeMilliseconds())
+            .ToListAsync(token);
 
         return entities.Select(Backtest.FromEntity).ToList();
     }
@@ -39,7 +40,7 @@ public sealed class BacktestQuery : IBacktestQuery
     public async Task<Backtest?> GetByIdAsync(Guid id, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.Backtests.FirstOrDefaultAsync(b => b.Id == id, token);
+        var entity = await context.Backtests.Include(b => b.AssetsStates).FirstOrDefaultAsync(b => b.Id == id, token);
         return entity is null ? null : Backtest.FromEntity(entity);
     }
 
