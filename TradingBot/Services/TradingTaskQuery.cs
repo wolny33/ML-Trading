@@ -25,8 +25,10 @@ public sealed class TradingTaskQuery : ITradingTaskQuery
         CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entities = await context.TradingTasks.Where(t =>
-                t.StartTimestamp >= start.ToUnixTimeMilliseconds() && t.StartTimestamp <= end.ToUnixTimeMilliseconds())
+        var entities = await context.TradingTasks
+            .Where(t => t.BacktestId == null)
+            .Where(t => t.StartTimestamp >= start.ToUnixTimeMilliseconds() &&
+                        t.StartTimestamp <= end.ToUnixTimeMilliseconds())
             .ToListAsync(token);
 
         return entities.Select(TradingTask.FromEntity).ToList();

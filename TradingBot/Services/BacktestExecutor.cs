@@ -13,7 +13,7 @@ public interface IBacktestExecutor
     Task CancelBacktestAsync(Guid id);
 }
 
-public sealed class BacktestExecutor : IBacktestExecutor
+public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 {
     private readonly IAssetsStateCommand _assetsStateCommand;
     private readonly IBacktestAssets _backtestAssets;
@@ -33,6 +33,11 @@ public sealed class BacktestExecutor : IBacktestExecutor
         _backtestAssets = backtestAssets;
         _assetsStateCommand = assetsStateCommand;
         _logger = logger.ForContext<BacktestExecutor>();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Task.WhenAll(_backtests.Values.Select(async b => await b.DisposeAsync()));
     }
 
     public Guid StartNew(BacktestDetails details)
