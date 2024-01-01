@@ -132,10 +132,10 @@ public sealed class ManualTestsController : ControllerBase
     [HttpPost]
     [Route("init-backtest-data")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<ActionResult> InitCacheAsync([FromQuery][Required] DateOnly start,
-        [FromQuery][Required] int symbols)
+    public async Task<ActionResult> InitializeCacheAsync([FromQuery][Required] DateOnly start)
     {
-        await _dataSource.InitializeBacktestDataAsync(start, DateOnly.FromDateTime(DateTime.Now).AddDays(-1), symbols);
+        await _dataSource.InitializeBacktestDataAsync(start, DateOnly.FromDateTime(DateTime.Now).AddDays(-1),
+            HttpContext.RequestAborted);
         return NoContent();
     }
 }

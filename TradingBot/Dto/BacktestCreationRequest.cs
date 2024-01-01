@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authentication;
 
 namespace TradingBot.Dto;
 
@@ -22,5 +23,10 @@ public sealed class BacktestCreationRequest : IValidatableObject
         if (InitialCash <= 0)
             yield return new ValidationResult($"'{nameof(InitialCash)}' must be positive",
                 new[] { nameof(InitialCash) });
+
+        var clock = validationContext.GetRequiredService<ISystemClock>();
+        if (End >= DateOnly.FromDateTime(clock.UtcNow.LocalDateTime))
+            yield return new ValidationResult($"'{nameof(End)}' must represent a past day (yesterday or earlier)",
+                new[] { nameof(End) });
     }
 }

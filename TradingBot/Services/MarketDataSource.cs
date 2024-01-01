@@ -15,7 +15,7 @@ public interface IMarketDataSource
 
     Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
 
-    Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, int symbols, CancellationToken token = default);
+    Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, CancellationToken token = default);
 }
 
 public sealed class MarketDataSource : IMarketDataSource
@@ -78,13 +78,20 @@ public sealed class MarketDataSource : IMarketDataSource
         return await SendLastTradeRequestAsync(symbol, token);
     }
 
-    public async Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, int symbols,
-        CancellationToken token = default)
+    public async Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, CancellationToken token = default)
     {
+        _logger.Debug("Initializing cache for backtest (from {Start} to {End})", start, end);
+
         var valid = await GetValidSymbolsAsync(token);
-        await valid.Take(symbols).Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
-                (await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)))).ToAsyncEnumerable())
+        await valid.Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
+            {
+                _logger.Verbose("Getting data for chunk: {Symbols}", chunk);
+                var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)));
+                return dataForChunk.ToAsyncEnumerable();
+            })
             .ToListAsync(token);
+
+        _logger.Debug("Cache was successfully initialized");
     }
 
     [SuppressMessage("ReSharper", "AccessToDisposedClosure")]

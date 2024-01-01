@@ -56,6 +56,10 @@ public sealed class BacktestExecutor : IBacktestExecutor
 
         try
         {
+            using var initializationScope = _scopeFactory.CreateScope();
+            var marketDataSource = initializationScope.ServiceProvider.GetRequiredService<IMarketDataSource>();
+            await marketDataSource.InitializeBacktestDataAsync(details.Start.AddDays(-10), details.End, token);
+
             for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {
                 if (token.IsCancellationRequested) await CancelAsync(backtestId);
