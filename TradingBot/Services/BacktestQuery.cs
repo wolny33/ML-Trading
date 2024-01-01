@@ -32,6 +32,7 @@ public sealed class BacktestQuery : IBacktestQuery
         var entities = await context.Backtests.Include(b => b.AssetsStates)
             .Where(b => b.ExecutionStartTimestamp >= start.ToUnixTimeMilliseconds() &&
                         b.ExecutionStartTimestamp <= end.ToUnixTimeMilliseconds())
+            .OrderBy(b => b.ExecutionStartTimestamp)
             .ToListAsync(token);
 
         return entities.Select(Backtest.FromEntity).ToList();
@@ -48,19 +49,26 @@ public sealed class BacktestQuery : IBacktestQuery
         CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.Backtests.Include(b => b.TradingTasks)
-            .FirstOrDefaultAsync(b => b.Id == backtestId, token);
+        if (!await context.Backtests.AnyAsync(b => b.Id == backtestId, token)) return null;
 
-        return entity?.TradingTasks.Select(TradingTask.FromEntity).ToList();
+        var entities = await context.TradingTasks
+            .Where(t => t.BacktestId == backtestId)
+            .OrderBy(t => t.StartTimestamp)
+            .ToListAsync(token);
+        return entities.Select(TradingTask.FromEntity).ToList();
     }
 
     public async Task<IReadOnlyList<AssetsState>?> GetAssetsStatesForBacktestAsync(Guid backtestId,
         CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.Backtests.Include(b => b.AssetsStates)
-            .FirstOrDefaultAsync(b => b.Id == backtestId, token);
+        if (!await context.Backtests.AnyAsync(b => b.Id == backtestId, token)) return null;
 
-        return entity?.AssetsStates.Select(AssetsState.FromEntity).ToList();
+        var entities = await context.AssetsStates
+            .Include(s => s.HeldPositions)
+            .Where(s => s.BacktestId == backtestId)
+            .OrderBy(s => s.CreationTimestamp)
+            .ToListAsync(token);
+        return entities.Select(AssetsState.FromEntity).ToList();
     }
 }

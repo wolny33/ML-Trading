@@ -80,7 +80,7 @@ public sealed class BacktestController : ControllerBase
     }
 
     [HttpGet]
-    [Route("{id:guid}/asset-states")]
+    [Route("{id:guid}/assets-states")]
     [ProducesResponseType(typeof(IReadOnlyList<AssetsStateResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
