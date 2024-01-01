@@ -439,5 +439,13 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
         }).ToDictionary(p => p.Symbol);
     }
 
+    /// <summary>
+    ///     Used for unit tests
+    /// </summary>
+    internal void SetAssetsForBacktest(Guid backtestId, Assets assets)
+    {
+        _assets[backtestId] = assets;
+    }
+
     private sealed record BacktestTradeDetails(TradingSymbol Symbol, decimal Amount, decimal Price);
 }
