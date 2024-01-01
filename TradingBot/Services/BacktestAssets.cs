@@ -172,15 +172,14 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
                     backtestId);
                 break;
             case OrderType.LimitBuy:
-                LimitBuyAsset(new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value),
+                BuyAsset(new BacktestTradeDetails(action.Symbol, action.Quantity, action.Price!.Value),
                     backtestId);
                 break;
             case OrderType.MarketSell:
                 SellAsset(new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open), backtestId);
                 break;
             case OrderType.MarketBuy:
-                MarketBuyAsset(new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open),
-                    backtestId);
+                BuyAsset(new BacktestTradeDetails(action.Symbol, action.Quantity, symbolData.Open), backtestId);
                 break;
             default:
                 throw new UnreachableException();
@@ -237,14 +236,14 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
 
         switch (action.OrderType)
         {
-            case OrderType.LimitBuy when assets.Cash.AvailableAmount < action.Quantity * action.Price:
+            case OrderType.LimitBuy when assets.Cash.BuyingPower < action.Quantity * action.Price:
                 throw new InsufficientFundsException();
             case OrderType.LimitSell or OrderType.MarketSell when
                 !assets.Positions.TryGetValue(action.Symbol, out var position) ||
                 position.AvailableQuantity < action.Quantity:
                 throw new InsufficientAssetsException();
             case OrderType.MarketBuy when symbolData is not null &&
-                                          assets.Cash.AvailableAmount < action.Quantity * symbolData.Open:
+                                          assets.Cash.BuyingPower < action.Quantity * symbolData.Open:
                 throw new InsufficientFundsException();
         }
 
@@ -252,7 +251,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
             action.Id);
     }
 
-    private void LimitBuyAsset(BacktestTradeDetails details, Guid backtestId)
+    private void BuyAsset(BacktestTradeDetails details, Guid backtestId)
     {
         var assets = _assets[backtestId];
         var newPositions = UpdateAsset(assets.Positions, details.Symbol, details.Amount, details.Price);
@@ -263,36 +262,14 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
             Cash = new Cash
             {
                 MainCurrency = assets.Cash.MainCurrency,
-                AvailableAmount = assets.Cash.AvailableAmount,
-                BuyingPower = assets.Cash.BuyingPower - details.Amount * details.Price
+                AvailableAmount = assets.Cash.AvailableAmount - details.Amount * details.Price,
+                BuyingPower = assets.Cash.BuyingPower
             },
             Positions = newPositions
         };
         _assets[backtestId] = newAssets;
 
-        _logger.Verbose("{Amount} {Symbol} was bought with a limit order at {Price}", details.Amount, details.Symbol,
-            details.Price);
-    }
-
-    private void MarketBuyAsset(BacktestTradeDetails details, Guid backtestId)
-    {
-        var assets = _assets[backtestId];
-        var newPositions = UpdateAsset(assets.Positions, details.Symbol, details.Amount, details.Price);
-        var newAssets = new Assets
-        {
-            EquityValue = newPositions.Values.Aggregate(0m, (sum, position) => sum + position.MarketValue) +
-                assets.Cash.AvailableAmount - details.Amount * details.Price,
-            Cash = new Cash
-            {
-                MainCurrency = assets.Cash.MainCurrency,
-                AvailableAmount = assets.Cash.AvailableAmount,
-                BuyingPower = assets.Cash.BuyingPower - details.Amount * details.Price
-            },
-            Positions = newPositions
-        };
-        _assets[backtestId] = newAssets;
-
-        _logger.Verbose("{Amount} {Symbol} was bought with a market order at {Price}", details.Amount, details.Symbol,
+        _logger.Verbose("{Amount} {Symbol} was bought at {Price}", details.Amount, details.Symbol,
             details.Price);
     }
 
@@ -337,12 +314,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
         var newAssets = new Assets
         {
             EquityValue = assets.EquityValue,
-            Cash = new Cash
-            {
-                MainCurrency = assets.Cash.MainCurrency,
-                AvailableAmount = assets.Cash.AvailableAmount,
-                BuyingPower = assets.Cash.BuyingPower
-            },
+            Cash = assets.Cash,
             Positions = newPositions
         };
         _assets[backtestId] = newAssets;
@@ -353,7 +325,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
     private void ReserveCash(decimal amount, Guid backtestId)
     {
         var assets = _assets[backtestId];
-        if (assets.Cash.AvailableAmount < amount)
+        if (assets.Cash.BuyingPower < amount)
             throw new UnreachableException("Not enough money to reserve - action validation failed");
 
         var newAssets = new Assets
@@ -361,10 +333,9 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
             EquityValue = assets.EquityValue,
             Cash = new Cash
             {
-                // TODO: check
                 MainCurrency = assets.Cash.MainCurrency,
-                AvailableAmount = assets.Cash.AvailableAmount - amount,
-                BuyingPower = assets.Cash.BuyingPower
+                AvailableAmount = assets.Cash.AvailableAmount,
+                BuyingPower = assets.Cash.BuyingPower - amount
             },
             Positions = assets.Positions
         };
@@ -410,7 +381,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
     private void FreeReservedCash(decimal amount, Guid backtestId)
     {
         var assets = _assets[backtestId];
-        if (assets.Cash.AvailableAmount + amount > assets.Cash.BuyingPower)
+        if (assets.Cash.BuyingPower + amount > assets.Cash.AvailableAmount)
             throw new UnreachableException("Money cannot be freed");
 
         var newAssets = new Assets
@@ -419,8 +390,8 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
             Cash = new Cash
             {
                 MainCurrency = assets.Cash.MainCurrency,
-                AvailableAmount = assets.Cash.AvailableAmount + amount,
-                BuyingPower = assets.Cash.BuyingPower
+                AvailableAmount = assets.Cash.AvailableAmount,
+                BuyingPower = assets.Cash.BuyingPower + amount
             },
             Positions = assets.Positions
         };
