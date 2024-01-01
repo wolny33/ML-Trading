@@ -15,6 +15,7 @@ public sealed class MarketDataSourceTests
     private readonly IMarketDataCache _marketDataCache;
     private readonly MarketDataSource _marketDataSource;
     private readonly IAlpacaTradingClient _tradingClient;
+    private readonly ICurrentTradingTask _tradingTask;
 
     public MarketDataSourceTests()
     {
@@ -29,11 +30,11 @@ public sealed class MarketDataSourceTests
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
 
-        var tradingTask = Substitute.For<ICurrentTradingTask>();
-        tradingTask.CurrentBacktestId.Returns((Guid?)null);
+        _tradingTask = Substitute.For<ICurrentTradingTask>();
+        _tradingTask.CurrentBacktestId.Returns((Guid?)null);
 
         _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
-            tradingTask);
+            _tradingTask);
     }
 
     [Fact]
@@ -124,9 +125,52 @@ public sealed class MarketDataSourceTests
     }
 
     [Fact]
-    public Task ShouldGetMostActiveSymbolsFromCacheInBacktest()
+    public async Task ShouldGetMostActiveSymbolsFromCacheInBacktest()
     {
-        throw new NotImplementedException();
+        _tradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
+        _tradingTask.GetTaskDay().Returns(new DateOnly(2023, 12, 19));
+
+        _marketDataCache.TryGetValidSymbols().Returns(new HashSet<TradingSymbol> { new("TKN2"), new("TKN4") });
+        _marketDataCache.TryGetCachedData(new TradingSymbol("TKN4"), DateOnly.MinValue, DateOnly.MaxValue).Returns(new[]
+        {
+            new DailyTradingData
+            {
+                Date = new DateOnly(2023, 12, 19),
+                Open = 112m,
+                Close = 113m,
+                High = 114m,
+                Low = 111m,
+                Volume = 1000m
+            }
+        });
+        _marketDataCache.GetMostActiveCachedSymbolsForDay(new DateOnly(2023, 12, 19))
+            .Returns(new[] { new TradingSymbol("TKN4") });
+
+        var result = await _marketDataSource.GetPricesAsync(DateOnly.MinValue, DateOnly.MaxValue);
+
+        result.Should().HaveCount(1);
+        result.Should().ContainKey(new TradingSymbol("TKN4")).WhoseValue.Should().BeEquivalentTo(new[]
+        {
+            new DailyTradingData
+            {
+                Date = new DateOnly(2023, 12, 19),
+                Open = 112m,
+                Close = 113m,
+                High = 114m,
+                Low = 111m,
+                Volume = 1000m
+            }
+        });
+
+        await _dataClient.DidNotReceive()
+            .ListMostActiveStocksByVolumeAsync(Arg.Any<int?>(), Arg.Any<CancellationToken>());
+        await _tradingClient.DidNotReceive().ListAssetsAsync(Arg.Any<AssetsRequest>(), Arg.Any<CancellationToken>());
+        await _dataClient.DidNotReceive()
+            .ListHistoricalBarsAsync(Arg.Any<HistoricalBarsRequest>(), Arg.Any<CancellationToken>());
+
+        _marketDataCache.DidNotReceive().CacheValidSymbols(Arg.Any<IReadOnlyList<TradingSymbol>>());
+        _marketDataCache.DidNotReceive().CacheDailySymbolData(new TradingSymbol("TKN4"),
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>());
     }
 
     [Fact]
@@ -169,9 +213,17 @@ public sealed class MarketDataSourceTests
     }
 
     [Fact]
-    public Task ShouldReturnClosePriceFromCacheInBacktest()
+    public async Task ShouldReturnClosePriceFromCacheInBacktest()
     {
-        throw new NotImplementedException();
+        _tradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
+        _tradingTask.GetTaskDay().Returns(new DateOnly(2023, 12, 19));
+
+        _marketDataCache.GetLastCachedPrice(new TradingSymbol("TKN6"), new DateOnly(2023, 12, 19)).Returns(12m);
+
+        (await _marketDataSource.GetLastAvailablePriceForSymbolAsync(new TradingSymbol("TKN6"))).Should().Be(12m);
+
+        await _dataClient.DidNotReceive()
+            .GetLatestTradeAsync(Arg.Any<LatestMarketDataRequest>(), Arg.Any<CancellationToken>());
     }
 
     private void SetUpResponses()
@@ -200,7 +252,7 @@ public sealed class MarketDataSourceTests
         assetsResponse[3].Symbol.Returns("TKN4");
         assetsResponse[3].Fractionable.Returns(true);
         assetsResponse[3].IsTradable.Returns(true);
-        // Valid symbol but invalid data
+        // Active, valid symbol but invalid data
         assetsResponse[4].Symbol.Returns("TKN5");
         assetsResponse[4].Fractionable.Returns(true);
         assetsResponse[4].IsTradable.Returns(true);

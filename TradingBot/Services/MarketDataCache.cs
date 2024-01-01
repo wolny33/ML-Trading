@@ -54,7 +54,7 @@ public sealed class MarketDataCache : IMarketDataCache
                        s, _cache.TryGetValue<DailyTradingData?>(new CacheKey(s, day), out var data) ? data : null
                    ))
                    .Where(d => d.Data is not null)
-                   .OrderBy(d => d.Data!.Volume)
+                   .OrderByDescending(d => d.Data!.Volume)
                    .Select(d => d.Symbol)
                ?? throw new InvalidOperationException("Valid symbols were not cached");
     }
@@ -65,6 +65,8 @@ public sealed class MarketDataCache : IMarketDataCache
         do
         {
             if (!_cache.TryGetValue<DailyTradingData?>(new CacheKey(symbol, day), out data)) return null;
+
+            day = day.AddDays(-1);
         } while (data is null);
 
         return data.Close;

@@ -69,7 +69,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
         if (!_assets.TryGetValue(backtestId, out var assets))
             throw new InvalidOperationException($"Assets were not initialized for backtest {backtestId}");
 
-        var symbolData = await GetTodayDataForSymbolAsync(action.Symbol, day);
+        var symbolData = await GetTodayDataForSymbolAsync(action.Symbol, day.AddDays(1));
         ValidateAction(action, assets, symbolData);
 
         switch (action.OrderType)

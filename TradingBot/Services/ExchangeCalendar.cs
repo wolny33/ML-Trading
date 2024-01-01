@@ -34,8 +34,8 @@ public sealed class ExchangeCalendar : IExchangeCalendar
     {
         if (_tradingTask.CurrentBacktestId is not null)
         {
-            _logger.Verbose("Backtest is active - checking if there is any symbol data for given day in cache");
-            return _cache.GetMostActiveCachedSymbolsForDay(_tradingTask.GetTaskDay()).Any();
+            _logger.Verbose("Backtest is active - checking if there is any symbol data for next day in cache");
+            return _cache.GetMostActiveCachedSymbolsForDay(_tradingTask.GetTaskDay().AddDays(1)).Any();
         }
 
         var now = _clock.UtcNow;

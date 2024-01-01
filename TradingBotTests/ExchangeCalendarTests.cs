@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using NSubstitute;
 using Serilog;
+using TradingBot.Models;
 using TradingBot.Services;
 
 namespace TradingBotTests;
@@ -12,8 +13,10 @@ namespace TradingBotTests;
 public sealed class ExchangeCalendarTests
 {
     private readonly ExchangeCalendar _calendar;
+    private readonly IMarketDataCache _marketDataCache;
     private readonly DateTimeOffset _now = new(2023, 12, 7, 13, 14, 0, TimeSpan.Zero);
     private readonly IAlpacaTradingClient _tradingClient;
+    private readonly ICurrentTradingTask _tradingTask;
 
     public ExchangeCalendarTests()
     {
@@ -24,14 +27,14 @@ public sealed class ExchangeCalendarTests
         var clientFactory = Substitute.For<IAlpacaClientFactory>();
         clientFactory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClient);
 
-        var tradingTask = Substitute.For<ICurrentTradingTask>();
-        tradingTask.CurrentBacktestId.Returns((Guid?)null);
+        _tradingTask = Substitute.For<ICurrentTradingTask>();
+        _tradingTask.CurrentBacktestId.Returns((Guid?)null);
 
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
-        var cache = Substitute.For<IMarketDataCache>();
+        _marketDataCache = Substitute.For<IMarketDataCache>();
 
-        _calendar = new ExchangeCalendar(clock, clientFactory, logger, callQueue, tradingTask, cache);
+        _calendar = new ExchangeCalendar(clock, clientFactory, logger, callQueue, _tradingTask, _marketDataCache);
     }
 
     [Fact]
@@ -141,15 +144,31 @@ public sealed class ExchangeCalendarTests
     }
 
     [Fact]
-    public Task ShouldReturnTrueInBacktestIfThereIsCachedSymbolDataForToday()
+    public async Task ShouldReturnTrueInBacktestIfThereIsCachedSymbolDataForNextDay()
     {
-        throw new NotImplementedException();
+        _tradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
+        _tradingTask.GetTaskDay().Returns(new DateOnly(2024, 1, 1));
+        _marketDataCache.GetMostActiveCachedSymbolsForDay(new DateOnly(2024, 1, 2))
+            .Returns(new[] { new TradingSymbol("TKN") });
+
+        (await _calendar.DoesTradingOpenInNext24HoursAsync()).Should().BeTrue();
+
+        await _tradingClient.DidNotReceive()
+            .ListIntervalCalendarAsync(Arg.Any<CalendarRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public Task ShouldReturnFalseInBacktestIfThereIsNoCachedSymbolDataForToday()
+    public async Task ShouldReturnFalseInBacktestIfThereIsNoCachedSymbolDataForNextDay()
     {
-        throw new NotImplementedException();
+        _tradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
+        _tradingTask.GetTaskDay().Returns(new DateOnly(2024, 1, 1));
+        _marketDataCache.GetMostActiveCachedSymbolsForDay(new DateOnly(2024, 1, 2))
+            .Returns(Enumerable.Empty<TradingSymbol>());
+
+        (await _calendar.DoesTradingOpenInNext24HoursAsync()).Should().BeFalse();
+
+        await _tradingClient.DidNotReceive()
+            .ListIntervalCalendarAsync(Arg.Any<CalendarRequest>(), Arg.Any<CancellationToken>());
     }
 
     private sealed record IntervalCalendar(OpenClose Trading, OpenClose Session) : IIntervalCalendar

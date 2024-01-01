@@ -13,6 +13,7 @@ namespace TradingBotTests;
 public sealed class ActionExecutorTests
 {
     private readonly Guid _actionId = Guid.NewGuid();
+    private readonly IBacktestAssets _backtestAssets;
     private readonly ActionExecutor _executor;
     private readonly DateTimeOffset _now = new(2023, 12, 1, 20, 15, 0, TimeSpan.Zero);
     private readonly IStrategy _strategy;
@@ -34,8 +35,8 @@ public sealed class ActionExecutorTests
         _strategy = Substitute.For<IStrategy>();
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
-        var backtestAssets = Substitute.For<IBacktestAssets>();
-        _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask, callQueue, backtestAssets);
+        _backtestAssets = Substitute.For<IBacktestAssets>();
+        _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask, callQueue, _backtestAssets);
     }
 
     [Fact]
@@ -98,8 +99,23 @@ public sealed class ActionExecutorTests
     }
 
     [Fact]
-    public Task ShouldNotPostActionsToAlpacaInBacktest()
+    public async Task ShouldNotPostActionsToAlpacaInBacktest()
     {
-        throw new NotImplementedException();
+        var actions = new[]
+        {
+            TradingAction.LimitBuy(new TradingSymbol("AMZN"), 12m, 123.45m, _now)
+        };
+        _strategy.GetTradingActionsAsync().Returns(actions);
+
+        var backtestId = Guid.NewGuid();
+        _tradingTask.CurrentBacktestId.Returns(backtestId);
+        _tradingTask.GetTaskDay().Returns(new DateOnly(2024, 1, 1));
+
+        await _executor.ExecuteTradingActionsAsync();
+
+        await _backtestAssets.Received(1).PostActionForBacktestAsync(actions[0], backtestId, new DateOnly(2024, 1, 1));
+        await _tradingTask.Received(1).SaveAndLinkBacktestActionAsync(actions[0], Arg.Any<CancellationToken>());
+
+        await _tradingClient.DidNotReceive().PostOrderAsync(Arg.Any<NewOrderRequest>(), Arg.Any<CancellationToken>());
     }
 }

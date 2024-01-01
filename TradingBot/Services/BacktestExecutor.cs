@@ -70,7 +70,8 @@ public sealed class BacktestExecutor : IBacktestExecutor
                 await taskExecutor.ExecuteAsync(token);
                 await _backtestAssets.ExecuteQueuedActionsForBacktestAsync(backtestId, day.AddDays(1), token);
 
-                await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId, task.GetTaskTime().AddHours(1),
+                await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId,
+                    task.GetTaskTime().AddDays(1).AddHours(-1),
                     token);
             }
 
