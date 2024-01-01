@@ -11,6 +11,7 @@ using NSubstitute;
 using TradingBot.Database.Entities;
 using TradingBot.Dto;
 using TradingBot.Models;
+using TradingBot.Services;
 
 namespace TradingBotTests;
 
@@ -107,24 +108,27 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                         Id = Guid.NewGuid(),
                         State = TradingTaskState.Success,
                         StateDetails = "Finished successfully",
-                        StartTimestamp = (Now - TimeSpan.FromMinutes(10)).ToUnixTimeMilliseconds(),
-                        EndTimestamp = (Now - TimeSpan.FromMinutes(9)).ToUnixTimeMilliseconds()
+                        StartTimestamp =
+                            new DateTimeOffset(2022, 1, 1, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+                        EndTimestamp = new DateTimeOffset(2022, 1, 1, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds()
                     },
                     new TradingTaskEntity
                     {
                         Id = Guid.NewGuid(),
                         State = TradingTaskState.Success,
                         StateDetails = "Finished successfully",
-                        StartTimestamp = (Now - TimeSpan.FromMinutes(9)).ToUnixTimeMilliseconds(),
-                        EndTimestamp = (Now - TimeSpan.FromMinutes(7)).ToUnixTimeMilliseconds()
+                        StartTimestamp =
+                            new DateTimeOffset(2022, 1, 2, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+                        EndTimestamp = new DateTimeOffset(2022, 1, 2, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds()
                     },
                     new TradingTaskEntity
                     {
                         Id = Guid.NewGuid(),
                         State = TradingTaskState.Success,
                         StateDetails = "Finished successfully",
-                        StartTimestamp = (Now - TimeSpan.FromMinutes(7)).ToUnixTimeMilliseconds(),
-                        EndTimestamp = (Now - TimeSpan.FromMinutes(5)).ToUnixTimeMilliseconds()
+                        StartTimestamp =
+                            new DateTimeOffset(2022, 1, 3, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+                        EndTimestamp = new DateTimeOffset(2022, 1, 3, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds()
                     }
                 }
             },
@@ -192,6 +196,8 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
     {
         if (!BacktestInitializationTask.Task.IsCompleted)
             BacktestInitializationTask.SetException(new OperationCanceledException());
+        if (Services.GetRequiredService<IBacktestExecutor>() is IAsyncDisposable disposable)
+            await disposable.DisposeAsync();
         BacktestInitializationTask = new TaskCompletionSource<IReadOnlyList<IAsset>>();
 
         await using var context = await DbContextFactory.CreateDbContextAsync();

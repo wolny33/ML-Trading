@@ -46,7 +46,7 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
 
     public async Task StartAsync(CancellationToken token = default)
     {
-        _currentTradingTaskId = await _taskCommand.CreateNewAsync(_clock.UtcNow, CurrentBacktestId, token);
+        _currentTradingTaskId = await _taskCommand.CreateNewAsync(GetTaskTime(), CurrentBacktestId, token);
     }
 
     public Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default)
@@ -99,8 +99,10 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
     public DateTimeOffset GetTaskTime()
     {
         // Since we use today's market data, backtest trading task is executed after trading hours
-        return new DateTimeOffset(GetTaskDay().ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.FromHours(20))),
-            TimeSpan.Zero);
+        return CurrentBacktestId is not null
+            ? new DateTimeOffset(GetTaskDay().ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.FromHours(20))),
+                TimeSpan.Zero)
+            : _clock.UtcNow;
     }
 
     public void SetBacktestDetails(Guid backtestId, DateOnly day)
@@ -114,7 +116,7 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
             throw new InvalidOperationException("Trading task must be started before it can be completed");
 
         return _taskCommand.SetStateAndEndAsync(taskId,
-            new TradingTaskCompletionDetails(_clock.UtcNow, state, description), token);
+            new TradingTaskCompletionDetails(GetTaskTime(), state, description), token);
     }
 
     private sealed record BacktestDetails(Guid Id, DateOnly Day);

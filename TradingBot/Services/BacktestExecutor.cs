@@ -9,7 +9,6 @@ namespace TradingBot.Services;
 public interface IBacktestExecutor
 {
     Guid StartNew(BacktestDetails details);
-    Task ExecuteAsync(BacktestDetails details, Guid id, CancellationToken token = default);
     Task CancelBacktestAsync(Guid id);
 }
 
@@ -49,7 +48,14 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
         return id;
     }
 
-    public async Task ExecuteAsync(BacktestDetails details, Guid id, CancellationToken token = default)
+    public async Task CancelBacktestAsync(Guid id)
+    {
+        if (!_backtests.Remove(id, out var backtest)) return;
+
+        await backtest.DisposeAsync();
+    }
+
+    private async Task ExecuteAsync(BacktestDetails details, Guid id, CancellationToken token = default)
     {
         var backtestId = await _backtestCommand.CreateNewAsync(details.Start, details.End, _clock.UtcNow, id, token);
         _logger.Information("Started new backtest with ID {Id}, from {Start} to {End}", backtestId, details.Start,
@@ -67,7 +73,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 
             for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {
-                if (token.IsCancellationRequested) await CancelAsync(backtestId);
+                if (token.IsCancellationRequested) await MarkAsCancelledAsync(backtestId);
 
                 _logger.Debug("Executing day {Day} for backtest {Id}", day, backtestId);
 
@@ -91,7 +97,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            await CancelAsync(backtestId);
+            await MarkAsCancelledAsync(backtestId);
         }
         catch (Exception e)
         {
@@ -99,13 +105,6 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
                 details.End);
             await EndWithErrorAsync(backtestId, e);
         }
-    }
-
-    public async Task CancelBacktestAsync(Guid id)
-    {
-        if (!_backtests.Remove(id, out var backtest)) return;
-
-        await backtest.DisposeAsync();
     }
 
     private Task EndWithErrorAsync(Guid id, Exception exception)
@@ -116,7 +115,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
                 $"Backtest failed with error code {error.Code}: {error.Message}"), CancellationToken.None);
     }
 
-    private Task CancelAsync(Guid id)
+    private Task MarkAsCancelledAsync(Guid id)
     {
         return _backtestCommand.SetStateAndEndAsync(id,
             new BacktestCompletionDetails(_clock.UtcNow, BacktestState.Cancelled, "Backtest was cancelled"),
@@ -127,8 +126,12 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
     {
         public async ValueTask DisposeAsync()
         {
-            TokenSource.Cancel();
-            await BacktestTask;
+            if (!BacktestTask.IsCompleted)
+            {
+                TokenSource.Cancel();
+                await BacktestTask;
+            }
+
             TokenSource.Dispose();
         }
     }
