@@ -1,6 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Diagnostics.CodeAnalysis;
 using Alpaca.Markets;
-using TradingBot.Exceptions;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 
@@ -15,21 +14,25 @@ public interface IMarketDataSource
         DateOnly end, CancellationToken token = default);
 
     Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
+
+    Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, int symbols, CancellationToken token = default);
 }
 
 public sealed class MarketDataSource : IMarketDataSource
 {
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IMarketDataCache _cache;
+    private readonly IAlpacaCallQueue _callQueue;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
 
     public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger,
-        IMarketDataCache cache)
+        IMarketDataCache cache, IAlpacaCallQueue callQueue)
     {
         _clientFactory = clientFactory;
         _assetsDataSource = assetsDataSource;
         _cache = cache;
+        _callQueue = callQueue;
         _logger = logger.ForContext<MarketDataSource>();
     }
 
@@ -57,26 +60,23 @@ public sealed class MarketDataSource : IMarketDataSource
         return IsDataValid(data.TradingData) ? data.TradingData : null;
     }
 
+    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     public async Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol,
         CancellationToken token = default)
     {
         using var client = await _clientFactory.CreateMarketDataClientAsync(token);
-        try
-        {
-            var latestTradeData = await client.GetLatestTradeAsync(new LatestMarketDataRequest(symbol.Value), token);
-            return latestTradeData.Price;
-        }
-        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
-        {
-            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
-            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
-        }
-        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
-                                      or TaskCanceledException)
-        {
-            _logger.Error(e, "Alpaca request failed");
-            throw new AlpacaCallFailedException(e);
-        }
+        var latestTradeData = await _callQueue.SendRequestWithRetriesAsync(() => client
+            .GetLatestTradeAsync(new LatestMarketDataRequest(symbol.Value), token)).ExecuteWithErrorHandling(_logger);
+        return latestTradeData.Price;
+    }
+
+    public async Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, int symbols,
+        CancellationToken token = default)
+    {
+        var valid = await GetValidSymbolsAsync(token);
+        await valid.Take(symbols).Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
+                (await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)))).ToAsyncEnumerable())
+            .ToListAsync(token);
     }
 
     private async Task<ISet<TradingSymbol>> GetValidSymbolsAsync(CancellationToken token = default)
@@ -94,62 +94,36 @@ public sealed class MarketDataSource : IMarketDataSource
         return validSymbols;
     }
 
+    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<ISet<TradingSymbol>> SendValidSymbolsRequestAsync(CancellationToken token = default)
     {
         using var tradingClient = await _clientFactory.CreateTradingClientAsync(token);
-
-        try
+        var assetsRequest = new AssetsRequest
         {
-            var availableAssets = await tradingClient.ListAssetsAsync(
-                new AssetsRequest
-                {
-                    AssetClass = AssetClass.UsEquity,
-                    AssetStatus = AssetStatus.Active
-                }, token);
-            return availableAssets.Where(a => a is { Fractionable: true, IsTradable: true })
-                .Select(a => new TradingSymbol(a.Symbol)).ToHashSet();
-        }
-        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
-        {
-            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
-            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
-        }
-        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
-                                      or TaskCanceledException)
-        {
-            _logger.Error(e, "Alpaca request failed");
-            throw new AlpacaCallFailedException(e);
-        }
+            AssetClass = AssetClass.UsEquity,
+            AssetStatus = AssetStatus.Active
+        };
+        var availableAssets = await _callQueue.SendRequestWithRetriesAsync(() =>
+            tradingClient.ListAssetsAsync(assetsRequest, token), _logger).ExecuteWithErrorHandling(_logger);
+        return availableAssets.Where(a => a is { Fractionable: true, IsTradable: true })
+            .Select(a => new TradingSymbol(a.Symbol)).ToHashSet();
     }
 
+    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<IEnumerable<TradingSymbol>> SendInterestingSymbolsRequestsAsync(
         CancellationToken token = default)
     {
         const int maxRequestSize = 100;
         using var dataClient = await _clientFactory.CreateMarketDataClientAsync(token);
 
-        var held = (await _assetsDataSource.GetAssetsAsync(token)).Positions.Keys.ToList();
+        var held = (await _assetsDataSource.GetCurrentAssetsAsync(token)).Positions.Keys.ToList();
         _logger.Debug("Retrieved held tokens: {Tokens}", held.Select(t => t.Value).ToList());
+        var active = (await _callQueue.SendRequestWithRetriesAsync(() => dataClient
+                .ListMostActiveStocksByVolumeAsync(maxRequestSize, token), _logger).ExecuteWithErrorHandling(_logger))
+            .Select(a => new TradingSymbol(a.Symbol)).ToList();
+        _logger.Debug("Retrieved most active tokens: {Active}", active);
 
-        try
-        {
-            var active = (await dataClient.ListMostActiveStocksByVolumeAsync(maxRequestSize, token))
-                .Select(a => new TradingSymbol(a.Symbol)).ToList();
-            _logger.Debug("Retrieved most active tokens: {Active}", active);
-
-            return held.Concat(active).Distinct();
-        }
-        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
-        {
-            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
-            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
-        }
-        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
-                                      or TaskCanceledException)
-        {
-            _logger.Error(e, "Alpaca request failed");
-            throw new AlpacaCallFailedException(e);
-        }
+        return held.Concat(active).Distinct();
     }
 
     private async Task<TradingSymbolData> GetSymbolDataAsync(TradingSymbol symbol, DateOnly start, DateOnly end,
@@ -170,7 +144,7 @@ public sealed class MarketDataSource : IMarketDataSource
     private async Task<IReadOnlyList<DailyTradingData>> SendBarsRequestAsync(TradingSymbol symbol, DateOnly start,
         DateOnly end, CancellationToken token = default)
     {
-        using var client = await _clientFactory.CreateMarketDataClientAsync(token);
+        using var dataClient = await _clientFactory.CreateMarketDataClientAsync(token);
 
         var startTime = start.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero));
         var endTime = end.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero));
@@ -180,31 +154,33 @@ public sealed class MarketDataSource : IMarketDataSource
         _logger.Verbose("Sending bars request for token {Token} in interval {Start} to {End}", symbol.Value, start,
             end);
 
-        try
-        {
-            var bars = await client.ListHistoricalBarsAsync(
-                new HistoricalBarsRequest(symbol.Value, barTimeFrame, interval), token);
+        return await GetAllPagesAsync(dataClient).SelectMany(page => page.ToAsyncEnumerable()).ToListAsync(token);
 
-            return bars.Items.Select(b => new DailyTradingData
+        async IAsyncEnumerable<IReadOnlyList<DailyTradingData>> GetAllPagesAsync(IAlpacaDataClient client)
+        {
+            string? nextPageToken = null;
+            do
             {
-                Date = DateOnly.FromDateTime(b.TimeUtc),
-                Open = b.Open,
-                Close = b.Close,
-                High = b.High,
-                Low = b.Low,
-                Volume = b.Volume
-            }).ToList();
-        }
-        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
-        {
-            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
-            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
-        }
-        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
-                                      or TaskCanceledException)
-        {
-            _logger.Error(e, "Alpaca request failed");
-            throw new AlpacaCallFailedException(e);
+                var request =
+                    new HistoricalBarsRequest(symbol.Value, barTimeFrame, interval)
+                        .WithPageSize(Pagination.MaxPageSize);
+                if (nextPageToken is not null) request = request.WithPageToken(nextPageToken);
+
+                var bars = await _callQueue
+                    .SendRequestWithRetriesAsync(() => client.ListHistoricalBarsAsync(request, token))
+                    .ExecuteWithErrorHandling(_logger);
+
+                nextPageToken = bars.NextPageToken;
+                yield return bars.Items.Select(b => new DailyTradingData
+                {
+                    Date = DateOnly.FromDateTime(b.TimeUtc),
+                    Open = b.Open,
+                    Close = b.Close,
+                    High = b.High,
+                    Low = b.Low,
+                    Volume = b.Volume
+                }).ToList();
+            } while (nextPageToken is not null);
         }
     }
 

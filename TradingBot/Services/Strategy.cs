@@ -1,13 +1,6 @@
-using Microsoft.EntityFrameworkCore;
-using Alpaca.Markets;
-using TradingBot.Database;
-using TradingBot.Models;
 using Microsoft.AspNetCore.Authentication;
-using SQLitePCL;
-using TradingBot.Migrations;
-using Newtonsoft.Json.Linq;
 using TradingBot.Configuration;
-using System.Diagnostics;
+using TradingBot.Models;
 
 namespace TradingBot.Services;
 
@@ -24,7 +17,7 @@ public sealed class Strategy : IStrategy
     private readonly ISystemClock _clock;
     private readonly IStrategyParametersService _strategyParameters;
 
-    public Strategy(IPricePredictor predictor, IAssetsDataSource assetsDataSource, IMarketDataSource marketDataSource, 
+    public Strategy(IPricePredictor predictor, IAssetsDataSource assetsDataSource, IMarketDataSource marketDataSource,
         ISystemClock clock, IStrategyParametersService strategyParameters)
     {
         _predictor = predictor;
@@ -36,16 +29,17 @@ public sealed class Strategy : IStrategy
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
     {
-        var strategyParameters = await _strategyParameters.GetConfigurationAsync();
+        var strategyParameters = await _strategyParameters.GetConfigurationAsync(token);
         var actions = await DetermineTradingActionsAsync(strategyParameters, token);
 
         return actions;
     }
 
-    private async Task<IReadOnlyList<TradingAction>> DetermineTradingActionsAsync(StrategyParametersConfiguration strategyParameters, CancellationToken token = default)
+    private async Task<IReadOnlyList<TradingAction>> DetermineTradingActionsAsync(
+        StrategyParametersConfiguration strategyParameters, CancellationToken token = default)
     {
-        var predictions = await _predictor.GetPredictionsAsync();
-        var assets = await _assetsDataSource.GetAssetsAsync();
+        var predictions = await _predictor.GetPredictionsAsync(token);
+        var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
         var tradingActions = new List<TradingAction>();
 
         var sellActions = new List<TradingAction>();
@@ -60,7 +54,7 @@ public sealed class Strategy : IStrategy
             var currentPrice = await GetCurrentPrice(symbol, token);
             closingPrices.Add(currentPrice);
 
-            closingPrices.AddRange(prediction.Value.Prices.Select(dailyPrice => dailyPrice.ClosingPrice).ToList());    
+            closingPrices.AddRange(prediction.Value.Prices.Select(dailyPrice => dailyPrice.ClosingPrice).ToList());
 
             if (IsPriceDecreasing(closingPrices, strategyParameters.MinDaysDecreasing) && assets.Positions.TryGetValue(symbol, out var position) && position.AvailableQuantity > 0)
             {
@@ -68,13 +62,14 @@ public sealed class Strategy : IStrategy
             }
             else if (IsPriceIncreasing(closingPrices, strategyParameters.MinDaysIncreasing))
             {
-                growthRates.Add(new AverageGrowthRate(symbol, CalculateAverageGrowthRate(closingPrices, strategyParameters.MinDaysIncreasing), 
+                growthRates.Add(new AverageGrowthRate(symbol, CalculateAverageGrowthRate(closingPrices, strategyParameters.MinDaysIncreasing),
                     CalculateBuyLimitPrice(prediction, currentPrice)));
             }
         }
 
         tradingActions.AddRange(sellActions);
-        tradingActions.AddRange(GetBuyActions(growthRates, cashAvailable, strategyParameters.MaxStocksBuyCount, strategyParameters.TopGrowingSymbolsBuyRatio));
+        tradingActions.AddRange(GetBuyActions(growthRates, cashAvailable, strategyParameters.MaxStocksBuyCount,
+            strategyParameters.TopGrowingSymbolsBuyRatio));
 
         return tradingActions;
     }
@@ -117,7 +112,8 @@ public sealed class Strategy : IStrategy
         return (closingPrices[minDaysIncreasing - 1] - closingPrices[0]) / closingPrices[0];
     }
 
-    private static decimal CalculateBuyLimitPrice(KeyValuePair<TradingSymbol, Prediction> prediction, decimal currentPrice)
+    private static decimal CalculateBuyLimitPrice(KeyValuePair<TradingSymbol, Prediction> prediction,
+        decimal currentPrice)
     {
         var nextDayLowPrice = prediction.Value.Prices.Select(dailyPrice => dailyPrice.LowPrice).ToList()[0];
         var buyLimitPrice = (currentPrice + nextDayLowPrice) / 2;
@@ -125,7 +121,8 @@ public sealed class Strategy : IStrategy
         return buyLimitPrice;
     }
 
-    private List<TradingAction> GetBuyActions(IReadOnlyList<AverageGrowthRate> growthRates, decimal cashAvaliable, int maxBuyCount, double topGrowingSymbolsBuyRatio)
+    private List<TradingAction> GetBuyActions(IReadOnlyList<AverageGrowthRate> growthRates, decimal cashAvailable,
+        int maxBuyCount, double topGrowingSymbolsBuyRatio)
     {
         var buyActions = new List<TradingAction>();
 
@@ -139,23 +136,24 @@ public sealed class Strategy : IStrategy
         {
             var symbol = topGrowingSymbols[i].Symbol;
             var price = topGrowingSymbols[i].Price;
-            if(price >= 1)
+            if (price >= 1)
                 price = Math.Round(price, 2);
             else
                 price = Math.Round(price, 4);
 
-            var quantity = (int)(cashAvaliable * (decimal)topGrowingSymbolsBuyRatio / price);
+            var quantity = (int)(cashAvailable * (decimal)topGrowingSymbolsBuyRatio / price);
 
             if (i == topGrowingSymbols.Count - 1)
-                quantity = (int)(cashAvaliable / price);
-            
+                quantity = (int)(cashAvailable / price);
+
             if (quantity <= 0)
                 continue;
 
-            cashAvaliable -= quantity * price;
+            cashAvailable -= quantity * price;
 
             buyActions.Add(TradingAction.LimitBuy(symbol, quantity, price, _clock.UtcNow));
         }
+
         return buyActions;
     }
 

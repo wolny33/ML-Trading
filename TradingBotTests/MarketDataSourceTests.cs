@@ -28,7 +28,8 @@ public sealed class MarketDataSourceTests
 
         _assetsDataSource = Substitute.For<IAssetsDataSource>();
         var logger = Substitute.For<ILogger>();
-        _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache);
+        var callQueue = new CallQueueMock();
+        _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue);
     }
 
     [Fact]
@@ -66,7 +67,7 @@ public sealed class MarketDataSourceTests
 
         _marketDataCache.Received(1).CacheValidSymbols(Arg.Is<IReadOnlyList<TradingSymbol>>(symbols =>
             symbols.Contains(new TradingSymbol("TKN1")) && symbols.Contains(new TradingSymbol("TKN2")) &&
-            symbols.Contains(new TradingSymbol("TKN4"))));
+            symbols.Contains(new TradingSymbol("TKN4")) && symbols.Contains(new TradingSymbol("TKN5"))));
 
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN1"),
             Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
@@ -192,11 +193,11 @@ public sealed class MarketDataSourceTests
 
         var activeStocksResponse = new[] { Substitute.For<IActiveStock>(), Substitute.For<IActiveStock>() };
         activeStocksResponse[0].Symbol.Returns("TKN1");
-        activeStocksResponse[1].Symbol.Returns("TKN4");
+        activeStocksResponse[1].Symbol.Returns("TKN5");
 
         _dataClient.ListMostActiveStocksByVolumeAsync(100, Arg.Any<CancellationToken>()).Returns(activeStocksResponse);
 
-        _assetsDataSource.GetAssetsAsync().Returns(new Assets
+        _assetsDataSource.GetCurrentAssetsAsync().Returns(new Assets
         {
             Cash = new Cash
             {

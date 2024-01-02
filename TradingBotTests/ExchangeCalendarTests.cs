@@ -25,8 +25,8 @@ public sealed class ExchangeCalendarTests
         clientFactory.CreateTradingClientAsync(Arg.Any<CancellationToken>()).Returns(_tradingClient);
 
         var logger = Substitute.For<ILogger>();
-
-        _calendar = new ExchangeCalendar(clock, clientFactory, logger);
+        var callQueue = new CallQueueMock();
+        _calendar = new ExchangeCalendar(clock, clientFactory, logger, callQueue);
     }
 
     [Fact]

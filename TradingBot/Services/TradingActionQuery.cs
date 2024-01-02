@@ -1,10 +1,8 @@
 ﻿using System.Diagnostics;
-using System.Net.Sockets;
 using Alpaca.Markets;
 using Microsoft.EntityFrameworkCore;
 using TradingBot.Database;
 using TradingBot.Database.Entities;
-using TradingBot.Exceptions;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 using OrderType = TradingBot.Models.OrderType;
@@ -119,32 +117,27 @@ public sealed class TradingActionQuery : ITradingActionQuery
 
         _logger.Verbose("Updating action {Id}: {Action}", entity.Id, entity);
 
-        try
+        var response = await client.GetOrderAsync(entity.AlpacaId.Value, token).ReturnNullOnRequestLimit(_logger)
+            .ExecuteWithErrorHandling(_logger);
+        if (response is null)
         {
-            var response = await client.GetOrderAsync(entity.AlpacaId.Value, token);
-            var executedAt = response.FilledAtUtc ??
-                             response.CancelledAtUtc ?? response.ExpiredAtUtc ?? response.FailedAtUtc;
+            _logger.Debug("Action {Id} was not updated because Alpaca request limit was hit", entity.Id);
+            return;
+        }
 
-            _logger.Verbose(
-                "Retrieved properties: Execution time = {ExecutionTime}, Status = {Status}, Fill price = {FillPrice}",
-                executedAt, response.OrderStatus.ToString(), response.AverageFillPrice);
+        var executedAt = response.FilledAtUtc
+                         ?? response.CancelledAtUtc
+                         ?? response.ExpiredAtUtc
+                         ?? response.FailedAtUtc;
 
-            entity.Status = response.OrderStatus;
-            entity.ExecutionTimestamp = executedAt is not null
-                ? new DateTimeOffset(executedAt.Value, TimeSpan.Zero).ToUnixTimeMilliseconds()
-                : null;
-            entity.AverageFillPrice = (double?)response.AverageFillPrice;
-        }
-        catch (RestClientErrorException e) when (e.HttpStatusCode is { } statusCode)
-        {
-            _logger.Error(e, "Alpaca responded with {StatusCode}", statusCode);
-            throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
-        }
-        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
-                                      or TaskCanceledException)
-        {
-            _logger.Error(e, "Alpaca request failed");
-            throw new AlpacaCallFailedException(e);
-        }
+        _logger.Verbose(
+            "Retrieved properties: Execution time = {ExecutionTime}, Status = {Status}, Fill price = {FillPrice}",
+            executedAt, response.OrderStatus.ToString(), response.AverageFillPrice);
+
+        entity.Status = response.OrderStatus;
+        entity.ExecutionTimestamp = executedAt is not null
+            ? new DateTimeOffset(executedAt.Value, TimeSpan.Zero).ToUnixTimeMilliseconds()
+            : null;
+        entity.AverageFillPrice = (double?)response.AverageFillPrice;
     }
 }

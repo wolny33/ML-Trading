@@ -21,11 +21,15 @@ public class AssetsController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(AssetsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<AssetsResponse> GetAsync([FromQuery] bool mocked = false)
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AssetsResponse>> GetAsync([FromQuery] bool mocked = false)
     {
         var assets = mocked
             ? await _assetsDataSource.GetMockedAssetsAsync(HttpContext.RequestAborted)
-            : await _assetsDataSource.GetAssetsAsync(HttpContext.RequestAborted);
-        return assets.ToResponse();
+            : await _assetsDataSource.GetLatestAssetsAsync(HttpContext.RequestAborted);
+
+        if (assets is not null) return assets.ToResponse();
+
+        return NotFound();
     }
 }

@@ -8,6 +8,8 @@ public interface IAssetsStateQuery
 {
     Task<AssetsState?> GetEarliestStateAsync(CancellationToken token = default);
 
+    Task<AssetsState?> GetLatestStateAsync(CancellationToken token = default);
+
     Task<IReadOnlyList<AssetsState>> GetStatesFromRangeAsync(DateTimeOffset start, DateTimeOffset end,
         CancellationToken token = default);
 }
@@ -25,6 +27,15 @@ public sealed class AssetsStateQuery : IAssetsStateQuery
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entity = await context.AssetsStates.Include(s => s.HeldPositions).OrderBy(s => s.CreationTimestamp)
+            .FirstOrDefaultAsync(token);
+        return entity is null ? null : AssetsState.FromEntity(entity);
+    }
+
+    public async Task<AssetsState?> GetLatestStateAsync(CancellationToken token = default)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+        var entity = await context.AssetsStates.Include(s => s.HeldPositions)
+            .OrderByDescending(s => s.CreationTimestamp)
             .FirstOrDefaultAsync(token);
         return entity is null ? null : AssetsState.FromEntity(entity);
     }

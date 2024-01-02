@@ -30,7 +30,7 @@ public sealed class AssetsStateCommand : IAssetsStateCommand
     public async Task SaveCurrentAssetsAsync(CancellationToken token = default)
     {
         _logger.Debug("Saving current assets information");
-        var assets = await _assetsDataSource.GetAssetsAsync(token);
+        var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
 
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         context.AssetsStates.Add(new AssetsState(assets, _clock.UtcNow).ToEntity());
