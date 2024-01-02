@@ -25,8 +25,7 @@ public static class AlpacaClientExtensions
             logger?.Error(e, "Alpaca responded with {StatusCode}", statusCode);
             throw new UnsuccessfulAlpacaResponseException(statusCode, e.ErrorCode, e.Message);
         }
-        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException
-                                      or TaskCanceledException)
+        catch (Exception e) when (e is RestClientErrorException or HttpRequestException or SocketException)
         {
             logger?.Error(e, "Alpaca request failed");
             throw new AlpacaCallFailedException(e);

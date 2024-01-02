@@ -76,7 +76,7 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
         if (!_hasCallsRemaining)
         {
             _logger.Debug("No Alpaca calls available - call will be retried after delay");
-            await _delay(TimeSpan.FromSeconds(10));
+            await _delay(TimeSpan.FromSeconds(2));
         }
 
         _logger.Verbose("Retrying Alpaca call");
@@ -102,15 +102,29 @@ public sealed class AlpacaCallQueue : IAlpacaCallQueue, IAsyncDisposable
     {
         public override async Task<bool> RetryAsync()
         {
-            if (await Request().ReturnNullOnRequestLimit() is not { } result)
+            try
             {
-                Logger?.Debug("Alpaca call retry failed - it was returned to the queue");
-                return false;
-            }
+                if (await Request().ReturnNullOnRequestLimit() is not { } result)
+                {
+                    Logger?.Debug("Alpaca call retry failed - it was returned to the queue");
+                    return false;
+                }
 
-            Logger?.Debug("Alpaca call retry succeeded");
-            TaskSource.SetResult(result);
-            return true;
+                Logger?.Debug("Alpaca call retry succeeded");
+                TaskSource.SetResult(result);
+                return true;
+            }
+            catch (OperationCanceledException exception)
+            {
+                TaskSource.SetException(exception);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                Logger?.Debug("Alpaca call retry threw an unhandled exception");
+                TaskSource.SetException(exception);
+                return true;
+            }
         }
     }
 }

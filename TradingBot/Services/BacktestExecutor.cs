@@ -69,7 +69,8 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
         {
             using var initializationScope = _scopeFactory.CreateScope();
             var marketDataSource = initializationScope.ServiceProvider.GetRequiredService<IMarketDataSource>();
-            await marketDataSource.InitializeBacktestDataAsync(details.Start.AddDays(-10), details.End, token);
+            // We need 10 valid days (excluding weekends and holidays) before start, so 20 days should be enough
+            await marketDataSource.InitializeBacktestDataAsync(details.Start.AddDays(-20), details.End, token);
 
             for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {
@@ -97,6 +98,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
+            _logger.Information("Backtest {Id} was cancelled", backtestId);
             await MarkAsCancelledAsync(backtestId);
         }
         catch (Exception e)

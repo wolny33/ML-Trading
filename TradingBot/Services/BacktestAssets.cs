@@ -97,7 +97,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
     public async Task ExecuteQueuedActionsForBacktestAsync(Guid backtestId, DateOnly day,
         CancellationToken token = default)
     {
-        if (!_queuedActions.TryGetValue(backtestId, out var actions) || !actions.Any())
+        if (!_queuedActions.Remove(backtestId, out var actions) || !actions.Any())
         {
             _logger.Debug("No actions were posted for backtest {Id} for {Day}", backtestId, day);
             return;
@@ -269,7 +269,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
         };
         _assets[backtestId] = newAssets;
 
-        _logger.Verbose("{Amount} {Symbol} was bought at {Price}", details.Amount, details.Symbol,
+        _logger.Verbose("{Amount} {Symbol} was bought at {Price}", details.Amount, details.Symbol.Value,
             details.Price);
     }
 
@@ -291,7 +291,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
         };
         _assets[backtestId] = newAssets;
 
-        _logger.Verbose("{Amount} {Symbol} was sold at {Price}", details.Amount, details.Symbol, details.Price);
+        _logger.Verbose("{Amount} {Symbol} was sold at {Price}", details.Amount, details.Symbol.Value, details.Price);
     }
 
     private void ReserveAsset(TradingSymbol symbol, decimal amount, Guid backtestId)

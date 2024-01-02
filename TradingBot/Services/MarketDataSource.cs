@@ -68,13 +68,13 @@ public sealed class MarketDataSource : IMarketDataSource
     {
         if (_tradingTask.CurrentBacktestId is not null)
         {
-            _logger.Verbose("Backtest is active - getting last price for {Symbol} from cache", symbol);
+            _logger.Verbose("Backtest is active - getting last price for {Symbol} from cache", symbol.Value);
             return _cache.GetLastCachedPrice(symbol, _tradingTask.GetTaskDay()) ??
                    throw new InvalidOperationException(
                        $"Last price for '{symbol.Value}' could not be retrieved from cache");
         }
 
-        _logger.Verbose("Getting last price for {Symbol} from Alpaca", symbol);
+        _logger.Verbose("Getting last price for {Symbol} from Alpaca", symbol.Value);
         return await SendLastTradeRequestAsync(symbol, token);
     }
 
@@ -85,7 +85,7 @@ public sealed class MarketDataSource : IMarketDataSource
         var valid = await GetValidSymbolsAsync(token);
         await valid.Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
             {
-                _logger.Verbose("Getting data for chunk: {Symbols}", chunk);
+                _logger.Verbose("Getting data for chunk: {Symbols}", chunk.Select(t => t.Value).ToList());
                 var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)));
                 return dataForChunk.ToAsyncEnumerable();
             })
@@ -152,7 +152,7 @@ public sealed class MarketDataSource : IMarketDataSource
         var active = (await _callQueue.SendRequestWithRetriesAsync(() => dataClient
                 .ListMostActiveStocksByVolumeAsync(maxRequestSize, token), _logger).ExecuteWithErrorHandling(_logger))
             .Select(a => new TradingSymbol(a.Symbol)).ToList();
-        _logger.Debug("Retrieved most active tokens: {Active}", active);
+        _logger.Debug("Retrieved most active tokens: {Active}", active.Select(t => t.Value).ToList());
 
         return held.Concat(active).Distinct();
     }

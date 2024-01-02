@@ -128,16 +128,6 @@ public sealed class ManualTestsController : ControllerBase
         if (_memoryCache.GetCurrentStatistics() is { } stats) return stats;
         return NotFound();
     }
-
-    [HttpPost]
-    [Route("init-backtest-data")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<ActionResult> InitializeCacheAsync([FromQuery][Required] DateOnly start)
-    {
-        await _dataSource.InitializeBacktestDataAsync(start, DateOnly.FromDateTime(DateTime.Now).AddDays(-1),
-            HttpContext.RequestAborted);
-        return NoContent();
-    }
 }
 
 public sealed class TradingActionRequest : IValidatableObject
