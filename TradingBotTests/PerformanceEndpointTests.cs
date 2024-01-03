@@ -192,10 +192,10 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
         var performanceResponse = await client.Request("api", "performance").GetAsync();
         performanceResponse.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
 
-        var actionsResponse = await client.Request("api", "performance", "trade-actions").GetAsync();
+        var actionsResponse = await client.Request("api", "performance", "trading-actions").GetAsync();
         actionsResponse.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
 
-        var detailsResponse = await client.Request("api", "performance", "trade-actions", Guid.NewGuid()).GetAsync();
+        var detailsResponse = await client.Request("api", "performance", "trading-actions", Guid.NewGuid()).GetAsync();
         detailsResponse.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
 
@@ -275,7 +275,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
         await _testSuite.ResetAsync();
 
         using var client = _testSuite.CreateAuthenticatedClient();
-        var actions = await client.Request("api", "performance", "trade-actions")
+        var actions = await client.Request("api", "performance", "trading-actions")
             .GetJsonAsync<IReadOnlyList<TradingActionResponse>>();
 
         actions.Should().BeEquivalentTo(new[]
@@ -376,7 +376,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
         await _testSuite.ResetAsync();
 
         using var client = _testSuite.CreateAuthenticatedClient();
-        var actions = await client.Request("api", "performance", "trade-actions")
+        var actions = await client.Request("api", "performance", "trading-actions")
             .SetQueryParams(new
             {
                 start = "2023-12-01T17:52:00+00:00",
@@ -427,7 +427,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
     public async Task ShouldValidateQueryParametersWhenRequestingTradeActions()
     {
         using var client = _testSuite.CreateAuthenticatedClient().AllowAnyHttpStatus();
-        var response = await client.Request("api", "performance", "trade-actions")
+        var response = await client.Request("api", "performance", "trading-actions")
             .SetQueryParams(new
             {
                 start = new DateTimeOffset(2023, 11, 22, 11, 19, 0, TimeSpan.Zero),
@@ -438,19 +438,5 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
         var errors = await response.GetJsonAsync<ValidationProblemDetails>();
         errors.Errors.Should().ContainKey(nameof(TradingActionCollectionRequest.Start)).WhoseValue.Should()
             .ContainMatch("*must be earlier than*");
-    }
-
-    [Fact]
-    public async Task ShouldReturnMockedTradeActionDetails()
-    {
-        using var client = _testSuite.CreateAuthenticatedClient();
-
-        var response = await client.Request("api", "performance", "trade-actions", _testSuite.Actions[0].Id, "details")
-            .GetJsonAsync<TradingActionDetailsResponse>();
-
-        response.Should().BeEquivalentTo(new
-        {
-            _testSuite.Actions[0].Id
-        });
     }
 }

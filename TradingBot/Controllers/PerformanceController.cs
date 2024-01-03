@@ -50,7 +50,6 @@ public sealed class PerformanceController : ControllerBase
         }).ToList();
     }
 
-    // TODO: Rename to 'trading-actions'
     /// <summary>
     ///     Gets list of trading actions taken
     /// </summary>
@@ -58,7 +57,7 @@ public sealed class PerformanceController : ControllerBase
     /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpGet]
-    [Route("trade-actions")]
+    [Route("trading-actions")]
     [ProducesResponseType(typeof(IReadOnlyList<TradingActionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -81,7 +80,7 @@ public sealed class PerformanceController : ControllerBase
     /// <response code="401">Unauthorized</response>
     /// <response code="404">Not found</response>
     [HttpGet]
-    [Route("trade-actions/{id:guid}")]
+    [Route("trading-actions/{id:guid}")]
     [ProducesResponseType(typeof(TradingActionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
