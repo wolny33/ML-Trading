@@ -31,8 +31,13 @@ public sealed class BacktestCreationRequest : IValidatableObject
                 new[] { nameof(InitialCash) });
 
         var clock = validationContext.GetRequiredService<ISystemClock>();
-        if (End >= DateOnly.FromDateTime(clock.UtcNow.LocalDateTime))
+        if (ShouldUsePredictor && End >= DateOnly.FromDateTime(clock.UtcNow.LocalDateTime))
             yield return new ValidationResult($"'{nameof(End)}' must represent a past day (yesterday or earlier)",
                 new[] { nameof(End) });
+
+        if (!ShouldUsePredictor && End >= DateOnly.FromDateTime(clock.UtcNow.LocalDateTime).AddDays(-10))
+            yield return new ValidationResult(
+                $"'{nameof(End)}' must represent a day at least 10 days ago if predictor is not used",
+                new[] { nameof(End), nameof(ShouldUsePredictor) });
     }
 }
