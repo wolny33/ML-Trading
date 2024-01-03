@@ -23,8 +23,6 @@ public interface IAssetsDataSource
     /// </remarks>
     /// <returns>Held <see cref="Assets" /></returns>
     Task<Assets?> GetLatestAssetsAsync(CancellationToken token = default);
-
-    Task<Assets> GetMockedAssetsAsync(CancellationToken token = default);
 }
 
 public sealed class AssetsDataSource : IAssetsDataSource
@@ -72,41 +70,6 @@ public sealed class AssetsDataSource : IAssetsDataSource
 
         var lastState = await _assetsStateQuery.GetLatestStateAsync(token);
         return lastState?.Assets;
-    }
-
-    public Task<Assets> GetMockedAssetsAsync(CancellationToken token = default)
-    {
-        return Task.FromResult(new Assets
-        {
-            EquityValue = 11015.98m + 12.04m * 70.66m + 128.97m * 13.06m,
-            Cash = new Cash
-            {
-                AvailableAmount = 11015.98m,
-                MainCurrency = "USD",
-                BuyingPower = 9024.56m
-            },
-            Positions = new Dictionary<TradingSymbol, Position>
-            {
-                [new TradingSymbol("AMZN")] = new()
-                {
-                    SymbolId = Guid.NewGuid(),
-                    Symbol = new TradingSymbol("AMZN"),
-                    Quantity = 12.04m,
-                    AvailableQuantity = 12.04m,
-                    AverageEntryPrice = 67.54m,
-                    MarketValue = 12.04m * 70.66m
-                },
-                [new TradingSymbol("BBBY")] = new()
-                {
-                    SymbolId = Guid.NewGuid(),
-                    Symbol = new TradingSymbol("BBBY"),
-                    Quantity = 128.97m,
-                    AvailableQuantity = 58.97m,
-                    AverageEntryPrice = 14.87m,
-                    MarketValue = 128.97m * 13.06m
-                }
-            }
-        });
     }
 
     private static Assets CreateAssets(IAccount account, IEnumerable<IPosition> positions)

@@ -16,20 +16,19 @@ public class AssetsController : ControllerBase
     }
 
     /// <summary>
-    ///     Gets currently held assets
+    ///     Gets currently held assets, or last recorded assets state if Alpaca API is not available at the moment
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(AssetsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<AssetsResponse>> GetAsync([FromQuery] bool mocked = false)
+    public async Task<ActionResult<AssetsResponse>> GetAsync()
     {
-        var assets = mocked
-            ? await _assetsDataSource.GetMockedAssetsAsync(HttpContext.RequestAborted)
-            : await _assetsDataSource.GetLatestAssetsAsync(HttpContext.RequestAborted);
+        var assets = await _assetsDataSource.GetLatestAssetsAsync(HttpContext.RequestAborted);
 
         if (assets is not null) return assets.ToResponse();
 
+        // TODO
         return NotFound();
     }
 }

@@ -16,7 +16,7 @@ public sealed class TestModeController : ControllerBase
     }
 
     /// <summary>
-    ///     Turns the test mode on or off.
+    ///     Turns the test mode on or off
     /// </summary>
     /// <response code="200">OK</response>
     /// <response code="400">Bad request</response>
@@ -31,7 +31,7 @@ public sealed class TestModeController : ControllerBase
     }
 
     /// <summary>
-    ///     Returns information if the test mode is on or off.
+    ///     Returns information if the test mode is on or off
     /// </summary>
     /// <response code="200">OK</response>
     /// <response code="401">Unauthorized</response>

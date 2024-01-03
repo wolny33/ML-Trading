@@ -16,7 +16,7 @@ public sealed class TradeController : Controller
     }
 
     /// <summary>
-    ///     Starts/Stops the investment.
+    ///     Starts/stops the investment
     /// </summary>
     /// <response code="200">OK</response>
     /// <response code="400">Bad request</response>
@@ -31,7 +31,7 @@ public sealed class TradeController : Controller
     }
 
     /// <summary>
-    ///     Returns information if the investment is started or stopped.
+    ///     Returns information if the investment is started or stopped
     /// </summary>
     /// <response code="200">OK</response>
     /// <response code="401">Unauthorized</response>
