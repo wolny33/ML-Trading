@@ -32,6 +32,7 @@ namespace TradingBot.Migrations
                     SimulationEnd = table.Column<DateOnly>(type: "TEXT", nullable: false),
                     ExecutionStartTimestamp = table.Column<long>(type: "INTEGER", nullable: false),
                     ExecutionEndTimestamp = table.Column<long>(type: "INTEGER", nullable: true),
+                    UsePredictor = table.Column<bool>(type: "INTEGER", nullable: false),
                     State = table.Column<int>(type: "INTEGER", nullable: false),
                     StateDetails = table.Column<string>(type: "TEXT", nullable: false)
                 },

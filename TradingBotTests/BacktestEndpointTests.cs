@@ -28,6 +28,7 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                 Id = Guid.NewGuid(),
                 State = BacktestState.Finished,
                 StateDetails = "Finished successfully",
+                UsePredictor = true,
                 ExecutionStartTimestamp = (Now - TimeSpan.FromMinutes(10)).ToUnixTimeMilliseconds(),
                 ExecutionEndTimestamp = (Now - TimeSpan.FromMinutes(5)).ToUnixTimeMilliseconds(),
                 SimulationStart = new DateOnly(2022, 1, 1),
@@ -137,6 +138,7 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                 Id = Guid.NewGuid(),
                 State = BacktestState.Running,
                 StateDetails = "Backtest is running",
+                UsePredictor = true,
                 ExecutionStartTimestamp = (Now - TimeSpan.FromMinutes(8)).ToUnixTimeMilliseconds(),
                 ExecutionEndTimestamp = null,
                 SimulationStart = new DateOnly(2022, 2, 1),
@@ -160,6 +162,7 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                 Id = Guid.NewGuid(),
                 State = BacktestState.Cancelled,
                 StateDetails = "Backtest is running",
+                UsePredictor = true,
                 ExecutionStartTimestamp = (Now - TimeSpan.FromMinutes(7)).ToUnixTimeMilliseconds(),
                 ExecutionEndTimestamp = (Now - TimeSpan.FromMinutes(6)).ToUnixTimeMilliseconds(),
                 SimulationStart = new DateOnly(2002, 1, 1),
@@ -171,6 +174,7 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                 State = BacktestState.Error,
                 StateDetails =
                     "Backtest failed with error code unsuccessful-api-response: Alpaca API responded with 403: Unauthorized",
+                UsePredictor = false,
                 ExecutionStartTimestamp = (Now - TimeSpan.FromMinutes(5)).ToUnixTimeMilliseconds(),
                 ExecutionEndTimestamp = (Now - TimeSpan.FromMinutes(4)).ToUnixTimeMilliseconds(),
                 SimulationStart = new DateOnly(2020, 1, 1),
@@ -297,7 +301,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[0].ExecutionStartTimestamp),
                 ExecutionEnd =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[0].ExecutionEndTimestamp!.Value),
-                TotalReturn = 0.3
+                TotalReturn = 0.3,
+                UsePredictor = _testSuite.Backtests[0].UsePredictor
             },
             new BacktestResponse
             {
@@ -309,7 +314,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                 ExecutionStart =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[1].ExecutionStartTimestamp),
                 ExecutionEnd = null,
-                TotalReturn = 0
+                TotalReturn = 0,
+                UsePredictor = _testSuite.Backtests[1].UsePredictor
             },
             new BacktestResponse
             {
@@ -322,7 +328,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[2].ExecutionStartTimestamp),
                 ExecutionEnd =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[2].ExecutionEndTimestamp!.Value),
-                TotalReturn = 0
+                TotalReturn = 0,
+                UsePredictor = _testSuite.Backtests[2].UsePredictor
             },
             new BacktestResponse
             {
@@ -335,7 +342,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[3].ExecutionStartTimestamp),
                 ExecutionEnd =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[3].ExecutionEndTimestamp!.Value),
-                TotalReturn = 0
+                TotalReturn = 0,
+                UsePredictor = _testSuite.Backtests[3].UsePredictor
             }
         }, options => options.WithStrictOrdering());
     }
@@ -360,7 +368,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                 ExecutionStart =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[1].ExecutionStartTimestamp),
                 ExecutionEnd = null,
-                TotalReturn = 0
+                TotalReturn = 0,
+                UsePredictor = _testSuite.Backtests[1].UsePredictor
             },
             new BacktestResponse
             {
@@ -373,7 +382,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[2].ExecutionStartTimestamp),
                 ExecutionEnd =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[2].ExecutionEndTimestamp!.Value),
-                TotalReturn = 0
+                TotalReturn = 0,
+                UsePredictor = _testSuite.Backtests[2].UsePredictor
             }
         }, options => options.WithStrictOrdering());
     }
@@ -410,7 +420,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                 DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[0].ExecutionStartTimestamp),
             ExecutionEnd =
                 DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[0].ExecutionEndTimestamp!.Value),
-            TotalReturn = 0.3
+            TotalReturn = 0.3,
+            UsePredictor = _testSuite.Backtests[0].UsePredictor
         });
     }
 
@@ -596,7 +607,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
         {
             start = "2022-01-01",
             end = "2023-01-01",
-            initialCash = 10_000
+            initialCash = 10_000,
+            shouldUsePredictor = true
         });
 
         response.StatusCode.Should().Be(StatusCodes.Status202Accepted);
@@ -621,6 +633,7 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                 SimulationEnd = new DateOnly(2023, 1, 1),
                 ExecutionStartTimestamp = BacktestTestSuite.Now.ToUnixTimeMilliseconds(),
                 ExecutionEndTimestamp = null,
+                UsePredictor = true,
                 TradingTasks = Array.Empty<TradingTaskEntity>(),
                 AssetsStates = new[]
                 {

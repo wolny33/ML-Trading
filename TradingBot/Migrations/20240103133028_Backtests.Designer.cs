@@ -11,7 +11,7 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20231228131210_Backtests")]
+    [Migration("20240103133028_Backtests")]
     partial class Backtests
     {
         /// <inheritdoc />
@@ -78,6 +78,9 @@ namespace TradingBot.Migrations
                     b.Property<string>("StateDetails")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("UsePredictor")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

@@ -76,6 +76,9 @@ namespace TradingBot.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("UsePredictor")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExecutionStartTimestamp");
