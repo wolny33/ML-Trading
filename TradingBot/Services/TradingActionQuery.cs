@@ -1,11 +1,9 @@
-﻿using System.Diagnostics;
-using Alpaca.Markets;
+﻿using Alpaca.Markets;
 using Microsoft.EntityFrameworkCore;
 using TradingBot.Database;
 using TradingBot.Database.Entities;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
-using OrderType = TradingBot.Models.OrderType;
 
 namespace TradingBot.Services;
 
@@ -17,8 +15,6 @@ public interface ITradingActionQuery
     Task<TradingAction?> GetTradingActionByIdAsync(Guid id, CancellationToken token = default);
 
     Task<IReadOnlyList<TradingAction>?> GetActionsForTaskWithIdAsync(Guid taskId, CancellationToken token = default);
-
-    IEnumerable<TradingAction> CreateMockedTradingActions(DateTimeOffset start, DateTimeOffset end);
 }
 
 public sealed class TradingActionQuery : ITradingActionQuery
@@ -81,34 +77,6 @@ public sealed class TradingActionQuery : ITradingActionQuery
         await context.SaveChangesAsync(token);
 
         return entities.Select(TradingAction.FromEntity).ToList();
-    }
-
-    public IEnumerable<TradingAction> CreateMockedTradingActions(DateTimeOffset start, DateTimeOffset end)
-    {
-        var first = start - start.TimeOfDay + TimeSpan.FromDays(1);
-        return Enumerable.Range(0, (int)(end - first).TotalDays + 1).Select(i => new TradingAction
-        {
-            Id = Guid.NewGuid(),
-            CreatedAt = first + TimeSpan.FromDays(i),
-            ExecutedAt = first + TimeSpan.FromDays(i) + TimeSpan.FromMinutes(15),
-            Price = (decimal)(Random.Shared.NextDouble() * 99 + 1),
-            Quantity = (decimal)Random.Shared.NextDouble(),
-            Symbol = new TradingSymbol(Random.Shared.Next() % 2 == 0 ? "AMZN" : "BBBY"),
-            OrderType = Random.Shared.Next() % 2 == 0 ? OrderType.LimitBuy : OrderType.LimitSell,
-            InForce = TimeInForce.Day,
-            Status = (Random.Shared.Next() % 6) switch
-            {
-                0 => OrderStatus.Accepted,
-                1 => OrderStatus.PartiallyFilled,
-                2 => OrderStatus.Filled,
-                3 => OrderStatus.Canceled,
-                4 => OrderStatus.Expired,
-                5 => OrderStatus.Rejected,
-                _ => throw new UnreachableException()
-            },
-            AlpacaId = Guid.NewGuid(),
-            AverageFillPrice = (decimal)(Random.Shared.NextDouble() * 99 + 1)
-        });
     }
 
     private async Task UpdateActionEntityAsync(TradingActionEntity entity, IAlpacaTradingClient client,
