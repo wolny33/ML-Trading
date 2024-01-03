@@ -20,6 +20,10 @@ public sealed class BacktestController : ControllerBase
         _clock = clock;
     }
 
+    /// <summary>
+    ///     Returns all backtests from given time range
+    /// </summary>
+    /// <response code="200">OK</response>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<BacktestResponse>), StatusCodes.Status200OK)]
     public async Task<IReadOnlyList<BacktestResponse>> GetAllAsync([FromQuery] BacktestRequest request)
@@ -30,6 +34,13 @@ public sealed class BacktestController : ControllerBase
         return (await _query.GetAllAsync(start, end, HttpContext.RequestAborted)).Select(b => b.ToResponse()).ToList();
     }
 
+    /// <summary>
+    ///     Returns backtest with given ID
+    /// </summary>
+    /// <response code="200">OK</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="404">Not found</response>
     [HttpGet]
     [Route("{id:guid}")]
     [ProducesResponseType(typeof(BacktestResponse), StatusCodes.Status200OK)]
@@ -44,6 +55,12 @@ public sealed class BacktestController : ControllerBase
         return backtest.ToResponse();
     }
 
+    /// <summary>
+    ///     Starts new backtest
+    /// </summary>
+    /// <response code="202">Accepted</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="401">Unauthorized</response>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -55,6 +72,12 @@ public sealed class BacktestController : ControllerBase
         return Accepted(new Uri(id.ToString(), UriKind.Relative));
     }
 
+    /// <summary>
+    ///     Cancels running backtest
+    /// </summary>
+    /// <response code="204">No content</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="401">Unauthorized</response>
     [HttpDelete]
     [Route("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -66,6 +89,13 @@ public sealed class BacktestController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    ///     Returns trading tasks executed during backtest with given ID
+    /// </summary>
+    /// <response code="200">OK</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="404">Not found</response>
     [HttpGet]
     [Route("{id:guid}/trading-tasks")]
     [ProducesResponseType(typeof(IReadOnlyList<TradingTaskResponse>), StatusCodes.Status200OK)]
@@ -80,6 +110,13 @@ public sealed class BacktestController : ControllerBase
         return tasks.Select(t => t.ToResponse()).ToList();
     }
 
+    /// <summary>
+    ///     Returns assets states recorded during backtest with given ID
+    /// </summary>
+    /// <response code="200">OK</response>
+    /// <response code="400">Bad request</response>
+    /// <response code="401">Unauthorized</response>
+    /// <response code="404">Not found</response>
     [HttpGet]
     [Route("{id:guid}/assets-states")]
     [ProducesResponseType(typeof(IReadOnlyList<AssetsStateResponse>), StatusCodes.Status200OK)]
