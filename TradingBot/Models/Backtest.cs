@@ -13,6 +13,7 @@ public sealed class Backtest
     public required bool UsePredictor { get; init; }
     public required BacktestState State { get; init; }
     public required string StateDetails { get; init; }
+    public required string Description { get; init; }
     public required double TotalReturn { get; init; }
 
     public static Backtest FromEntity(BacktestEntity entity)
@@ -29,6 +30,7 @@ public sealed class Backtest
             UsePredictor = entity.UsePredictor,
             State = entity.State,
             StateDetails = entity.StateDetails,
+            Description = entity.Description,
             TotalReturn = CalculateTotalReturn(entity.AssetsStates.AsReadOnly())
         };
     }
@@ -56,6 +58,7 @@ public sealed class Backtest
             UsePredictor = UsePredictor,
             State = State.ToString(),
             StateDetails = StateDetails,
+            Description = Description,
             TotalReturn = TotalReturn
         };
     }

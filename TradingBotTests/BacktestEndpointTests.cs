@@ -33,6 +33,7 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                 ExecutionEndTimestamp = (Now - TimeSpan.FromMinutes(5)).ToUnixTimeMilliseconds(),
                 SimulationStart = new DateOnly(2022, 1, 1),
                 SimulationEnd = new DateOnly(2022, 1, 4),
+                Description = "Backtest 1",
                 AssetsStates = new[]
                 {
                     new AssetsStateEntity
@@ -143,6 +144,7 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                 ExecutionEndTimestamp = null,
                 SimulationStart = new DateOnly(2022, 2, 1),
                 SimulationEnd = new DateOnly(2023, 2, 1),
+                Description = "Backtest 2",
                 AssetsStates = new[]
                 {
                     new AssetsStateEntity
@@ -166,7 +168,8 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                 ExecutionStartTimestamp = (Now - TimeSpan.FromMinutes(7)).ToUnixTimeMilliseconds(),
                 ExecutionEndTimestamp = (Now - TimeSpan.FromMinutes(6)).ToUnixTimeMilliseconds(),
                 SimulationStart = new DateOnly(2002, 1, 1),
-                SimulationEnd = new DateOnly(2023, 1, 1)
+                SimulationEnd = new DateOnly(2023, 1, 1),
+                Description = string.Empty
             },
             new BacktestEntity
             {
@@ -178,7 +181,8 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                 ExecutionStartTimestamp = (Now - TimeSpan.FromMinutes(5)).ToUnixTimeMilliseconds(),
                 ExecutionEndTimestamp = (Now - TimeSpan.FromMinutes(4)).ToUnixTimeMilliseconds(),
                 SimulationStart = new DateOnly(2020, 1, 1),
-                SimulationEnd = new DateOnly(2023, 1, 1)
+                SimulationEnd = new DateOnly(2023, 1, 1),
+                Description = string.Empty
             }
         };
     }
@@ -302,7 +306,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                 ExecutionEnd =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[0].ExecutionEndTimestamp!.Value),
                 TotalReturn = 0.3,
-                UsePredictor = _testSuite.Backtests[0].UsePredictor
+                UsePredictor = _testSuite.Backtests[0].UsePredictor,
+                Description = _testSuite.Backtests[0].Description
             },
             new BacktestResponse
             {
@@ -315,7 +320,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[1].ExecutionStartTimestamp),
                 ExecutionEnd = null,
                 TotalReturn = 0,
-                UsePredictor = _testSuite.Backtests[1].UsePredictor
+                UsePredictor = _testSuite.Backtests[1].UsePredictor,
+                Description = _testSuite.Backtests[1].Description
             },
             new BacktestResponse
             {
@@ -329,7 +335,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                 ExecutionEnd =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[2].ExecutionEndTimestamp!.Value),
                 TotalReturn = 0,
-                UsePredictor = _testSuite.Backtests[2].UsePredictor
+                UsePredictor = _testSuite.Backtests[2].UsePredictor,
+                Description = _testSuite.Backtests[2].Description
             },
             new BacktestResponse
             {
@@ -343,7 +350,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                 ExecutionEnd =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[3].ExecutionEndTimestamp!.Value),
                 TotalReturn = 0,
-                UsePredictor = _testSuite.Backtests[3].UsePredictor
+                UsePredictor = _testSuite.Backtests[3].UsePredictor,
+                Description = _testSuite.Backtests[3].Description
             }
         }, options => options.WithStrictOrdering());
     }
@@ -369,7 +377,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[1].ExecutionStartTimestamp),
                 ExecutionEnd = null,
                 TotalReturn = 0,
-                UsePredictor = _testSuite.Backtests[1].UsePredictor
+                UsePredictor = _testSuite.Backtests[1].UsePredictor,
+                Description = _testSuite.Backtests[1].Description
             },
             new BacktestResponse
             {
@@ -383,7 +392,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                 ExecutionEnd =
                     DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[2].ExecutionEndTimestamp!.Value),
                 TotalReturn = 0,
-                UsePredictor = _testSuite.Backtests[2].UsePredictor
+                UsePredictor = _testSuite.Backtests[2].UsePredictor,
+                Description = _testSuite.Backtests[2].Description
             }
         }, options => options.WithStrictOrdering());
     }
@@ -421,7 +431,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
             ExecutionEnd =
                 DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Backtests[0].ExecutionEndTimestamp!.Value),
             TotalReturn = 0.3,
-            UsePredictor = _testSuite.Backtests[0].UsePredictor
+            UsePredictor = _testSuite.Backtests[0].UsePredictor,
+            Description = _testSuite.Backtests[0].Description
         });
     }
 
@@ -634,6 +645,7 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                 ExecutionStartTimestamp = BacktestTestSuite.Now.ToUnixTimeMilliseconds(),
                 ExecutionEndTimestamp = null,
                 UsePredictor = true,
+                Description = string.Empty,
                 TradingTasks = Array.Empty<TradingTaskEntity>(),
                 AssetsStates = new[]
                 {

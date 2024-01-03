@@ -33,7 +33,8 @@ public sealed class BacktestCommand : IBacktestCommand
             ExecutionEndTimestamp = null,
             UsePredictor = details.ShouldUsePredictor,
             State = BacktestState.Running,
-            StateDetails = "Backtest is running"
+            StateDetails = "Backtest is running",
+            Description = details.Description
         };
         context.Backtests.Add(backtest);
         await context.SaveChangesAsync(token);
@@ -62,7 +63,7 @@ public sealed class BacktestCommand : IBacktestCommand
 }
 
 public sealed record BacktestCreationDetails(Guid Id, DateOnly Start, DateOnly End, DateTimeOffset ExecutionStart,
-    bool ShouldUsePredictor);
+    bool ShouldUsePredictor, string Description);
 
 public sealed record BacktestCompletionDetails(DateTimeOffset ExecutionEnd, BacktestState State,
     string StateDescription);

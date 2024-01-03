@@ -11,7 +11,7 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20240103133028_Backtests")]
+    [Migration("20240103140036_Backtests")]
     partial class Backtests
     {
         /// <inheritdoc />
@@ -58,6 +58,10 @@ namespace TradingBot.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<long?>("ExecutionEndTimestamp")

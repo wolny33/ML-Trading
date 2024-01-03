@@ -58,7 +58,8 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
     private async Task ExecuteAsync(BacktestDetails details, Guid id, CancellationToken token = default)
     {
         var backtestId = await _backtestCommand.CreateNewAsync(
-            new BacktestCreationDetails(id, details.Start, details.End, _clock.UtcNow, details.ShouldUsePredictor),
+            new BacktestCreationDetails(id, details.Start, details.End, _clock.UtcNow, details.ShouldUsePredictor,
+                details.Description),
             token);
         _logger.Information("Started new backtest with ID {Id}, from {Start} to {End}", backtestId, details.Start,
             details.End);
@@ -69,6 +70,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 
         try
         {
+            await Task.Yield();
             using var initializationScope = _scopeFactory.CreateScope();
             var marketDataSource = initializationScope.ServiceProvider.GetRequiredService<IMarketDataSource>();
             // We need 10 valid days (excluding weekends and holidays) before start, so 20 days should be enough
@@ -141,4 +143,5 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
     }
 }
 
-public sealed record BacktestDetails(DateOnly Start, DateOnly End, decimal InitialCash, bool ShouldUsePredictor);
+public sealed record BacktestDetails(DateOnly Start, DateOnly End, decimal InitialCash, bool ShouldUsePredictor,
+    string Description);

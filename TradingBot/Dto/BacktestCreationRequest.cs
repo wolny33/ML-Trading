@@ -20,6 +20,8 @@ public sealed class BacktestCreationRequest : IValidatableObject
     /// </summary>
     public bool ShouldUsePredictor { get; init; } = true;
 
+    public string Description { get; init; } = string.Empty;
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (End <= Start)

@@ -17,6 +17,7 @@ public sealed class BacktestEntity
     public required bool UsePredictor { get; init; }
     public required BacktestState State { get; set; }
     public required string StateDetails { get; set; }
+    public required string Description { get; init; }
     public IList<TradingTaskEntity> TradingTasks { get; init; } = new List<TradingTaskEntity>();
     public IList<AssetsStateEntity> AssetsStates { get; init; } = new List<AssetsStateEntity>();
 }

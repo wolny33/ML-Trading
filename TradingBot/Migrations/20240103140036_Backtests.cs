@@ -34,7 +34,8 @@ namespace TradingBot.Migrations
                     ExecutionEndTimestamp = table.Column<long>(type: "INTEGER", nullable: true),
                     UsePredictor = table.Column<bool>(type: "INTEGER", nullable: false),
                     State = table.Column<int>(type: "INTEGER", nullable: false),
-                    StateDetails = table.Column<string>(type: "TEXT", nullable: false)
+                    StateDetails = table.Column<string>(type: "TEXT", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
