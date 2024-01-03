@@ -14,6 +14,7 @@ public sealed class BacktestEntity
     public required DateOnly SimulationEnd { get; init; }
     public required long ExecutionStartTimestamp { get; init; }
     public long? ExecutionEndTimestamp { get; set; }
+    public required bool UsePredictor { get; init; }
     public required BacktestState State { get; set; }
     public required string StateDetails { get; set; }
     public IList<TradingTaskEntity> TradingTasks { get; init; } = new List<TradingTaskEntity>();

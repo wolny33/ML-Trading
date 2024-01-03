@@ -7,8 +7,7 @@ namespace TradingBot.Services;
 
 public interface IBacktestCommand
 {
-    Task<Guid> CreateNewAsync(DateOnly start, DateOnly end, DateTimeOffset simulationStart, Guid? id = null,
-        CancellationToken token = default);
+    Task<Guid> CreateNewAsync(BacktestCreationDetails details, CancellationToken token = default);
 
     Task SetStateAndEndAsync(Guid backtestId, BacktestCompletionDetails details, CancellationToken token = default);
 }
@@ -22,17 +21,17 @@ public sealed class BacktestCommand : IBacktestCommand
         _dbContextFactory = dbContextFactory;
     }
 
-    public async Task<Guid> CreateNewAsync(DateOnly start, DateOnly end, DateTimeOffset executionStart, Guid? id = null,
-        CancellationToken token = default)
+    public async Task<Guid> CreateNewAsync(BacktestCreationDetails details, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var backtest = new BacktestEntity
         {
-            Id = id ?? Guid.NewGuid(),
-            SimulationStart = start,
-            SimulationEnd = end,
-            ExecutionStartTimestamp = executionStart.ToUnixTimeMilliseconds(),
+            Id = details.Id,
+            SimulationStart = details.Start,
+            SimulationEnd = details.End,
+            ExecutionStartTimestamp = details.ExecutionStart.ToUnixTimeMilliseconds(),
             ExecutionEndTimestamp = null,
+            UsePredictor = details.ShouldUsePredictor,
             State = BacktestState.Running,
             StateDetails = "Backtest is running"
         };
@@ -61,6 +60,9 @@ public sealed class BacktestCommand : IBacktestCommand
         await context.SaveChangesAsync(token);
     }
 }
+
+public sealed record BacktestCreationDetails(Guid Id, DateOnly Start, DateOnly End, DateTimeOffset ExecutionStart,
+    bool ShouldUsePredictor);
 
 public sealed record BacktestCompletionDetails(DateTimeOffset ExecutionEnd, BacktestState State,
     string StateDescription);

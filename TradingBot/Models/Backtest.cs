@@ -10,6 +10,7 @@ public sealed class Backtest
     public required DateOnly SimulationEnd { get; init; }
     public required DateTimeOffset ExecutionStart { get; init; }
     public DateTimeOffset? ExecutionEnd { get; init; }
+    public required bool UsePredictor { get; init; }
     public required BacktestState State { get; init; }
     public required string StateDetails { get; init; }
     public required double TotalReturn { get; init; }
@@ -25,6 +26,7 @@ public sealed class Backtest
             ExecutionEnd = entity.ExecutionEndTimestamp is not null
                 ? DateTimeOffset.FromUnixTimeMilliseconds(entity.ExecutionEndTimestamp.Value)
                 : null,
+            UsePredictor = entity.UsePredictor,
             State = entity.State,
             StateDetails = entity.StateDetails,
             TotalReturn = CalculateTotalReturn(entity.AssetsStates.AsReadOnly())
@@ -51,6 +53,7 @@ public sealed class Backtest
             SimulationEnd = SimulationEnd,
             ExecutionStart = ExecutionStart,
             ExecutionEnd = ExecutionEnd,
+            UsePredictor = UsePredictor,
             State = State.ToString(),
             StateDetails = StateDetails,
             TotalReturn = TotalReturn

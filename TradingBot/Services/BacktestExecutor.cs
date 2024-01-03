@@ -57,7 +57,9 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 
     private async Task ExecuteAsync(BacktestDetails details, Guid id, CancellationToken token = default)
     {
-        var backtestId = await _backtestCommand.CreateNewAsync(details.Start, details.End, _clock.UtcNow, id, token);
+        var backtestId = await _backtestCommand.CreateNewAsync(
+            new BacktestCreationDetails(id, details.Start, details.End, _clock.UtcNow, details.ShouldUsePredictor),
+            token);
         _logger.Information("Started new backtest with ID {Id}, from {Start} to {End}", backtestId, details.Start,
             details.End);
 
@@ -139,4 +141,4 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
     }
 }
 
-public sealed record BacktestDetails(DateOnly Start, DateOnly End, decimal InitialCash);
+public sealed record BacktestDetails(DateOnly Start, DateOnly End, decimal InitialCash, bool ShouldUsePredictor);

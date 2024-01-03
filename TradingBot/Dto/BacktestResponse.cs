@@ -19,6 +19,9 @@ public sealed class BacktestResponse
     public DateTimeOffset? ExecutionEnd { get; init; }
 
     [Required]
+    public required bool UsePredictor { get; init; }
+
+    [Required]
     public required string State { get; init; }
 
     [Required]

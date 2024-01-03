@@ -6,13 +6,19 @@ namespace TradingBot.Dto;
 public sealed class BacktestCreationRequest : IValidatableObject
 {
     [Required]
-    public DateOnly Start { get; init; }
+    public required DateOnly Start { get; init; }
 
     [Required]
-    public DateOnly End { get; init; }
+    public required DateOnly End { get; init; }
 
     [Required]
-    public decimal InitialCash { get; init; }
+    public required decimal InitialCash { get; init; }
+
+    /// <summary>
+    ///     If <c>true</c>, predictor will be used in the same way as in normal trading task execution. Otherwise,
+    ///     predictor will instead return real future data, so that strategy algorithm can be tested.
+    /// </summary>
+    public bool ShouldUsePredictor { get; init; } = true;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

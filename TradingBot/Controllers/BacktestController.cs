@@ -50,7 +50,8 @@ public sealed class BacktestController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public ActionResult StartNew(BacktestCreationRequest request)
     {
-        var id = _backtestExecutor.StartNew(new BacktestDetails(request.Start, request.End, request.InitialCash));
+        var id = _backtestExecutor.StartNew(new BacktestDetails(request.Start, request.End, request.InitialCash,
+            request.ShouldUsePredictor));
         return Accepted(new Uri(id.ToString(), UriKind.Relative));
     }
 
