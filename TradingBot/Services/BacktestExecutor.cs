@@ -82,7 +82,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 
                 using var scope = _scopeFactory.CreateScope();
                 var task = scope.ServiceProvider.GetRequiredService<ICurrentTradingTask>();
-                task.SetBacktestDetails(backtestId, day);
+                task.SetBacktestDetails(backtestId, day, details.ShouldUsePredictor);
 
                 var taskExecutor = scope.ServiceProvider.GetRequiredService<TradingTaskExecutor>();
                 await taskExecutor.ExecuteAsync(token);

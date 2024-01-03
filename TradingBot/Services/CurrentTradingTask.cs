@@ -13,6 +13,7 @@ namespace TradingBot.Services;
 public interface ICurrentTradingTask
 {
     Guid? CurrentBacktestId { get; }
+    bool ShouldReturnFutureDataFromPredictor { get; }
     Task StartAsync(CancellationToken token = default);
     Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default);
     Task SaveAndLinkBacktestActionAsync(TradingAction action, CancellationToken token = default);
@@ -23,7 +24,7 @@ public interface ICurrentTradingTask
     Task MarkAsErroredAsync(Error error, CancellationToken token = default);
     DateOnly GetTaskDay();
     DateTimeOffset GetTaskTime();
-    void SetBacktestDetails(Guid backtestId, DateOnly day);
+    void SetBacktestDetails(Guid backtestId, DateOnly day, bool usePredictor);
 }
 
 public sealed class CurrentTradingTask : ICurrentTradingTask
@@ -43,6 +44,8 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
     }
 
     public Guid? CurrentBacktestId => _backtestDetails?.Id;
+
+    public bool ShouldReturnFutureDataFromPredictor => _backtestDetails?.UsePredictor is false;
 
     public async Task StartAsync(CancellationToken token = default)
     {
@@ -105,9 +108,9 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
             : _clock.UtcNow;
     }
 
-    public void SetBacktestDetails(Guid backtestId, DateOnly day)
+    public void SetBacktestDetails(Guid backtestId, DateOnly day, bool usePredictor)
     {
-        _backtestDetails = new BacktestDetails(backtestId, day);
+        _backtestDetails = new BacktestDetails(backtestId, day, usePredictor);
     }
 
     private Task EndWithStateAsync(TradingTaskState state, string description, CancellationToken token)
@@ -119,5 +122,5 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
             new TradingTaskCompletionDetails(GetTaskTime(), state, description), token);
     }
 
-    private sealed record BacktestDetails(Guid Id, DateOnly Day);
+    private sealed record BacktestDetails(Guid Id, DateOnly Day, bool UsePredictor);
 }
