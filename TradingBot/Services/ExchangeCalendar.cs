@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Alpaca.Markets;
+﻿using Alpaca.Markets;
 using Microsoft.AspNetCore.Authentication;
 using ILogger = Serilog.ILogger;
 
@@ -50,7 +49,6 @@ public sealed class ExchangeCalendar : IExchangeCalendar, IAsyncDisposable
         return nextTradingDay.Trading.OpenEst - now <= TimeSpan.FromDays(1);
     }
 
-    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<IIntervalCalendar?> SendCalendarRequestAsync(DateTimeOffset now, CancellationToken token)
     {
         var client = await _tradingClient.Value;

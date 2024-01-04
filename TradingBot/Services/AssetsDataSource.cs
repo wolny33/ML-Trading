@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Alpaca.Markets;
+﻿using Alpaca.Markets;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 
@@ -110,7 +109,6 @@ public sealed class AssetsDataSource : IAssetsDataSource, IAsyncDisposable
         return account is not null && positions is not null ? new AlpacaResponses(account, positions) : null;
     }
 
-    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<AlpacaResponses> SendRequestsWithRetriesAsync(CancellationToken token = default)
     {
         _logger.Debug("Sending requests to Alpaca");
