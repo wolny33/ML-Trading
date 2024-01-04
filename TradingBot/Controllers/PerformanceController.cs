@@ -61,7 +61,7 @@ public sealed class PerformanceController : ControllerBase
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IReadOnlyList<TradingActionResponse>> GetTradingActionsAsync(
-        [FromQuery] TradingActionCollectionRequest request)
+        [FromQuery] TradingActionRequest request)
     {
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
         var start = request.Start ?? end - TimeSpan.FromDays(10);

@@ -436,7 +436,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
 
         response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
         var errors = await response.GetJsonAsync<ValidationProblemDetails>();
-        errors.Errors.Should().ContainKey(nameof(TradingActionCollectionRequest.Start)).WhoseValue.Should()
+        errors.Errors.Should().ContainKey(nameof(TradingActionRequest.Start)).WhoseValue.Should()
             .ContainMatch("*must be earlier than*");
     }
 }
