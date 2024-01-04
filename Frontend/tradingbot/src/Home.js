@@ -13,7 +13,6 @@ const LOGIN_URL = '/login';
 const INVESTMENT_URL = '/investment';
 const PERFORMANCE_URL = '/performance';
 const TRADE_ACTIONS_URL = '/trading-actions';
-const TRADE_ACTION_DETAILS_URL = '/details'
 const STRATEGY_URL = '/strategy';
 const ASSETS_URL = '/assets';
 
@@ -59,8 +58,7 @@ const Home = () => {
   const [newStrategyParameters, setNewStrategyParameters] = useState({});
 
   const [maxChartValue, setMaxChartValue] = useState(0);
-  const [detailsDictionary, setDetailsDictionary] = useState({});
-  const [isDetailsReady, setDetailsReady] = useState(false);
+  const [areActionsReady, setActionsReady] = useState(false);
 
   useEffect(() => {
     const storedUserName = localStorage.getItem("userName");
@@ -162,56 +160,17 @@ const Home = () => {
             password: storedPwd
         }
       }
-    ).then(result => {
-      setTradingActionsData(result.data);
-      const promises = result.data.map(tradingAction => {
-        const tradeActionId = tradingAction.id;
-        return getTradeActionDetails(tradeActionId, storedUserName, storedPwd)
-          .then(details => {
-            setDetailsDictionary(prevDetails => ({
-              ...prevDetails,
-              [tradeActionId]: details,
-            }));
-          })
-          .catch(err => {
-            if(!err?.response || err.response?.status === 401 ) {
-              logout();
-            } else {
-              displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
-            }
-          });
-      });
-      return Promise.all(promises);
-    }).then(() => {
-      setDetailsReady(true);
-    }).catch(err => {
-      if(!err?.response || err.response?.status === 401 ) {
-        logout();
-      } else {
-        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
-      }
-    });
-  }, []);
-
-  const getTradeActionDetails = async (tradeActionId, storedUserName, storedPwd) => {
-    try{
-      const response = await axios.get(PERFORMANCE_URL + TRADE_ACTIONS_URL + '/' + tradeActionId + TRADE_ACTION_DETAILS_URL,
-        {
-          auth: {
-              username: storedUserName,
-              password: storedPwd
-          }
+    ).then(result => setTradingActionsData(result.data))
+      .then(() => {
+        setActionsReady(true);
+      }).catch(err => {
+        if (!err?.response || err.response?.status === 401) {
+          logout();
+        } else {
+          displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
         }
-      );
-      return response.data;
-    }catch(err){
-      if(!err?.response || err.response?.status === 401 ) {
-        logout();
-      } else {
-        displayErrorAlert(err.response?.data, "Error fetching trade action details \n" + errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
-      }
-    }
-  }
+      });
+  }, []);
 
   const logout = () => {
     localStorage.clear();
@@ -442,26 +401,10 @@ const Home = () => {
       showFirstButton: false,
       showLastButton: false,
     },
-    muiDetailPanelProps:'',
-    renderDetailPanel: ({ row }) => {
-      const details = detailsDictionary.hasOwnProperty(row.original.id)
-      ? detailsDictionary[row.original.id]: 'No value';
-      return(
-      <Box
-        sx={{
-          display: 'grid',
-          margin: 'auto',
-          gridTemplateColumns: '1fr 1fr',
-          width: '100%',
-        }}
-      >
-        <Typography>Details: {JSON.stringify(details)}</Typography>
-      </Box>
-    )
-    },
+    muiDetailPanelProps: ''
   });
 
-  if (!isDetailsReady) {
+  if (!areActionsReady) {
     return <div>Loading...</div>;
   }
 
