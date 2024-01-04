@@ -25,24 +25,24 @@ public interface IAssetsDataSource
     Task<Assets?> GetLatestAssetsAsync(CancellationToken token = default);
 }
 
-public sealed class AssetsDataSource : IAssetsDataSource
+public sealed class AssetsDataSource : IAssetsDataSource, IAsyncDisposable
 {
     private readonly IAssetsStateQuery _assetsStateQuery;
     private readonly IBacktestAssets _backtestAssets;
     private readonly IAlpacaCallQueue _callQueue;
-    private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
+    private readonly Lazy<Task<IAlpacaTradingClient>> _tradingClient;
     private readonly ICurrentTradingTask _tradingTask;
 
     public AssetsDataSource(IAlpacaClientFactory clientFactory, ILogger logger, IAlpacaCallQueue callQueue,
         IAssetsStateQuery assetsStateQuery, IBacktestAssets backtestAssets, ICurrentTradingTask tradingTask)
     {
-        _clientFactory = clientFactory;
         _callQueue = callQueue;
         _assetsStateQuery = assetsStateQuery;
         _backtestAssets = backtestAssets;
         _tradingTask = tradingTask;
         _logger = logger.ForContext<AssetsDataSource>();
+        _tradingClient = new Lazy<Task<IAlpacaTradingClient>>(() => clientFactory.CreateTradingClientAsync());
     }
 
     public async Task<Assets> GetCurrentAssetsAsync(CancellationToken token = default)
@@ -72,6 +72,11 @@ public sealed class AssetsDataSource : IAssetsDataSource
         return lastState?.Assets;
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (_tradingClient.IsValueCreated) (await _tradingClient.Value).Dispose();
+    }
+
     private static Assets CreateAssets(IAccount account, IEnumerable<IPosition> positions)
     {
         return new Assets
@@ -98,7 +103,7 @@ public sealed class AssetsDataSource : IAssetsDataSource
     private async Task<AlpacaResponses?> SendRequestsWithoutRetriesAsync(CancellationToken token = default)
     {
         _logger.Debug("Sending requests to Alpaca");
-        using var client = await _clientFactory.CreateTradingClientAsync(token);
+        var client = await _tradingClient.Value;
         var account = await client.GetAccountAsync(token).ExecuteWithErrorHandling(_logger).ReturnNullOnRequestLimit();
         var positions = await client.ListPositionsAsync(token).ReturnNullOnRequestLimit(_logger)
             .ExecuteWithErrorHandling(_logger);
@@ -109,7 +114,7 @@ public sealed class AssetsDataSource : IAssetsDataSource
     private async Task<AlpacaResponses> SendRequestsWithRetriesAsync(CancellationToken token = default)
     {
         _logger.Debug("Sending requests to Alpaca");
-        using var client = await _clientFactory.CreateTradingClientAsync(token);
+        var client = await _tradingClient.Value;
         var account = await _callQueue.SendRequestWithRetriesAsync(() => client.GetAccountAsync(token), _logger)
             .ExecuteWithErrorHandling(_logger);
         var positions = await _callQueue.SendRequestWithRetriesAsync(() =>

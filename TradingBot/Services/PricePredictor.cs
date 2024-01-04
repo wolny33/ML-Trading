@@ -10,9 +10,6 @@ namespace TradingBot.Services;
 public interface IPricePredictor
 {
     public Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default);
-
-    public Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data,
-        CancellationToken token = default);
 }
 
 public sealed class PricePredictor : IPricePredictor
@@ -52,7 +49,7 @@ public sealed class PricePredictor : IPricePredictor
         return result;
     }
 
-    public async Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data,
+    private async Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data,
         CancellationToken token = default)
     {
         var request = CreatePredictorRequest(data);

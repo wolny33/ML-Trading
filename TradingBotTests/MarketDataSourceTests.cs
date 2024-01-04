@@ -8,7 +8,7 @@ using TradingBot.Services;
 namespace TradingBotTests;
 
 [Trait("Category", "Unit")]
-public sealed class MarketDataSourceTests
+public sealed class MarketDataSourceTests : IAsyncDisposable
 {
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IAlpacaDataClient _dataClient;
@@ -35,6 +35,11 @@ public sealed class MarketDataSourceTests
 
         _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
             _tradingTask);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _marketDataSource.DisposeAsync();
     }
 
     [Fact]

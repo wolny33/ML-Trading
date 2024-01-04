@@ -11,27 +11,26 @@ namespace TradingBot.Services;
 public interface IActionExecutor
 {
     Task ExecuteTradingActionsAsync(CancellationToken token = default);
-    Task ExecuteActionAsync(TradingAction action, CancellationToken token = default);
 }
 
-public sealed class ActionExecutor : IActionExecutor
+public sealed class ActionExecutor : IActionExecutor, IAsyncDisposable
 {
     private readonly IBacktestAssets _backtestAssets;
     private readonly IAlpacaCallQueue _callQueue;
-    private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
     private readonly IStrategy _strategy;
+    private readonly Lazy<Task<IAlpacaTradingClient>> _tradingClient;
     private readonly ICurrentTradingTask _tradingTask;
 
     public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ILogger logger,
         ICurrentTradingTask tradingTask, IAlpacaCallQueue callQueue, IBacktestAssets backtestAssets)
     {
         _strategy = strategy;
-        _clientFactory = clientFactory;
         _tradingTask = tradingTask;
         _callQueue = callQueue;
         _backtestAssets = backtestAssets;
         _logger = logger.ForContext<ActionExecutor>();
+        _tradingClient = new Lazy<Task<IAlpacaTradingClient>>(() => clientFactory.CreateTradingClientAsync());
     }
 
     public async Task ExecuteTradingActionsAsync(CancellationToken token = default)
@@ -40,7 +39,7 @@ public sealed class ActionExecutor : IActionExecutor
         foreach (var action in actions) await ExecuteActionAndHandleErrorsAsync(action, token);
     }
 
-    public async Task ExecuteActionAsync(TradingAction action, CancellationToken token = default)
+    private async Task ExecuteActionAsync(TradingAction action, CancellationToken token = default)
     {
         if (_tradingTask.CurrentBacktestId is { } backtestId)
         {
@@ -56,11 +55,16 @@ public sealed class ActionExecutor : IActionExecutor
     private async Task<Guid> PostActionToAlpacaAsync(TradingAction action, CancellationToken token)
     {
         _logger.Debug("Executing action {@Action}", action);
-        using var client = await _clientFactory.CreateTradingClientAsync(token);
+        var client = await _tradingClient.Value;
         var order = await _callQueue.SendRequestWithRetriesAsync(() =>
             PostOrderAsync(CreateRequestForAction(action), client, token)
                 .ExecuteWithErrorHandling(_logger));
         return order.OrderId;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_tradingClient.IsValueCreated) (await _tradingClient.Value).Dispose();
     }
 
     private async Task ExecuteActionAndHandleErrorsAsync(TradingAction action, CancellationToken token)
