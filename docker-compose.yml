@@ -8,9 +8,8 @@ services:
       - "5000:5000"
     depends_on:
       - predictor
-    # Uncomment to persist SQLite data
-    #volumes:
-    #  - ./Data:/app/Data
+    volumes:
+      - ./Data:/app/Data
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
       interval: 10s
@@ -29,9 +28,6 @@ services:
   predictor:
     build:
       context: PredictionModel
-    ports:
-      # TODO: Remove after integration with backend
-      - "8000:8000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 10s
