@@ -87,16 +87,4 @@ public sealed class ManualTestsController : ControllerBase
         await _assetsStateCommand.SaveCurrentAssetsAsync(assets, HttpContext.RequestAborted);
         return NoContent();
     }
-
-    // TODO: Move
-    [HttpGet]
-    [Route("cache-stats")]
-    [ProducesResponseType(typeof(MemoryCacheStatistics), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public ActionResult<MemoryCacheStatistics> GetCacheStats()
-    {
-        if (_memoryCache.GetCurrentStatistics() is { } stats) return stats;
-        return NotFound();
-    }
 }

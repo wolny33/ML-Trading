@@ -25,7 +25,7 @@ public sealed class TestModeConfigService : ITestModeConfigService
     public async Task<TestModeConfiguration> GetConfigurationAsync(CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.TestModeConfiguration.FirstOrDefaultAsync(token) ??
+        var entity = await context.TestModeConfiguration.SingleOrDefaultAsync(token) ??
                      TestModeConfiguration.CreateDefault();
 
         return TestModeConfiguration.FromEntity(entity);
@@ -34,7 +34,7 @@ public sealed class TestModeConfigService : ITestModeConfigService
     public async Task<TestModeConfiguration> SetEnabledAsync(bool enabled, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.TestModeConfiguration.FirstOrDefaultAsync(token);
+        var entity = await context.TestModeConfiguration.SingleOrDefaultAsync(token);
         if (entity is null)
         {
             entity = TestModeConfiguration.CreateDefault();

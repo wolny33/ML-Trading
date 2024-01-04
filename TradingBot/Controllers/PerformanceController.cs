@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
 using TradingBot.Services;
@@ -89,24 +88,5 @@ public sealed class PerformanceController : ControllerBase
     {
         var result = await _actionsQuery.GetTradingActionByIdAsync(id, HttpContext.RequestAborted);
         return result is not null ? result.ToResponse() : NotFound();
-    }
-
-    /// <summary>
-    ///     Gets details of trade action
-    /// </summary>
-    /// <param name="id">ID of the trade action which details should be displayed.</param>
-    /// <response code="200">OK</response>
-    /// <response code="400">Bad request</response>
-    /// <response code="401">Unauthorized</response>
-    // TODO: Remove after updating UI
-    [HttpGet]
-    [Route("trade-actions/{id:guid}/details")]
-    [ProducesResponseType(typeof(TradingActionDetailsResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public TradingActionDetailsResponse GetTradeActionDetails([Required] Guid id)
-    {
-        return new TradingActionDetailsResponse { Id = id };
     }
 }
