@@ -297,7 +297,10 @@ const Home = () => {
   };
 
   const countInitialAccountValue = () => {
-    return equityValue/(1 + performanceData[performanceData.length - 1].return);
+    if(performanceData.length > 0)
+      return equityValue/(1 + performanceData[performanceData.length - 1].return);
+    else
+      return 0;
   }
 
   const chartData = {

@@ -28,7 +28,7 @@ public sealed class StrategyParametersResponse
     /// <remarks>
     ///     For example, if <see cref="MaxStocksBuyCount" /> is 3, and <see cref="TopGrowingSymbolsBuyRatio" /> is 0.5,
     ///     50% of available funds would be used to buy the fastest growing symbol, then 50% remaining funds would be
-    ///     used to buy the second symbol, and 50% of the rest - to buy the third.
+    ///     used to buy the second symbol, and all of the rest - to buy the third.
     /// </remarks>
     [Required]
     public required double TopGrowingSymbolsBuyRatio { get; init; }
