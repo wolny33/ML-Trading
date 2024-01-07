@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authentication;
 using TradingBot.Configuration;
 using TradingBot.Models;
 
@@ -12,19 +11,19 @@ public interface IStrategy
 public sealed class Strategy : IStrategy
 {
     private readonly IAssetsDataSource _assetsDataSource;
-    private readonly IPricePredictor _predictor;
     private readonly IMarketDataSource _marketDataSource;
-    private readonly ISystemClock _clock;
+    private readonly IPricePredictor _predictor;
     private readonly IStrategyParametersService _strategyParameters;
+    private readonly ICurrentTradingTask _tradingTask;
 
     public Strategy(IPricePredictor predictor, IAssetsDataSource assetsDataSource, IMarketDataSource marketDataSource,
-        ISystemClock clock, IStrategyParametersService strategyParameters)
+        IStrategyParametersService strategyParameters, ICurrentTradingTask tradingTask)
     {
         _predictor = predictor;
         _assetsDataSource = assetsDataSource;
         _marketDataSource = marketDataSource;
-        _clock = clock;
         _strategyParameters = strategyParameters;
+        _tradingTask = tradingTask;
     }
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
@@ -58,7 +57,7 @@ public sealed class Strategy : IStrategy
 
             if (IsPriceDecreasing(closingPrices, strategyParameters.MinDaysDecreasing) && assets.Positions.TryGetValue(symbol, out var position) && position.AvailableQuantity > 0)
             {
-                sellActions.Add(TradingAction.MarketSell(symbol, position.AvailableQuantity, _clock.UtcNow));
+                sellActions.Add(TradingAction.MarketSell(symbol, position.AvailableQuantity, _tradingTask.GetTaskTime()));
             }
             else if (IsPriceIncreasing(closingPrices, strategyParameters.MinDaysIncreasing))
             {
@@ -151,7 +150,7 @@ public sealed class Strategy : IStrategy
 
             cashAvailable -= quantity * price;
 
-            buyActions.Add(TradingAction.LimitBuy(symbol, quantity, price, _clock.UtcNow));
+            buyActions.Add(TradingAction.LimitBuy(symbol, quantity, price, _tradingTask.GetTaskTime()));
         }
 
         return buyActions;

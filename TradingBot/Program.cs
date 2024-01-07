@@ -162,7 +162,7 @@ public sealed class Program
         services.AddScoped<IStrategy, Strategy>();
         services.AddScoped<IActionExecutor, ActionExecutor>();
         services.AddScoped<IExchangeCalendar, ExchangeCalendar>();
-        services.AddScoped<ITradingTaskDetailsUpdater, TradingTaskDetailsUpdater>();
+        services.AddScoped<ICurrentTradingTask, CurrentTradingTask>();
         services.AddScoped<TradingTaskExecutor>();
 
         services.AddTransient<CredentialsCommand>();
@@ -175,8 +175,13 @@ public sealed class Program
         services.AddTransient<ITradingTaskQuery, TradingTaskQuery>();
         services.AddTransient<IAssetsStateCommand, AssetsStateCommand>();
         services.AddTransient<IAssetsStateQuery, AssetsStateQuery>();
+        services.AddTransient<IBacktestCommand, BacktestCommand>();
+        services.AddTransient<IBacktestQuery, BacktestQuery>();
 
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
         services.AddSingleton<IAlpacaCallQueue, AlpacaCallQueue>();
+
+        services.AddSingleton<IBacktestExecutor, BacktestExecutor>();
+        services.AddSingleton<IBacktestAssets, BacktestAssets>();
     }
 }

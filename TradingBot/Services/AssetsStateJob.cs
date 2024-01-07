@@ -5,12 +5,14 @@ namespace TradingBot.Services;
 
 public sealed class AssetsStateJob : IJob
 {
+    private readonly IAssetsDataSource _assetsDataSource;
     private readonly IAssetsStateCommand _command;
     private readonly ILogger _logger;
 
-    public AssetsStateJob(IAssetsStateCommand command, ILogger logger)
+    public AssetsStateJob(IAssetsStateCommand command, ILogger logger, IAssetsDataSource assetsDataSource)
     {
         _command = command;
+        _assetsDataSource = assetsDataSource;
         _logger = logger.ForContext<AssetsStateJob>();
     }
 
@@ -18,7 +20,8 @@ public sealed class AssetsStateJob : IJob
     {
         try
         {
-            await _command.SaveCurrentAssetsAsync(context.CancellationToken);
+            var assets = await _assetsDataSource.GetCurrentAssetsAsync(context.CancellationToken);
+            await _command.SaveCurrentAssetsAsync(assets, context.CancellationToken);
         }
         catch (Exception e)
         {

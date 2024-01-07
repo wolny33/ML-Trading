@@ -17,4 +17,5 @@ public sealed class AppDbContext : DbContext
     public DbSet<StrategyParametersEntity> StrategyParameters => Set<StrategyParametersEntity>();
     public DbSet<AssetsStateEntity> AssetsStates => Set<AssetsStateEntity>();
     public DbSet<PositionEntity> Positions => Set<PositionEntity>();
+    public DbSet<BacktestEntity> Backtests => Set<BacktestEntity>();
 }

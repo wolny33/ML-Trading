@@ -17,6 +17,7 @@ namespace TradingBot.Controllers;
 public sealed class ManualTestsController : ControllerBase
 {
     private readonly ITradingActionQuery _actionQuery;
+    private readonly IAssetsDataSource _assetsDataSource;
     private readonly IAssetsStateCommand _assetsStateCommand;
     private readonly IMarketDataSource _dataSource;
     private readonly IActionExecutor _executor;
@@ -27,7 +28,7 @@ public sealed class ManualTestsController : ControllerBase
 
     public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource, IActionExecutor executor,
         ITradingActionQuery actionQuery, TradingTaskExecutor taskExecutor, IAssetsStateCommand assetsStateCommand,
-        IStrategy strategy, IMemoryCache memoryCache)
+        IStrategy strategy, IMemoryCache memoryCache, IAssetsDataSource assetsDataSource)
     {
         _predictor = predictor;
         _dataSource = dataSource;
@@ -36,6 +37,7 @@ public sealed class ManualTestsController : ControllerBase
         _taskExecutor = taskExecutor;
         _strategy = strategy;
         _memoryCache = memoryCache;
+        _assetsDataSource = assetsDataSource;
         _assetsStateCommand = assetsStateCommand;
     }
 
@@ -112,7 +114,8 @@ public sealed class ManualTestsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<ActionResult> SaveCurrentAssetsStateAsync()
     {
-        await _assetsStateCommand.SaveCurrentAssetsAsync(HttpContext.RequestAborted);
+        var assets = await _assetsDataSource.GetCurrentAssetsAsync(HttpContext.RequestAborted);
+        await _assetsStateCommand.SaveCurrentAssetsAsync(assets, HttpContext.RequestAborted);
         return NoContent();
     }
 
@@ -124,16 +127,6 @@ public sealed class ManualTestsController : ControllerBase
     {
         if (_memoryCache.GetCurrentStatistics() is { } stats) return stats;
         return NotFound();
-    }
-
-    [HttpPost]
-    [Route("init-backtest-data")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<ActionResult> InitCacheAsync([FromQuery][Required] DateOnly start,
-        [FromQuery][Required] int symbols)
-    {
-        await _dataSource.InitializeBacktestDataAsync(start, DateOnly.FromDateTime(DateTime.Now).AddDays(-1), symbols);
-        return NoContent();
     }
 }
 

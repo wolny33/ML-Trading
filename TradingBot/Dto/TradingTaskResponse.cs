@@ -17,4 +17,6 @@ public sealed class TradingTaskResponse
 
     [Required]
     public required string StateDetails { get; init; }
+
+    public required Guid? BacktestId { get; init; }
 }

@@ -15,4 +15,7 @@ public sealed class TradingTaskEntity
 
     [Required]
     public IList<TradingActionEntity> TradingActions { get; set; } = new List<TradingActionEntity>();
+
+    public Guid? BacktestId { get; init; }
+    public BacktestEntity? Backtest { get; init; }
 }

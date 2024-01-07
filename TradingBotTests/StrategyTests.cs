@@ -2,7 +2,6 @@
 using NSubstitute;
 using TradingBot.Models;
 using TradingBot.Services;
-using Microsoft.AspNetCore.Authentication;
 using TradingBot.Configuration;
 using FluentAssertions;
 
@@ -225,10 +224,9 @@ namespace TradingBotTests
         [Fact]
         public async Task ShouldCorrectlyGenerateTradeActions()
         {
-            var clock = Substitute.For<ISystemClock>();
-            var time = DateTime.UtcNow;
-            clock.UtcNow.Returns(time);
-            var today = DateOnly.FromDateTime(time);
+            var tradingTask = Substitute.For<ICurrentTradingTask>();
+            var time = DateTimeOffset.UtcNow;
+            tradingTask.GetTaskTime().Returns(time);
 
             var predictior = Substitute.For<IPricePredictor>();
             predictior.GetPredictionsAsync().Returns(_predictions);
@@ -248,7 +246,7 @@ namespace TradingBotTests
             var strategyParameters = Substitute.For<IStrategyParametersService>();
             strategyParameters.GetConfigurationAsync().Returns(_strategyParameters);
 
-            var strategy = new Strategy(predictior, assetsData, marketData, clock, strategyParameters);
+            var strategy = new Strategy(predictior, assetsData, marketData, strategyParameters, tradingTask);
             var tradeActions = await strategy.GetTradingActionsAsync();
 
             tradeActions.Should().ContainEquivalentOf(new TradingAction

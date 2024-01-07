@@ -163,7 +163,8 @@ public sealed class TradingTasksEndpointTests : IClassFixture<TradingTasksTestSu
                 StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[0].StartTimestamp),
                 FinishedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[0].EndTimestamp!.Value),
                 State = _testSuite.Tasks[0].State.ToString(),
-                StateDetails = _testSuite.Tasks[0].StateDetails
+                StateDetails = _testSuite.Tasks[0].StateDetails,
+                BacktestId = null
             },
             new TradingTaskResponse
             {
@@ -171,7 +172,8 @@ public sealed class TradingTasksEndpointTests : IClassFixture<TradingTasksTestSu
                 StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[1].StartTimestamp),
                 FinishedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[1].EndTimestamp!.Value),
                 State = _testSuite.Tasks[1].State.ToString(),
-                StateDetails = _testSuite.Tasks[1].StateDetails
+                StateDetails = _testSuite.Tasks[1].StateDetails,
+                BacktestId = null
             },
             new TradingTaskResponse
             {
@@ -179,7 +181,8 @@ public sealed class TradingTasksEndpointTests : IClassFixture<TradingTasksTestSu
                 StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[2].StartTimestamp),
                 FinishedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[2].EndTimestamp!.Value),
                 State = _testSuite.Tasks[2].State.ToString(),
-                StateDetails = _testSuite.Tasks[2].StateDetails
+                StateDetails = _testSuite.Tasks[2].StateDetails,
+                BacktestId = null
             },
             new TradingTaskResponse
             {
@@ -187,7 +190,8 @@ public sealed class TradingTasksEndpointTests : IClassFixture<TradingTasksTestSu
                 StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[3].StartTimestamp),
                 FinishedAt = null,
                 State = _testSuite.Tasks[3].State.ToString(),
-                StateDetails = _testSuite.Tasks[3].StateDetails
+                StateDetails = _testSuite.Tasks[3].StateDetails,
+                BacktestId = null
             }
         });
 
@@ -214,7 +218,8 @@ public sealed class TradingTasksEndpointTests : IClassFixture<TradingTasksTestSu
                 StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[1].StartTimestamp),
                 FinishedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[1].EndTimestamp!.Value),
                 State = _testSuite.Tasks[1].State.ToString(),
-                StateDetails = _testSuite.Tasks[1].StateDetails
+                StateDetails = _testSuite.Tasks[1].StateDetails,
+                BacktestId = null
             },
             new TradingTaskResponse
             {
@@ -222,7 +227,8 @@ public sealed class TradingTasksEndpointTests : IClassFixture<TradingTasksTestSu
                 StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[2].StartTimestamp),
                 FinishedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[2].EndTimestamp!.Value),
                 State = _testSuite.Tasks[2].State.ToString(),
-                StateDetails = _testSuite.Tasks[2].StateDetails
+                StateDetails = _testSuite.Tasks[2].StateDetails,
+                BacktestId = null
             }
         });
     }
@@ -254,7 +260,8 @@ public sealed class TradingTasksEndpointTests : IClassFixture<TradingTasksTestSu
             StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Tasks[3].StartTimestamp),
             FinishedAt = null,
             State = _testSuite.Tasks[3].State.ToString(),
-            StateDetails = _testSuite.Tasks[3].StateDetails
+            StateDetails = _testSuite.Tasks[3].StateDetails,
+            BacktestId = null
         });
     }
 

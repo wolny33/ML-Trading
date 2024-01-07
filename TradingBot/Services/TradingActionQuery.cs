@@ -39,9 +39,10 @@ public sealed class TradingActionQuery : ITradingActionQuery
         CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entities = await context.TradingActions.Where(a =>
-            a.CreationTimestamp >= start.ToUnixTimeMilliseconds() &&
-            a.CreationTimestamp <= end.ToUnixTimeMilliseconds()).ToListAsync(token);
+        var entities = await context.TradingActions.Include(a => a.TradingTask)
+            .Where(a => a.TradingTask == null || a.TradingTask.BacktestId == null).Where(a =>
+                a.CreationTimestamp >= start.ToUnixTimeMilliseconds() &&
+                a.CreationTimestamp <= end.ToUnixTimeMilliseconds()).ToListAsync(token);
 
         using var client = await _clientFactory.CreateTradingClientAsync(token);
         // ReSharper disable once AccessToDisposedClosure

@@ -17,4 +17,7 @@ public sealed class AssetsStateEntity
 
     [Required]
     public IList<PositionEntity> HeldPositions { get; init; } = new List<PositionEntity>();
+
+    public Guid? BacktestId { get; init; }
+    public BacktestEntity? Backtest { get; init; }
 }

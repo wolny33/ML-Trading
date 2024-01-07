@@ -5,7 +5,7 @@ namespace TradingBot.Exceptions.Alpaca;
 
 public sealed partial class InsufficientFundsException : UnsuccessfulAlpacaResponseException
 {
-    private InsufficientFundsException() : base("insufficient-funds",
+    public InsufficientFundsException() : base("insufficient-funds",
         "Not enough buying power to execute requested order")
     {
         StatusCode = StatusCodes.Status422UnprocessableEntity;

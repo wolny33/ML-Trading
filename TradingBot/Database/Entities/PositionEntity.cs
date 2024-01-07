@@ -17,5 +17,6 @@ public sealed class PositionEntity
     [Required]
     public AssetsStateEntity AssetsState { get; init; } = null!;
 
-    public required Guid AssetsStateId { get; init; }
+    [Required]
+    public Guid AssetsStateId { get; init; }
 }

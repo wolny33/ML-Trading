@@ -198,4 +198,88 @@ public sealed class MarketDataCacheTests
         _marketDataCache.TryGetCachedData(new TradingSymbol("TKN1"), _today.AddDays(-2), _today.AddDays(-1)).Should()
             .BeEquivalentTo(new[] { yesterday });
     }
+
+    [Fact]
+    public void ShouldCorrectlyReturnMostActiveCachedSymbols()
+    {
+        var firstTokenData = new DailyTradingData
+        {
+            Date = _today,
+            Open = 2m,
+            Close = 3m,
+            High = 4m,
+            Low = 1m,
+            Volume = 10m
+        };
+        var secondTokenData = new DailyTradingData
+        {
+            Date = _today,
+            Open = 3m,
+            Close = 4m,
+            High = 5m,
+            Low = 2m,
+            Volume = 11m
+        };
+        _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), _today), firstTokenData);
+        _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN2"), _today), secondTokenData);
+        _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN3"), _today), (DailyTradingData?)null);
+
+        _marketDataCache.CacheValidSymbols(new[] { "TKN1", "TKN2", "TKN3", "TKN4" }.Select(s => new TradingSymbol(s))
+            .ToList());
+
+        _marketDataCache.GetMostActiveCachedSymbolsForDay(_today).Should()
+            .BeEquivalentTo(new[] { new TradingSymbol("TKN2"), new TradingSymbol("TKN1") },
+                options => options.WithStrictOrdering());
+    }
+
+    [Fact]
+    public void ShouldCorrectlyReturnLastCachedPriceForSymbol()
+    {
+        var today = new DailyTradingData
+        {
+            Date = _today,
+            Open = 3m,
+            Close = 4m,
+            High = 5m,
+            Low = 2m,
+            Volume = 11m
+        };
+        _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), today.Date), today);
+
+        _marketDataCache.GetLastCachedPrice(new TradingSymbol("TKN1"), today.Date).Should().Be(4m);
+    }
+
+    [Fact]
+    public void ShouldCorrectlyReturnLastCachedPriceForSymbolIfMostRecentDayIsNull()
+    {
+        var yesterday = new DailyTradingData
+        {
+            Date = _today.AddDays(-1),
+            Open = 3m,
+            Close = 4m,
+            High = 5m,
+            Low = 2m,
+            Volume = 11m
+        };
+        _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), yesterday.Date), yesterday);
+        _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), _today), (DailyTradingData?)null);
+
+        _marketDataCache.GetLastCachedPrice(new TradingSymbol("TKN1"), _today).Should().Be(4m);
+    }
+
+    [Fact]
+    public void ShouldReturnNullLastPriceIfThereIsNoCachedData()
+    {
+        _marketDataCache.GetLastCachedPrice(new TradingSymbol("TKN1"), _today).Should().BeNull();
+    }
+
+    [Fact]
+    public void ShouldReturnNullLastPriceIfAllDaysAreNull()
+    {
+        _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), _today.AddDays(-1)),
+            (DailyTradingData?)null);
+        _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), _today), (DailyTradingData?)null);
+
+        _marketDataCache.GetLastCachedPrice(new TradingSymbol("TKN1"), _today).Should().BeNull();
+    }
 }

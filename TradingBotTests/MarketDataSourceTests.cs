@@ -15,6 +15,7 @@ public sealed class MarketDataSourceTests
     private readonly IMarketDataCache _marketDataCache;
     private readonly MarketDataSource _marketDataSource;
     private readonly IAlpacaTradingClient _tradingClient;
+    private readonly ICurrentTradingTask _tradingTask;
 
     public MarketDataSourceTests()
     {
@@ -25,11 +26,15 @@ public sealed class MarketDataSourceTests
         clientFactory.CreateMarketDataClientAsync(Arg.Any<CancellationToken>()).Returns(_dataClient);
 
         _marketDataCache = Substitute.For<IMarketDataCache>();
-
         _assetsDataSource = Substitute.For<IAssetsDataSource>();
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
-        _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue);
+
+        _tradingTask = Substitute.For<ICurrentTradingTask>();
+        _tradingTask.CurrentBacktestId.Returns((Guid?)null);
+
+        _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
+            _tradingTask);
     }
 
     [Fact]
@@ -120,6 +125,55 @@ public sealed class MarketDataSourceTests
     }
 
     [Fact]
+    public async Task ShouldGetMostActiveSymbolsFromCacheInBacktest()
+    {
+        _tradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
+        _tradingTask.GetTaskDay().Returns(new DateOnly(2023, 12, 19));
+
+        _marketDataCache.TryGetValidSymbols().Returns(new HashSet<TradingSymbol> { new("TKN2"), new("TKN4") });
+        _marketDataCache.TryGetCachedData(new TradingSymbol("TKN4"), DateOnly.MinValue, DateOnly.MaxValue).Returns(new[]
+        {
+            new DailyTradingData
+            {
+                Date = new DateOnly(2023, 12, 19),
+                Open = 112m,
+                Close = 113m,
+                High = 114m,
+                Low = 111m,
+                Volume = 1000m
+            }
+        });
+        _marketDataCache.GetMostActiveCachedSymbolsForDay(new DateOnly(2023, 12, 19))
+            .Returns(new[] { new TradingSymbol("TKN4") });
+
+        var result = await _marketDataSource.GetPricesAsync(DateOnly.MinValue, DateOnly.MaxValue);
+
+        result.Should().HaveCount(1);
+        result.Should().ContainKey(new TradingSymbol("TKN4")).WhoseValue.Should().BeEquivalentTo(new[]
+        {
+            new DailyTradingData
+            {
+                Date = new DateOnly(2023, 12, 19),
+                Open = 112m,
+                Close = 113m,
+                High = 114m,
+                Low = 111m,
+                Volume = 1000m
+            }
+        });
+
+        await _dataClient.DidNotReceive()
+            .ListMostActiveStocksByVolumeAsync(Arg.Any<int?>(), Arg.Any<CancellationToken>());
+        await _tradingClient.DidNotReceive().ListAssetsAsync(Arg.Any<AssetsRequest>(), Arg.Any<CancellationToken>());
+        await _dataClient.DidNotReceive()
+            .ListHistoricalBarsAsync(Arg.Any<HistoricalBarsRequest>(), Arg.Any<CancellationToken>());
+
+        _marketDataCache.DidNotReceive().CacheValidSymbols(Arg.Any<IReadOnlyList<TradingSymbol>>());
+        _marketDataCache.DidNotReceive().CacheDailySymbolData(new TradingSymbol("TKN4"),
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>());
+    }
+
+    [Fact]
     public async Task ShouldCorrectlyReturnPricesForSingleSymbol()
     {
         SetUpResponses();
@@ -158,6 +212,54 @@ public sealed class MarketDataSourceTests
         result.Should().Be(10m);
     }
 
+    [Fact]
+    public async Task ShouldReturnClosePriceFromCacheInBacktest()
+    {
+        _tradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
+        _tradingTask.GetTaskDay().Returns(new DateOnly(2023, 12, 19));
+
+        _marketDataCache.GetLastCachedPrice(new TradingSymbol("TKN6"), new DateOnly(2023, 12, 19)).Returns(12m);
+
+        (await _marketDataSource.GetLastAvailablePriceForSymbolAsync(new TradingSymbol("TKN6"))).Should().Be(12m);
+
+        await _dataClient.DidNotReceive()
+            .GetLatestTradeAsync(Arg.Any<LatestMarketDataRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ShouldCorrectlyInitializeCacheForBacktest()
+    {
+        SetUpResponses();
+
+        await _marketDataSource.InitializeBacktestDataAsync(DateOnly.MinValue, DateOnly.MaxValue);
+
+        _marketDataCache.Received(1).CacheValidSymbols(Arg.Is<IReadOnlyList<TradingSymbol>>(symbols =>
+            symbols.Contains(new TradingSymbol("TKN1")) && symbols.Contains(new TradingSymbol("TKN2")) &&
+            symbols.Contains(new TradingSymbol("TKN4")) && symbols.Contains(new TradingSymbol("TKN5"))));
+
+        await _dataClient.Received(1)
+            .ListHistoricalBarsAsync(Arg.Is<HistoricalBarsRequest>(r => r.Symbols.Single() == "TKN1"),
+                Arg.Any<CancellationToken>());
+        await _dataClient.Received(1)
+            .ListHistoricalBarsAsync(Arg.Is<HistoricalBarsRequest>(r => r.Symbols.Single() == "TKN2"),
+                Arg.Any<CancellationToken>());
+        await _dataClient.Received(1)
+            .ListHistoricalBarsAsync(Arg.Is<HistoricalBarsRequest>(r => r.Symbols.Single() == "TKN4"),
+                Arg.Any<CancellationToken>());
+        await _dataClient.Received(1)
+            .ListHistoricalBarsAsync(Arg.Is<HistoricalBarsRequest>(r => r.Symbols.Single() == "TKN5"),
+                Arg.Any<CancellationToken>());
+
+        _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN1"),
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+        _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN2"),
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+        _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN4"),
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+        _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN5"),
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+    }
+
     private void SetUpResponses()
     {
         var assetsResponse = new[]
@@ -184,7 +286,7 @@ public sealed class MarketDataSourceTests
         assetsResponse[3].Symbol.Returns("TKN4");
         assetsResponse[3].Fractionable.Returns(true);
         assetsResponse[3].IsTradable.Returns(true);
-        // Valid symbol but invalid data
+        // Active, valid symbol but invalid data
         assetsResponse[4].Symbol.Returns("TKN5");
         assetsResponse[4].Fractionable.Returns(true);
         assetsResponse[4].IsTradable.Returns(true);
@@ -258,6 +360,19 @@ public sealed class MarketDataSourceTests
         tkn3Page.NextPageToken.Returns((string?)null);
         _dataClient.ListHistoricalBarsAsync(Arg.Is<HistoricalBarsRequest>(r => r.Symbols.Single() == "TKN3"))
             .Returns(tkn3Page);
+
+        var tkn4Bar = Substitute.For<IBar>();
+        tkn4Bar.TimeUtc.Returns(new DateTime(2023, 12, 19, 22, 41, 0));
+        tkn4Bar.Open.Returns(32m);
+        tkn4Bar.Close.Returns(33m);
+        tkn4Bar.High.Returns(34m);
+        tkn4Bar.Low.Returns(31m);
+        tkn4Bar.Volume.Returns(300m);
+        var tkn4Page = Substitute.For<IPage<IBar>>();
+        tkn4Page.Items.Returns(new[] { tkn4Bar });
+        tkn4Page.NextPageToken.Returns((string?)null);
+        _dataClient.ListHistoricalBarsAsync(Arg.Is<HistoricalBarsRequest>(r => r.Symbols.Single() == "TKN4"))
+            .Returns(tkn4Page);
 
         var tkn5Bar = Substitute.For<IBar>();
         tkn5Bar.TimeUtc.Returns(new DateTime(2023, 12, 19, 22, 41, 0));

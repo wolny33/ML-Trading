@@ -30,21 +30,31 @@ public interface IAssetsDataSource
 public sealed class AssetsDataSource : IAssetsDataSource
 {
     private readonly IAssetsStateQuery _assetsStateQuery;
+    private readonly IBacktestAssets _backtestAssets;
     private readonly IAlpacaCallQueue _callQueue;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
+    private readonly ICurrentTradingTask _tradingTask;
 
     public AssetsDataSource(IAlpacaClientFactory clientFactory, ILogger logger, IAlpacaCallQueue callQueue,
-        IAssetsStateQuery assetsStateQuery)
+        IAssetsStateQuery assetsStateQuery, IBacktestAssets backtestAssets, ICurrentTradingTask tradingTask)
     {
         _clientFactory = clientFactory;
         _callQueue = callQueue;
         _assetsStateQuery = assetsStateQuery;
+        _backtestAssets = backtestAssets;
+        _tradingTask = tradingTask;
         _logger = logger.ForContext<AssetsDataSource>();
     }
 
     public async Task<Assets> GetCurrentAssetsAsync(CancellationToken token = default)
     {
+        if (_tradingTask.CurrentBacktestId is { } backtestId)
+        {
+            _logger.Verbose("Backtest is active - getting assets for current backtest");
+            return _backtestAssets.GetForBacktestWithId(backtestId);
+        }
+
         _logger.Debug("Getting current assets data");
         var (account, positions) = await SendRequestsWithRetriesAsync(token);
 

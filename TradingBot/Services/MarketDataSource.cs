@@ -15,7 +15,7 @@ public interface IMarketDataSource
 
     Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
 
-    Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, int symbols, CancellationToken token = default);
+    Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, CancellationToken token = default);
 }
 
 public sealed class MarketDataSource : IMarketDataSource
@@ -25,14 +25,16 @@ public sealed class MarketDataSource : IMarketDataSource
     private readonly IAlpacaCallQueue _callQueue;
     private readonly IAlpacaClientFactory _clientFactory;
     private readonly ILogger _logger;
+    private readonly ICurrentTradingTask _tradingTask;
 
     public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger,
-        IMarketDataCache cache, IAlpacaCallQueue callQueue)
+        IMarketDataCache cache, IAlpacaCallQueue callQueue, ICurrentTradingTask tradingTask)
     {
         _clientFactory = clientFactory;
         _assetsDataSource = assetsDataSource;
         _cache = cache;
         _callQueue = callQueue;
+        _tradingTask = tradingTask;
         _logger = logger.ForContext<MarketDataSource>();
     }
 
@@ -42,7 +44,7 @@ public sealed class MarketDataSource : IMarketDataSource
         _logger.Debug("Getting prices from {Start} to {End}", start, end);
 
         var valid = await GetValidSymbolsAsync(token);
-        var interestingValidSymbols = (await SendInterestingSymbolsRequestsAsync(token)).Where(s => valid.Contains(s));
+        var interestingValidSymbols = (await GetInterestingSymbolsAsync(token)).Where(s => valid.Contains(s));
 
         return await interestingValidSymbols.Chunk(15)
             .ToAsyncEnumerable()
@@ -64,19 +66,41 @@ public sealed class MarketDataSource : IMarketDataSource
     public async Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol,
         CancellationToken token = default)
     {
+        if (_tradingTask.CurrentBacktestId is not null)
+        {
+            _logger.Verbose("Backtest is active - getting last price for {Symbol} from cache", symbol.Value);
+            return _cache.GetLastCachedPrice(symbol, _tradingTask.GetTaskDay()) ??
+                   throw new InvalidOperationException(
+                       $"Last price for '{symbol.Value}' could not be retrieved from cache");
+        }
+
+        _logger.Verbose("Getting last price for {Symbol} from Alpaca", symbol.Value);
+        return await SendLastTradeRequestAsync(symbol, token);
+    }
+
+    public async Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, CancellationToken token = default)
+    {
+        _logger.Debug("Initializing cache for backtest (from {Start} to {End})", start, end);
+
+        var valid = await GetValidSymbolsAsync(token);
+        await valid.Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
+            {
+                _logger.Verbose("Getting data for chunk: {Symbols}", chunk.Select(t => t.Value).ToList());
+                var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)));
+                return dataForChunk.ToAsyncEnumerable();
+            })
+            .ToListAsync(token);
+
+        _logger.Debug("Cache was successfully initialized");
+    }
+
+    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
+    private async Task<decimal> SendLastTradeRequestAsync(TradingSymbol symbol, CancellationToken token)
+    {
         using var client = await _clientFactory.CreateMarketDataClientAsync(token);
         var latestTradeData = await _callQueue.SendRequestWithRetriesAsync(() => client
             .GetLatestTradeAsync(new LatestMarketDataRequest(symbol.Value), token)).ExecuteWithErrorHandling(_logger);
         return latestTradeData.Price;
-    }
-
-    public async Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, int symbols,
-        CancellationToken token = default)
-    {
-        var valid = await GetValidSymbolsAsync(token);
-        await valid.Take(symbols).Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
-                (await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)))).ToAsyncEnumerable())
-            .ToListAsync(token);
     }
 
     private async Task<ISet<TradingSymbol>> GetValidSymbolsAsync(CancellationToken token = default)
@@ -109,6 +133,13 @@ public sealed class MarketDataSource : IMarketDataSource
             .Select(a => new TradingSymbol(a.Symbol)).ToHashSet();
     }
 
+    private Task<IEnumerable<TradingSymbol>> GetInterestingSymbolsAsync(CancellationToken token = default)
+    {
+        return _tradingTask.CurrentBacktestId is not null
+            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForDay(_tradingTask.GetTaskDay()))
+            : SendInterestingSymbolsRequestsAsync(token);
+    }
+
     [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<IEnumerable<TradingSymbol>> SendInterestingSymbolsRequestsAsync(
         CancellationToken token = default)
@@ -121,7 +152,7 @@ public sealed class MarketDataSource : IMarketDataSource
         var active = (await _callQueue.SendRequestWithRetriesAsync(() => dataClient
                 .ListMostActiveStocksByVolumeAsync(maxRequestSize, token), _logger).ExecuteWithErrorHandling(_logger))
             .Select(a => new TradingSymbol(a.Symbol)).ToList();
-        _logger.Debug("Retrieved most active tokens: {Active}", active);
+        _logger.Debug("Retrieved most active tokens: {Active}", active.Select(t => t.Value).ToList());
 
         return held.Concat(active).Distinct();
     }
