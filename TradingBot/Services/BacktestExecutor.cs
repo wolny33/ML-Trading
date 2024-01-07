@@ -71,7 +71,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
         try
         {
             await Task.Yield();
-            using var initializationScope = _scopeFactory.CreateScope();
+            await using var initializationScope = _scopeFactory.CreateAsyncScope();
             var marketDataSource = initializationScope.ServiceProvider.GetRequiredService<IMarketDataSource>();
             // We need 10 valid days (excluding weekends and holidays) before start, so 20 days should be enough
             await marketDataSource.InitializeBacktestDataAsync(details.Start.AddDays(-20), details.End, token);

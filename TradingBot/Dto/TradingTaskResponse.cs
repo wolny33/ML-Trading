@@ -15,6 +15,12 @@ public sealed class TradingTaskResponse
     [Required]
     public required string State { get; init; }
 
+    /// <summary>
+    ///     Description of trading task's state
+    /// </summary>
+    /// <remarks>
+    ///     Contains error details if an error occured during task's execution
+    /// </remarks>
     [Required]
     public required string StateDetails { get; init; }
 

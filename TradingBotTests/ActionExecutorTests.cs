@@ -10,7 +10,7 @@ using OrderType = Alpaca.Markets.OrderType;
 namespace TradingBotTests;
 
 [Trait("Category", "Unit")]
-public sealed class ActionExecutorTests
+public sealed class ActionExecutorTests : IAsyncDisposable
 {
     private readonly Guid _actionId = Guid.NewGuid();
     private readonly IBacktestAssets _backtestAssets;
@@ -37,6 +37,11 @@ public sealed class ActionExecutorTests
         var callQueue = new CallQueueMock();
         _backtestAssets = Substitute.For<IBacktestAssets>();
         _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask, callQueue, _backtestAssets);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _executor.DisposeAsync();
     }
 
     [Fact]

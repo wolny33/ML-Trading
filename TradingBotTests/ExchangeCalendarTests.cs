@@ -10,7 +10,7 @@ using TradingBot.Services;
 namespace TradingBotTests;
 
 [Trait("Category", "Unit")]
-public sealed class ExchangeCalendarTests
+public sealed class ExchangeCalendarTests : IAsyncDisposable
 {
     private readonly ExchangeCalendar _calendar;
     private readonly IMarketDataCache _marketDataCache;
@@ -35,6 +35,11 @@ public sealed class ExchangeCalendarTests
         _marketDataCache = Substitute.For<IMarketDataCache>();
 
         _calendar = new ExchangeCalendar(clock, clientFactory, logger, callQueue, _tradingTask, _marketDataCache);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _calendar.DisposeAsync();
     }
 
     [Fact]

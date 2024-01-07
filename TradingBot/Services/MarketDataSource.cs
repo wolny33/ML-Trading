@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Alpaca.Markets;
+﻿using Alpaca.Markets;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 
@@ -18,24 +17,34 @@ public interface IMarketDataSource
     Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, CancellationToken token = default);
 }
 
-public sealed class MarketDataSource : IMarketDataSource
+public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 {
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IMarketDataCache _cache;
     private readonly IAlpacaCallQueue _callQueue;
-    private readonly IAlpacaClientFactory _clientFactory;
+    private readonly Lazy<Task<IAlpacaDataClient>> _dataClient;
     private readonly ILogger _logger;
+    private readonly Lazy<Task<IAlpacaTradingClient>> _tradingClient;
     private readonly ICurrentTradingTask _tradingTask;
 
     public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger,
         IMarketDataCache cache, IAlpacaCallQueue callQueue, ICurrentTradingTask tradingTask)
     {
-        _clientFactory = clientFactory;
         _assetsDataSource = assetsDataSource;
         _cache = cache;
         _callQueue = callQueue;
         _tradingTask = tradingTask;
         _logger = logger.ForContext<MarketDataSource>();
+
+        _dataClient = new Lazy<Task<IAlpacaDataClient>>(() => clientFactory.CreateMarketDataClientAsync());
+        _tradingClient = new Lazy<Task<IAlpacaTradingClient>>(() => clientFactory.CreateTradingClientAsync());
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_tradingClient.IsValueCreated) (await _tradingClient.Value).Dispose();
+
+        if (_dataClient.IsValueCreated) (await _dataClient.Value).Dispose();
     }
 
     public async Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesAsync(DateOnly start,
@@ -62,7 +71,6 @@ public sealed class MarketDataSource : IMarketDataSource
         return IsDataValid(data.TradingData) ? data.TradingData : null;
     }
 
-    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     public async Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol,
         CancellationToken token = default)
     {
@@ -94,10 +102,9 @@ public sealed class MarketDataSource : IMarketDataSource
         _logger.Debug("Cache was successfully initialized");
     }
 
-    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<decimal> SendLastTradeRequestAsync(TradingSymbol symbol, CancellationToken token)
     {
-        using var client = await _clientFactory.CreateMarketDataClientAsync(token);
+        var client = await _dataClient.Value;
         var latestTradeData = await _callQueue.SendRequestWithRetriesAsync(() => client
             .GetLatestTradeAsync(new LatestMarketDataRequest(symbol.Value), token)).ExecuteWithErrorHandling(_logger);
         return latestTradeData.Price;
@@ -118,10 +125,9 @@ public sealed class MarketDataSource : IMarketDataSource
         return validSymbols;
     }
 
-    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<ISet<TradingSymbol>> SendValidSymbolsRequestAsync(CancellationToken token = default)
     {
-        using var tradingClient = await _clientFactory.CreateTradingClientAsync(token);
+        var tradingClient = await _tradingClient.Value;
         var assetsRequest = new AssetsRequest
         {
             AssetClass = AssetClass.UsEquity,
@@ -140,12 +146,11 @@ public sealed class MarketDataSource : IMarketDataSource
             : SendInterestingSymbolsRequestsAsync(token);
     }
 
-    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<IEnumerable<TradingSymbol>> SendInterestingSymbolsRequestsAsync(
         CancellationToken token = default)
     {
         const int maxRequestSize = 100;
-        using var dataClient = await _clientFactory.CreateMarketDataClientAsync(token);
+        var dataClient = await _dataClient.Value;
 
         var held = (await _assetsDataSource.GetCurrentAssetsAsync(token)).Positions.Keys.ToList();
         _logger.Debug("Retrieved held tokens: {Tokens}", held.Select(t => t.Value).ToList());
@@ -175,8 +180,6 @@ public sealed class MarketDataSource : IMarketDataSource
     private async Task<IReadOnlyList<DailyTradingData>> SendBarsRequestAsync(TradingSymbol symbol, DateOnly start,
         DateOnly end, CancellationToken token = default)
     {
-        using var dataClient = await _clientFactory.CreateMarketDataClientAsync(token);
-
         var startTime = start.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero));
         var endTime = end.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero));
         var interval = new Interval<DateTime>(startTime, endTime);
@@ -185,10 +188,12 @@ public sealed class MarketDataSource : IMarketDataSource
         _logger.Verbose("Sending bars request for token {Token} in interval {Start} to {End}", symbol.Value, start,
             end);
 
-        return await GetAllPagesAsync(dataClient).SelectMany(page => page.ToAsyncEnumerable()).ToListAsync(token);
+        return await GetAllPagesAsync().SelectMany(page => page.ToAsyncEnumerable()).ToListAsync(token);
 
-        async IAsyncEnumerable<IReadOnlyList<DailyTradingData>> GetAllPagesAsync(IAlpacaDataClient client)
+        async IAsyncEnumerable<IReadOnlyList<DailyTradingData>> GetAllPagesAsync()
         {
+            var client = await _dataClient.Value;
+
             string? nextPageToken = null;
             do
             {

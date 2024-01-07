@@ -59,9 +59,6 @@ const setupAxiosMocks = () => {
             }]
         })
     );
-    axios.get.mockImplementationOnce(() =>
-      Promise.resolve({ data: [{ "id": "f2eee7d8-4344-43b7-8cb5-e5bb47dbb87d" }] })
-    );
 };
 
   test('renders correctly', async () => {
@@ -72,13 +69,13 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await waitFor(() => {
-        expect(axios.get).toHaveBeenCalledTimes(7);
+        expect(axios.get).toHaveBeenCalledTimes(6);
     });
     expect(axios.get).toHaveBeenCalledWith('/assets', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/test-mode', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/investment', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/strategy', expect.anything());
-    expect(axios.get).toHaveBeenCalledWith('/performance/trade-actions', expect.anything());
+    expect(axios.get).toHaveBeenCalledWith('/performance/trading-actions', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/performance', expect.anything());
 
     const heading = await waitFor(() => screen.getByText('Returns chart'));
@@ -97,8 +94,8 @@ const setupAxiosMocks = () => {
         <Home />
       </MemoryRouter>
     );
-    await waitFor(() => {
-        expect(axios.get).toHaveBeenCalledTimes(7);
+    await act(async () => {
+        expect(axios.get).toHaveBeenCalledTimes(6);
     });
     const switchTestModeButton = screen.getByTestId('test-mode-on-button');
     
@@ -135,8 +132,8 @@ const setupAxiosMocks = () => {
         <Home />
       </MemoryRouter>
     );
-    await waitFor(() => {
-        expect(axios.get).toHaveBeenCalledTimes(7);
+    await act(async () => {
+        expect(axios.get).toHaveBeenCalledTimes(6);
     });
     const switchTestModeButton = screen.getByTestId("investment-on-button");
     

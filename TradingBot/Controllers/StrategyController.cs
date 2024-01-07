@@ -16,7 +16,7 @@ public sealed class StrategyController : ControllerBase
     }
 
     /// <summary>
-    ///     Gets the strategy parameters.
+    ///     Gets the strategy parameters
     /// </summary>
     /// <response code="200">OK</response>
     /// <response code="401">Unauthorized</response>
@@ -29,7 +29,7 @@ public sealed class StrategyController : ControllerBase
     }
 
     /// <summary>
-    ///     Changes the strategy parameters.
+    ///     Changes the strategy parameters
     /// </summary>
     /// <response code="200">OK</response>
     /// <response code="400">Bad request</response>
@@ -40,7 +40,8 @@ public sealed class StrategyController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<StrategyParametersResponse> ChangeStrategyParameters(StrategyParametersRequest request)
     {
-        return (await _strategyParametersService.SetParametersAsync(request.MaxStocksBuyCount, request.MinDaysDecreasing, request.MinDaysIncreasing,
+        return (await _strategyParametersService.SetParametersAsync(request.MaxStocksBuyCount,
+            request.MinDaysDecreasing, request.MinDaysIncreasing,
             request.TopGrowingSymbolsBuyRatio, HttpContext.RequestAborted)).ToResponse();
     }
 }

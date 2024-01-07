@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
 using TradingBot.Services;
@@ -23,13 +22,13 @@ public sealed class PerformanceController : ControllerBase
     }
 
     /// <summary>
-    ///     Gets information about profits and losses.
+    ///     Gets information about profits and losses
     /// </summary>
     /// <response code="200">OK</response>
     /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyList<ReturnsRequest>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IReadOnlyList<ReturnResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IReadOnlyList<ReturnResponse>> GetReturnsAsync([FromQuery] ReturnsRequest request)
@@ -51,38 +50,36 @@ public sealed class PerformanceController : ControllerBase
     }
 
     /// <summary>
-    ///     Gets list of trade actions taken.
+    ///     Gets list of trading actions taken
     /// </summary>
     /// <response code="200">OK</response>
     /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     [HttpGet]
-    [Route("trade-actions")]
+    [Route("trading-actions")]
     [ProducesResponseType(typeof(IReadOnlyList<TradingActionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IReadOnlyList<TradingActionResponse>> GetTradeActionsAsync(
-        [FromQuery] TradingActionCollectionRequest request)
+    public async Task<IReadOnlyList<TradingActionResponse>> GetTradingActionsAsync(
+        [FromQuery] TradingActionRequest request)
     {
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
 
-        var actions = request.Mocked
-            ? _actionsQuery.CreateMockedTradingActions(start, end)
-            : await _actionsQuery.GetTradingActionsAsync(start, end, HttpContext.RequestAborted);
+        var actions = await _actionsQuery.GetTradingActionsAsync(start, end, HttpContext.RequestAborted);
 
         return actions.Select(a => a.ToResponse()).ToList();
     }
 
     /// <summary>
-    ///     Gets trade action by ID.
+    ///     Gets trade action by ID
     /// </summary>
     /// <response code="200">OK</response>
     /// <response code="400">Bad request</response>
     /// <response code="401">Unauthorized</response>
     /// <response code="404">Not found</response>
     [HttpGet]
-    [Route("trade-actions/{id:guid}")]
+    [Route("trading-actions/{id:guid}")]
     [ProducesResponseType(typeof(TradingActionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -91,24 +88,5 @@ public sealed class PerformanceController : ControllerBase
     {
         var result = await _actionsQuery.GetTradingActionByIdAsync(id, HttpContext.RequestAborted);
         return result is not null ? result.ToResponse() : NotFound();
-    }
-
-    /// <summary>
-    ///     Gets details of trade action.
-    /// </summary>
-    /// <param name="id">ID of the trade action which details should be displayed.</param>
-    /// <response code="200">OK</response>
-    /// <response code="400">Bad request</response>
-    /// <response code="401">Unauthorized</response>
-    // TODO: Remove after updating UI
-    [HttpGet]
-    [Route("trade-actions/{id:guid}/details")]
-    [ProducesResponseType(typeof(TradingActionDetailsResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public TradingActionDetailsResponse GetTradeActionDetails([Required] Guid id)
-    {
-        return new TradingActionDetailsResponse { Id = id };
     }
 }

@@ -25,7 +25,7 @@ public sealed class InvestmentConfigService : IInvestmentConfigService
     public async Task<InvestmentConfiguration> GetConfigurationAsync(CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.InvestmentConfiguration.FirstOrDefaultAsync(token) ??
+        var entity = await context.InvestmentConfiguration.SingleOrDefaultAsync(token) ??
                      InvestmentConfiguration.CreateDefault();
 
         return InvestmentConfiguration.FromEntity(entity);
@@ -34,7 +34,7 @@ public sealed class InvestmentConfigService : IInvestmentConfigService
     public async Task<InvestmentConfiguration> SetEnabledAsync(bool enabled, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.InvestmentConfiguration.FirstOrDefaultAsync(token);
+        var entity = await context.InvestmentConfiguration.SingleOrDefaultAsync(token);
         if (entity is null)
         {
             entity = InvestmentConfiguration.CreateDefault();

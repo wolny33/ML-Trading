@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Alpaca.Markets;
+﻿using Alpaca.Markets;
 using Microsoft.AspNetCore.Authentication;
 using ILogger = Serilog.ILogger;
 
@@ -10,24 +9,29 @@ public interface IExchangeCalendar
     Task<bool> DoesTradingOpenInNext24HoursAsync(CancellationToken token = default);
 }
 
-public sealed class ExchangeCalendar : IExchangeCalendar
+public sealed class ExchangeCalendar : IExchangeCalendar, IAsyncDisposable
 {
     private readonly IMarketDataCache _cache;
     private readonly IAlpacaCallQueue _callQueue;
-    private readonly IAlpacaClientFactory _clientFactory;
     private readonly ISystemClock _clock;
     private readonly ILogger _logger;
+    private readonly Lazy<Task<IAlpacaTradingClient>> _tradingClient;
     private readonly ICurrentTradingTask _tradingTask;
 
     public ExchangeCalendar(ISystemClock clock, IAlpacaClientFactory clientFactory, ILogger logger,
         IAlpacaCallQueue callQueue, ICurrentTradingTask tradingTask, IMarketDataCache cache)
     {
         _clock = clock;
-        _clientFactory = clientFactory;
         _callQueue = callQueue;
         _tradingTask = tradingTask;
         _cache = cache;
         _logger = logger.ForContext<ExchangeCalendar>();
+        _tradingClient = new Lazy<Task<IAlpacaTradingClient>>(() => clientFactory.CreateTradingClientAsync());
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_tradingClient.IsValueCreated) (await _tradingClient.Value).Dispose();
     }
 
     public async Task<bool> DoesTradingOpenInNext24HoursAsync(CancellationToken token = default)
@@ -45,10 +49,9 @@ public sealed class ExchangeCalendar : IExchangeCalendar
         return nextTradingDay.Trading.OpenEst - now <= TimeSpan.FromDays(1);
     }
 
-    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private async Task<IIntervalCalendar?> SendCalendarRequestAsync(DateTimeOffset now, CancellationToken token)
     {
-        using var client = await _clientFactory.CreateTradingClientAsync(token);
+        var client = await _tradingClient.Value;
         var todayEst = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(now.UtcDateTime, GetEstTimeZone()));
         var result =
             await _callQueue.SendRequestWithRetriesAsync(() => client

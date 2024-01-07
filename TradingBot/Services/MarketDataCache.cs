@@ -17,6 +17,8 @@ public interface IMarketDataCache
         DateOnly end);
 
     void CacheValidSymbols(IReadOnlyList<TradingSymbol> symbols);
+
+    MemoryCacheStatistics GetCacheStats();
 }
 
 public sealed class MarketDataCache : IMarketDataCache
@@ -83,6 +85,11 @@ public sealed class MarketDataCache : IMarketDataCache
     public void CacheValidSymbols(IReadOnlyList<TradingSymbol> symbols)
     {
         _validSymbols = symbols.ToHashSet();
+    }
+
+    public MemoryCacheStatistics GetCacheStats()
+    {
+        return _cache.GetCurrentStatistics() ?? throw new InvalidOperationException("Cache stats are not tracked");
     }
 
     internal sealed record CacheKey(TradingSymbol Symbol, DateOnly Date);
