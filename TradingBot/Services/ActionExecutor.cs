@@ -39,6 +39,11 @@ public sealed class ActionExecutor : IActionExecutor, IAsyncDisposable
         foreach (var action in actions) await ExecuteActionAndHandleErrorsAsync(action, token);
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (_tradingClient.IsValueCreated) (await _tradingClient.Value).Dispose();
+    }
+
     private async Task ExecuteActionAsync(TradingAction action, CancellationToken token = default)
     {
         if (_tradingTask.CurrentBacktestId is { } backtestId)
@@ -60,11 +65,6 @@ public sealed class ActionExecutor : IActionExecutor, IAsyncDisposable
             PostOrderAsync(CreateRequestForAction(action), client, token)
                 .ExecuteWithErrorHandling(_logger));
         return order.OrderId;
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_tradingClient.IsValueCreated) (await _tradingClient.Value).Dispose();
     }
 
     private async Task ExecuteActionAndHandleErrorsAsync(TradingAction action, CancellationToken token)
