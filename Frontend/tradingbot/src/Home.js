@@ -135,9 +135,30 @@ const TradingActionsTable = ({ tradingActions }) => {
       header: 'Id',
     },
     {
+      accessorKey: 'status',
+      header: 'Status',
+      accessorFn: (originalRow) => {
+        if(originalRow.status === 'Error'){
+          return 'Error [' + originalRow.error.code + ']: ' + originalRow.error.message;
+        }
+
+        return originalRow.status;
+      }
+    },
+    {
       accessorKey: 'createdAt',
-      header: 'Date',
+      header: 'Created',
       accessorFn: (originalRow) => new Date(originalRow.createdAt),
+      filterVariant: 'date-range',
+      muiFilterDatePickerProps: '',
+      Cell: ({ cell }) => cell.getValue().toLocaleDateString('en-GB',
+        { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }
+      ),
+    },
+    {
+      accessorKey: 'executedAt',
+      header: 'Executed',
+      accessorFn: (originalRow) => originalRow.executedAt === null ? "Not executed yet" : new Date(originalRow.executedAt),
       filterVariant: 'date-range',
       muiFilterDatePickerProps: '',
       Cell: ({ cell }) => cell.getValue().toLocaleDateString('en-GB',
@@ -159,6 +180,36 @@ const TradingActionsTable = ({ tradingActions }) => {
     {
       accessorKey: 'price',
       header: 'Price',
+      Cell: ({ cell }) => {
+        const priceValue = cell.getValue();
+        if (priceValue === null || priceValue === undefined)
+          return null;
+        return priceValue.toLocaleString('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        });
+      },
+      filterVariant: 'range-slider',
+      filterFn: (row, id, filterValues) => {
+        if (row.getValue(id) === null || row.getValue(id) === undefined)
+          return false;
+        const value = row.getValue(id);
+        return (value >= filterValues[0] && value <= filterValues[1]);
+      },
+      muiFilterSliderProps: {
+        min: 0,
+        max: 1000,
+        step: 10,
+        valueLabelFormat: (value) =>
+          value.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+          }),
+      },
+    },
+    {
+      accessorKey: 'averageFillPrice',
+      header: 'Fill price',
       Cell: ({ cell }) => {
         const priceValue = cell.getValue();
         if (priceValue === null || priceValue === undefined)
@@ -555,10 +606,19 @@ const Home = () => {
         </div>
         <div className="bg-white p-6 rounded-xl shadow-lg overflow-x-auto mt-4">
           <h3 className="text-2xl font-semibold text-gray-700 mb-4 text-center">
-            Trading history
+            Trading task history
           </h3>
           <TradingTasksTable tradingTasks={tradingTasksData} onRowClicked={setSelectedTaskId} />
-          {selectedTaskId !== null && <TradingActionsTable tradingActions={tradingTasksData.find((task) => task.id === selectedTaskId).actions} />}
+          <h3 className="text-2xl font-semibold text-gray-700 mb-4 text-center">
+            Trading actions
+          </h3>
+          {selectedTaskId !== null ? (
+            <TradingActionsTable tradingActions={tradingTasksData.find((task) => task.id === selectedTaskId).actions} />
+          ) : (
+            <div style={{border: '1px solid black', width: '100%', fontStyle: 'italic', textAlign: 'center'}}>
+              No task selected
+            </div>
+          )}
         </div>
         <div>
           {showStrategyOptions ? (
