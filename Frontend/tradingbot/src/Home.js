@@ -81,6 +81,8 @@ const TradingTasksTable = ({ tradingTasks, onRowClicked }) => {
             return <span style={{ color: 'green' }}>Succcess</span>;
           case 'ExchangeClosed':
             return <span style={{ color: 'grey' }}>Exchange closed</span>;
+          case 'ConfigDisabled':
+            return <span style={{ color: 'grey' }}>Disabled in configuration</span>;
           case 'Error':
             return <span style={{ color: 'red' }}>Error</span>;
           default:
@@ -158,12 +160,17 @@ const TradingActionsTable = ({ tradingActions }) => {
     {
       accessorKey: 'executedAt',
       header: 'Executed',
-      accessorFn: (originalRow) => originalRow.executedAt === null ? "Not executed yet" : new Date(originalRow.executedAt),
+      accessorFn: (originalRow) => originalRow.executedAt === null ? null : new Date(originalRow.executedAt),
       filterVariant: 'date-range',
       muiFilterDatePickerProps: '',
-      Cell: ({ cell }) => cell.getValue().toLocaleDateString('en-GB',
-        { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }
-      ),
+      Cell: ({ cell }) => {
+        const value = cell.getValue();
+        if (value === null)
+          return "Not executed yet";
+        return value.toLocaleDateString('en-GB',
+          { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }
+        )
+      },
     },
     {
       accessorKey: 'orderType',
@@ -609,13 +616,13 @@ const Home = () => {
             Trading task history
           </h3>
           <TradingTasksTable tradingTasks={tradingTasksData} onRowClicked={setSelectedTaskId} />
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4 text-center">
+          <h3 className="text-2xl font-semibold text-gray-700 mb-4 text-center" style={{paddingTop: '20px'}}>
             Trading actions
           </h3>
           {selectedTaskId !== null ? (
             <TradingActionsTable tradingActions={tradingTasksData.find((task) => task.id === selectedTaskId).actions} />
           ) : (
-            <div style={{border: '1px solid black', width: '100%', fontStyle: 'italic', textAlign: 'center'}}>
+            <div style={{border: '1px solid gray', width: '100%', fontStyle: 'italic', color: 'gray', textAlign: 'center'}}>
               No task selected
             </div>
           )}
