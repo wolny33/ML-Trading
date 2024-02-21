@@ -31,16 +31,18 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
 {
     private readonly ISystemClock _clock;
     private readonly ITradingTaskCommand _taskCommand;
+    private readonly ITestModeConfigService _testModeConfig;
     private readonly ITradingActionCommand _tradingActionCommand;
     private BacktestDetails? _backtestDetails;
     private Guid? _currentTradingTaskId;
 
     public CurrentTradingTask(ITradingActionCommand tradingActionCommand, ITradingTaskCommand taskCommand,
-        ISystemClock clock)
+        ISystemClock clock, ITestModeConfigService testModeConfig)
     {
         _tradingActionCommand = tradingActionCommand;
         _taskCommand = taskCommand;
         _clock = clock;
+        _testModeConfig = testModeConfig;
     }
 
     public Guid? CurrentBacktestId => _backtestDetails?.Id;
@@ -49,7 +51,8 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
 
     public async Task StartAsync(CancellationToken token = default)
     {
-        _currentTradingTaskId = await _taskCommand.CreateNewAsync(GetTaskTime(), CurrentBacktestId, token);
+        var mode = CurrentBacktestId is not null ? Mode.Backtest : await _testModeConfig.GetCurrentModeAsync(token);
+        _currentTradingTaskId = await _taskCommand.CreateNewAsync(GetTaskTime(), mode, CurrentBacktestId, token);
     }
 
     public Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default)

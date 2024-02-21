@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TradingBot.Configuration;
 using TradingBot.Database;
+using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
@@ -8,6 +9,7 @@ namespace TradingBot.Services;
 public interface ITestModeConfigService
 {
     public Task<TestModeConfiguration> GetConfigurationAsync(CancellationToken token = default);
+    public Task<Mode> GetCurrentModeAsync(CancellationToken token = default);
     public Task<TestModeConfiguration> SetEnabledAsync(bool enabled, CancellationToken token = default);
 }
 
@@ -29,6 +31,11 @@ public sealed class TestModeConfigService : ITestModeConfigService
                      TestModeConfiguration.CreateDefault();
 
         return TestModeConfiguration.FromEntity(entity);
+    }
+
+    public async Task<Mode> GetCurrentModeAsync(CancellationToken token = default)
+    {
+        return (await GetConfigurationAsync(token)).Enabled ? Mode.TestMode : Mode.LiveTrading;
     }
 
     public async Task<TestModeConfiguration> SetEnabledAsync(bool enabled, CancellationToken token = default)

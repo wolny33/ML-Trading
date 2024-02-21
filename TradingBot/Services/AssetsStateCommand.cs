@@ -8,7 +8,7 @@ namespace TradingBot.Services;
 
 public interface IAssetsStateCommand
 {
-    Task SaveCurrentAssetsAsync(Assets assets, CancellationToken token = default);
+    Task SaveCurrentAssetsAsync(Assets assets, Mode mode, CancellationToken token = default);
     Task SaveAssetsForBacktestWithIdAsync(Guid id, DateTimeOffset time, CancellationToken token = default);
 }
 
@@ -28,22 +28,23 @@ public sealed class AssetsStateCommand : IAssetsStateCommand
         _logger = logger.ForContext<AssetsStateCommand>();
     }
 
-    public async Task SaveCurrentAssetsAsync(Assets assets, CancellationToken token = default)
+    public async Task SaveCurrentAssetsAsync(Assets assets, Mode mode, CancellationToken token = default)
     {
         _logger.Debug("Saving current assets information");
-        await SaveAssetsStateAsync(new AssetsState(assets, _clock.UtcNow, null), token);
+        await SaveAssetsStateAsync(new AssetsState(assets, _clock.UtcNow, null), mode, token);
         _logger.Information("Successfully saved current assets information");
     }
 
     public Task SaveAssetsForBacktestWithIdAsync(Guid id, DateTimeOffset time, CancellationToken token = default)
     {
-        return SaveAssetsStateAsync(new AssetsState(_backtestAssets.GetForBacktestWithId(id), time, id), token);
+        return SaveAssetsStateAsync(new AssetsState(_backtestAssets.GetForBacktestWithId(id), time, id), Mode.Backtest,
+            token);
     }
 
-    private async Task SaveAssetsStateAsync(AssetsState state, CancellationToken token)
+    private async Task SaveAssetsStateAsync(AssetsState state, Mode mode, CancellationToken token)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        context.AssetsStates.Add(state.ToEntity());
+        context.AssetsStates.Add(state.ToEntity(mode));
         await context.SaveChangesAsync(token);
     }
 }

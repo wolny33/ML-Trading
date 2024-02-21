@@ -21,7 +21,7 @@ public interface IAssetsDataSource
     ///     the database, or <c>null</c> if no assets data was saved yet.
     /// </remarks>
     /// <returns>Held <see cref="Assets" /></returns>
-    Task<Assets?> GetLatestAssetsAsync(CancellationToken token = default);
+    Task<Assets?> GetLatestAssetsAsync(Mode mode, CancellationToken token = default);
 }
 
 public sealed class AssetsDataSource : IAssetsDataSource, IAsyncDisposable
@@ -58,7 +58,7 @@ public sealed class AssetsDataSource : IAssetsDataSource, IAsyncDisposable
         return CreateAssets(account, positions);
     }
 
-    public async Task<Assets?> GetLatestAssetsAsync(CancellationToken token = default)
+    public async Task<Assets?> GetLatestAssetsAsync(Mode mode, CancellationToken token = default)
     {
         _logger.Debug("Getting most recent available assets data");
         if (await SendRequestsWithoutRetriesAsync(token) is { } responses)
@@ -67,7 +67,7 @@ public sealed class AssetsDataSource : IAssetsDataSource, IAsyncDisposable
             return CreateAssets(account, positions);
         }
 
-        var lastState = await _assetsStateQuery.GetLatestStateAsync(token);
+        var lastState = await _assetsStateQuery.GetLatestStateAsync(mode, token);
         return lastState?.Assets;
     }
 

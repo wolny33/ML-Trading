@@ -8,11 +8,14 @@ public sealed class AssetsStateJob : IJob
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IAssetsStateCommand _command;
     private readonly ILogger _logger;
+    private readonly ITestModeConfigService _testModeConfig;
 
-    public AssetsStateJob(IAssetsStateCommand command, ILogger logger, IAssetsDataSource assetsDataSource)
+    public AssetsStateJob(IAssetsStateCommand command, ILogger logger, IAssetsDataSource assetsDataSource,
+        ITestModeConfigService testModeConfig)
     {
         _command = command;
         _assetsDataSource = assetsDataSource;
+        _testModeConfig = testModeConfig;
         _logger = logger.ForContext<AssetsStateJob>();
     }
 
@@ -21,7 +24,8 @@ public sealed class AssetsStateJob : IJob
         try
         {
             var assets = await _assetsDataSource.GetCurrentAssetsAsync(context.CancellationToken);
-            await _command.SaveCurrentAssetsAsync(assets, context.CancellationToken);
+            var mode = await _testModeConfig.GetCurrentModeAsync(context.CancellationToken);
+            await _command.SaveCurrentAssetsAsync(assets, mode, context.CancellationToken);
         }
         catch (Exception e)
         {

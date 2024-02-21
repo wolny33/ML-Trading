@@ -30,7 +30,8 @@ public sealed class TradingTasksTestSuite : IntegrationTestSuite, IAsyncLifetime
                 StartTimestamp = (Now - TimeSpan.FromMinutes(22)).ToUnixTimeMilliseconds(),
                 EndTimestamp = (Now - TimeSpan.FromMinutes(21)).ToUnixTimeMilliseconds(),
                 State = TradingTaskState.ConfigDisabled,
-                StateDetails = "Automatic investing is disabled in configuration"
+                StateDetails = "Automatic investing is disabled in configuration",
+                Mode = Mode.TestMode
             },
             new TradingTaskEntity
             {
@@ -58,7 +59,8 @@ public sealed class TradingTasksTestSuite : IntegrationTestSuite, IAsyncLifetime
                         ErrorMessage = null,
                         TradingTaskId = id
                     }
-                }
+                },
+                Mode = Mode.TestMode
             },
             new TradingTaskEntity
             {
@@ -67,7 +69,8 @@ public sealed class TradingTasksTestSuite : IntegrationTestSuite, IAsyncLifetime
                 EndTimestamp = (Now - TimeSpan.FromMinutes(17)).ToUnixTimeMilliseconds(),
                 State = TradingTaskState.Error,
                 StateDetails =
-                    "Trading task failed with error code unsuccessful-alpaca-response: Alpaca API responded with status code 401: invalid credentials"
+                    "Trading task failed with error code unsuccessful-alpaca-response: Alpaca API responded with status code 401: invalid credentials",
+                Mode = Mode.TestMode
             },
             new TradingTaskEntity
             {
@@ -75,7 +78,8 @@ public sealed class TradingTasksTestSuite : IntegrationTestSuite, IAsyncLifetime
                 StartTimestamp = (Now - TimeSpan.FromMinutes(10)).ToUnixTimeMilliseconds(),
                 EndTimestamp = null,
                 State = TradingTaskState.Running,
-                StateDetails = "Trading task is running"
+                StateDetails = "Trading task is running",
+                Mode = Mode.TestMode
             }
         };
     }

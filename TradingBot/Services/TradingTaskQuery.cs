@@ -6,7 +6,7 @@ namespace TradingBot.Services;
 
 public interface ITradingTaskQuery
 {
-    Task<IReadOnlyList<TradingTask>> GetTradingTasksAsync(DateTimeOffset start, DateTimeOffset end,
+    Task<IReadOnlyList<TradingTask>> GetTradingTasksAsync(DateTimeOffset start, DateTimeOffset end, Mode mode,
         CancellationToken token = default);
 
     Task<TradingTask?> GetTradingTaskByIdAsync(Guid id, CancellationToken token = default);
@@ -22,11 +22,11 @@ public sealed class TradingTaskQuery : ITradingTaskQuery
     }
 
     public async Task<IReadOnlyList<TradingTask>> GetTradingTasksAsync(DateTimeOffset start, DateTimeOffset end,
-        CancellationToken token = default)
+        Mode mode, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entities = await context.TradingTasks
-            .Where(t => t.BacktestId == null)
+            .Where(t => t.Mode == mode)
             .Where(t => t.StartTimestamp >= start.ToUnixTimeMilliseconds() &&
                         t.StartTimestamp <= end.ToUnixTimeMilliseconds())
             .ToListAsync(token);

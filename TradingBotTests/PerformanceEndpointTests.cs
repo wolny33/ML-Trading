@@ -11,6 +11,7 @@ using NSubstitute;
 using TradingBot.Database.Entities;
 using TradingBot.Dto;
 using TradingBot.Exceptions;
+using TradingBot.Models;
 using OrderType = TradingBot.Models.OrderType;
 
 namespace TradingBotTests;
@@ -108,11 +109,22 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
         new AssetsStateEntity
         {
             Id = Guid.NewGuid(),
+            CreationTimestamp = (Now - TimeSpan.FromDays(4)).ToUnixTimeMilliseconds(),
+            MainCurrency = "USD",
+            AvailableCash = 1000,
+            BuyingPower = 4000,
+            EquityValue = 2000,
+            Mode = Mode.LiveTrading
+        },
+        new AssetsStateEntity
+        {
+            Id = Guid.NewGuid(),
             CreationTimestamp = (Now - TimeSpan.FromDays(3)).ToUnixTimeMilliseconds(),
             MainCurrency = "USD",
             AvailableCash = 100,
             BuyingPower = 400,
-            EquityValue = 200
+            EquityValue = 200,
+            Mode = Mode.TestMode
         },
         new AssetsStateEntity
         {
@@ -121,7 +133,8 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
             MainCurrency = "USD",
             AvailableCash = 100,
             BuyingPower = 400,
-            EquityValue = 180
+            EquityValue = 180,
+            Mode = Mode.TestMode
         },
         new AssetsStateEntity
         {
@@ -130,7 +143,8 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
             MainCurrency = "USD",
             AvailableCash = 100,
             BuyingPower = 400,
-            EquityValue = 220
+            EquityValue = 220,
+            Mode = Mode.TestMode
         }
     };
 
