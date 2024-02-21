@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
-using TradingBot.Models;
 using TradingBot.Services;
 
 namespace TradingBot.Controllers;
@@ -71,7 +70,8 @@ public sealed class PerformanceController : ControllerBase
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
 
-        var actions = await _actionsQuery.GetTradingActionsAsync(start, end, HttpContext.RequestAborted);
+        var mode = await _testModeConfig.GetCurrentModeAsync(HttpContext.RequestAborted);
+        var actions = await _actionsQuery.GetTradingActionsAsync(start, end, mode, HttpContext.RequestAborted);
 
         return actions.Select(a => a.ToResponse()).ToList();
     }

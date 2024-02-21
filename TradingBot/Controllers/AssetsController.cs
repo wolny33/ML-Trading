@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
-using TradingBot.Models;
 using TradingBot.Services;
 
 namespace TradingBot.Controllers;
@@ -27,10 +26,7 @@ public class AssetsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AssetsResponse>> GetAsync()
     {
-        var mode = (await _testModeConfig.GetConfigurationAsync(HttpContext.RequestAborted)).Enabled
-            ? Mode.TestMode
-            : Mode.LiveTrading;
-
+        var mode = await _testModeConfig.GetCurrentModeAsync(HttpContext.RequestAborted);
         var assets = await _assetsDataSource.GetLatestAssetsAsync(mode, HttpContext.RequestAborted);
 
         if (assets is not null) return assets.ToResponse();
