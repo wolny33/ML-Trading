@@ -22,18 +22,28 @@ const setupAxiosMocks = () => {
     localStorage.setItem("userName", userName);
     localStorage.setItem("pwd", pwd);
     localStorage.setItem("isLoggedIn", 'true');
+
     axios.get.mockImplementationOnce(() =>
-    Promise.resolve({ data: { "equityValue": 10000 } })
-  );
+      Promise.resolve({ data: { "equityValue": 10000 } })
+    );
+
     axios.get.mockImplementationOnce(() =>
       Promise.resolve({ data: { "enabled": true } })
     );
+
     axios.get.mockImplementationOnce(() =>
       Promise.resolve({ data: { "enabled": true } })
     );
+
     axios.get.mockImplementationOnce(() =>
-      Promise.resolve({ data: { "importantProperty": 'importantProperty' } })
+      Promise.resolve({ data: { 
+        "maxStocksBuyCount": 4,
+        "minDaysDecreasing": 2,
+        "minDaysIncreasing": 4,
+        "topGrowingSymbolsBuyRatio": 0.4 
+      }})
     );
+
     axios.get.mockImplementationOnce(() =>
         Promise.resolve({ data: [
             {
@@ -46,8 +56,9 @@ const setupAxiosMocks = () => {
             },
         ]})
     );
+
     axios.get.mockImplementationOnce(() =>
-        Promise.resolve({ data:  [
+        Promise.resolve({ data: [
             {
               "id": "f2eee7d8-4344-43b7-8cb5-e5bb47dbb87d",
               "startedAt": "2023-11-19T012:00:00+01:00",
@@ -57,8 +68,9 @@ const setupAxiosMocks = () => {
             }]
         })
     );
+
     axios.get.mockImplementationOnce(() =>
-        Promise.resolve({ data:  [
+        Promise.resolve({ data: [
             {
               "id": "f2eee7d8-4344-43b7-8cb5-e5bb47dbb88d",
               "status": "Accepted",
@@ -89,9 +101,9 @@ const setupAxiosMocks = () => {
     expect(axios.get).toHaveBeenCalledWith('/test-mode', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/investment', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/strategy', expect.anything());
-    expect(axios.get).toHaveBeenCalledWith('/performance/trading-tasks', expect.anything());
-    expect(axios.get).toHaveBeenCalledWith('/performance/trading-tasks/f2eee7d8-4344-43b7-8cb5-e5bb47dbb87d/trading-actions', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/performance', expect.anything());
+    expect(axios.get).toHaveBeenCalledWith('/trading-tasks', expect.anything());
+    expect(axios.get).toHaveBeenCalledWith('/trading-tasks/f2eee7d8-4344-43b7-8cb5-e5bb47dbb87d/trading-actions', expect.anything());
 
     const heading = await waitFor(() => screen.getByText('Returns chart'));
     expect(heading).toBeInTheDocument();
@@ -110,7 +122,7 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await act(async () => {
-        expect(axios.get).toHaveBeenCalledTimes(7);
+        expect(axios.get).toHaveBeenCalledTimes(6);
     });
     const switchTestModeButton = screen.getByTestId('test-mode-on-button');
     
@@ -122,13 +134,13 @@ const setupAxiosMocks = () => {
         expect(axios.put).toHaveBeenCalledWith('/test-mode',
           { 
             "enable": false 
-            },
-            { auth: 
-            { 
+          },
+          { 
+            auth: { 
                 username: userName, 
                 password: pwd 
             }
-            }
+          }
         );
     });
     const updatedSwitchTestModeButton = screen.getByTestId('test-mode-off-button');
@@ -148,7 +160,7 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await act(async () => {
-        expect(axios.get).toHaveBeenCalledTimes(7);
+        expect(axios.get).toHaveBeenCalledTimes(6);
     });
     const switchTestModeButton = screen.getByTestId("investment-on-button");
     

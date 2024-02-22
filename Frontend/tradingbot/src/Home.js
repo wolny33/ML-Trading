@@ -43,8 +43,6 @@ export const errorStatusString = (url, status, statusText) => {
 }
 
 const TradingTasksTable = ({ tradingTasks, onRowClicked }) => {
-  console.log(tradingTasks);
-
   const columns = useMemo(() => [
     {
       accessorKey: 'id',
