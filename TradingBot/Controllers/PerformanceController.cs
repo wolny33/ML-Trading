@@ -12,13 +12,15 @@ public sealed class PerformanceController : ControllerBase
     private readonly ITradingActionQuery _actionsQuery;
     private readonly IAssetsStateQuery _assetsStateQuery;
     private readonly ISystemClock _clock;
+    private readonly ITestModeConfigService _testModeConfig;
 
     public PerformanceController(ITradingActionQuery actionsQuery, ISystemClock clock,
-        IAssetsStateQuery assetsStateQuery)
+        IAssetsStateQuery assetsStateQuery, ITestModeConfigService testModeConfig)
     {
         _actionsQuery = actionsQuery;
         _clock = clock;
         _assetsStateQuery = assetsStateQuery;
+        _testModeConfig = testModeConfig;
     }
 
     /// <summary>
@@ -35,13 +37,15 @@ public sealed class PerformanceController : ControllerBase
     {
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
+        var mode = await _testModeConfig.GetCurrentModeAsync(HttpContext.RequestAborted);
 
-        var initial = (await _assetsStateQuery.GetEarliestStateAsync(HttpContext.RequestAborted))?.Assets.EquityValue;
+        var initial = (await _assetsStateQuery.GetEarliestStateAsync(mode, HttpContext.RequestAborted))?.Assets
+            .EquityValue;
         if (initial is null)
             // There are no saved asset states to return
             return Array.Empty<ReturnResponse>();
 
-        var states = await _assetsStateQuery.GetStatesFromRangeAsync(start, end, HttpContext.RequestAborted);
+        var states = await _assetsStateQuery.GetStatesFromRangeAsync(start, end, mode, HttpContext.RequestAborted);
         return states.Select(s => new ReturnResponse
         {
             Return = initial.Value != 0 ? (s.Assets.EquityValue - initial.Value) / initial.Value : 0,
@@ -66,7 +70,8 @@ public sealed class PerformanceController : ControllerBase
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
 
-        var actions = await _actionsQuery.GetTradingActionsAsync(start, end, HttpContext.RequestAborted);
+        var mode = await _testModeConfig.GetCurrentModeAsync(HttpContext.RequestAborted);
+        var actions = await _actionsQuery.GetTradingActionsAsync(start, end, mode, HttpContext.RequestAborted);
 
         return actions.Select(a => a.ToResponse()).ToList();
     }

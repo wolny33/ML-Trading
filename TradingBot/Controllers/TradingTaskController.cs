@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
+using TradingBot.Models;
 using TradingBot.Services;
 
 namespace TradingBot.Controllers;
@@ -12,12 +13,15 @@ public sealed class TradingTaskController : ControllerBase
     private readonly ITradingActionQuery _actionQuery;
     private readonly ISystemClock _clock;
     private readonly ITradingTaskQuery _query;
+    private readonly ITestModeConfigService _testModeConfig;
 
-    public TradingTaskController(ISystemClock clock, ITradingTaskQuery query, ITradingActionQuery actionQuery)
+    public TradingTaskController(ISystemClock clock, ITradingTaskQuery query, ITradingActionQuery actionQuery,
+        ITestModeConfigService testModeConfig)
     {
         _clock = clock;
         _query = query;
         _actionQuery = actionQuery;
+        _testModeConfig = testModeConfig;
     }
 
     /// <summary>
@@ -35,7 +39,8 @@ public sealed class TradingTaskController : ControllerBase
         var end = request.End ?? request.Start + TimeSpan.FromDays(10) ?? _clock.UtcNow;
         var start = request.Start ?? end - TimeSpan.FromDays(10);
 
-        var tasks = await _query.GetTradingTasksAsync(start, end, HttpContext.RequestAborted);
+        var mode = await _testModeConfig.GetCurrentModeAsync(HttpContext.RequestAborted);
+        var tasks = await _query.GetTradingTasksAsync(start, end, mode, HttpContext.RequestAborted);
         return tasks.Select(t => t.ToResponse()).ToList();
     }
 

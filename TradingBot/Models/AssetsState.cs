@@ -5,7 +5,7 @@ namespace TradingBot.Models;
 
 public sealed record AssetsState(Assets Assets, DateTimeOffset CreatedAt, Guid? BacktestId)
 {
-    public AssetsStateEntity ToEntity()
+    public AssetsStateEntity ToEntity(Mode mode)
     {
         var id = Guid.NewGuid();
         return new AssetsStateEntity
@@ -27,7 +27,8 @@ public sealed record AssetsState(Assets Assets, DateTimeOffset CreatedAt, Guid? 
                 MarketValue = (double)p.MarketValue,
                 Quantity = (double)p.Quantity
             }).ToList(),
-            BacktestId = BacktestId
+            BacktestId = BacktestId,
+            Mode = mode
         };
     }
 

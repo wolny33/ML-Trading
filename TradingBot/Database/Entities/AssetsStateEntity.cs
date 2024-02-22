@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using TradingBot.Models;
 
 namespace TradingBot.Database.Entities;
 
@@ -14,6 +15,7 @@ public sealed class AssetsStateEntity
     public required double EquityValue { get; init; }
     public required double AvailableCash { get; init; }
     public required double BuyingPower { get; init; }
+    public required Mode Mode { get; init; }
 
     [Required]
     public IList<PositionEntity> HeldPositions { get; init; } = new List<PositionEntity>();

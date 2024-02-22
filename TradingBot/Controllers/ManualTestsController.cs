@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
 using TradingBot.Models;
 using TradingBot.Services;
 
@@ -15,19 +14,19 @@ public sealed class ManualTestsController : ControllerBase
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IAssetsStateCommand _assetsStateCommand;
     private readonly IMarketDataSource _dataSource;
-    private readonly IMemoryCache _memoryCache;
     private readonly IPricePredictor _predictor;
     private readonly TradingTaskExecutor _taskExecutor;
+    private readonly ITestModeConfigService _testModeConfig;
 
     public ManualTestsController(IPricePredictor predictor, IMarketDataSource dataSource,
-        TradingTaskExecutor taskExecutor, IAssetsStateCommand assetsStateCommand, IMemoryCache memoryCache,
-        IAssetsDataSource assetsDataSource)
+        TradingTaskExecutor taskExecutor, IAssetsStateCommand assetsStateCommand,
+        IAssetsDataSource assetsDataSource, ITestModeConfigService testModeConfig)
     {
         _predictor = predictor;
         _dataSource = dataSource;
         _taskExecutor = taskExecutor;
-        _memoryCache = memoryCache;
         _assetsDataSource = assetsDataSource;
+        _testModeConfig = testModeConfig;
         _assetsStateCommand = assetsStateCommand;
     }
 
@@ -84,7 +83,8 @@ public sealed class ManualTestsController : ControllerBase
     public async Task<ActionResult> SaveCurrentAssetsStateAsync()
     {
         var assets = await _assetsDataSource.GetCurrentAssetsAsync(HttpContext.RequestAborted);
-        await _assetsStateCommand.SaveCurrentAssetsAsync(assets, HttpContext.RequestAborted);
+        var mode = await _testModeConfig.GetCurrentModeAsync(HttpContext.RequestAborted);
+        await _assetsStateCommand.SaveCurrentAssetsAsync(assets, mode, HttpContext.RequestAborted);
         return NoContent();
     }
 }

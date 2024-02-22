@@ -9,10 +9,12 @@ namespace TradingBot.Controllers;
 public class AssetsController : ControllerBase
 {
     private readonly IAssetsDataSource _assetsDataSource;
+    private readonly ITestModeConfigService _testModeConfig;
 
-    public AssetsController(IAssetsDataSource assetsDataSource)
+    public AssetsController(IAssetsDataSource assetsDataSource, ITestModeConfigService testModeConfig)
     {
         _assetsDataSource = assetsDataSource;
+        _testModeConfig = testModeConfig;
     }
 
     /// <summary>
@@ -24,7 +26,8 @@ public class AssetsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AssetsResponse>> GetAsync()
     {
-        var assets = await _assetsDataSource.GetLatestAssetsAsync(HttpContext.RequestAborted);
+        var mode = await _testModeConfig.GetCurrentModeAsync(HttpContext.RequestAborted);
+        var assets = await _assetsDataSource.GetLatestAssetsAsync(mode, HttpContext.RequestAborted);
 
         if (assets is not null) return assets.ToResponse();
 

@@ -7,7 +7,7 @@ namespace TradingBot.Services;
 
 public interface ITradingTaskCommand
 {
-    Task<Guid> CreateNewAsync(DateTimeOffset start, Guid? backtestId, CancellationToken token = default);
+    Task<Guid> CreateNewAsync(DateTimeOffset start, Mode mode, Guid? backtestId, CancellationToken token = default);
     Task SetStateAndEndAsync(Guid taskId, TradingTaskCompletionDetails details, CancellationToken token = default);
 }
 
@@ -20,7 +20,8 @@ public sealed class TradingTaskCommand : ITradingTaskCommand
         _dbContextFactory = dbContextFactory;
     }
 
-    public async Task<Guid> CreateNewAsync(DateTimeOffset start, Guid? backtestId, CancellationToken token = default)
+    public async Task<Guid> CreateNewAsync(DateTimeOffset start, Mode mode, Guid? backtestId,
+        CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var newTask = new TradingTaskEntity
@@ -30,7 +31,8 @@ public sealed class TradingTaskCommand : ITradingTaskCommand
             State = TradingTaskState.Running,
             StateDetails = "Trading task is running",
             EndTimestamp = null,
-            BacktestId = backtestId
+            BacktestId = backtestId,
+            Mode = mode
         };
         context.TradingTasks.Add(newTask);
         await context.SaveChangesAsync(token);

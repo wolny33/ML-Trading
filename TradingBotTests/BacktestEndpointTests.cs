@@ -40,17 +40,20 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                     {
                         Id = Guid.NewGuid(),
                         CreationTimestamp =
-                            new DateTimeOffset(2022, 1, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+                            new DateTimeOffset(2022, 1, 1, 0, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
                         AvailableCash = 100,
                         BuyingPower = 100,
                         MainCurrency = "USD",
-                        EquityValue = 100
+                        EquityValue = 100,
+                        Mode = Mode.Backtest
                     },
                     new AssetsStateEntity
                     {
                         Id = Guid.NewGuid(),
                         CreationTimestamp =
-                            new DateTimeOffset(2022, 1, 2, 19, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+                            new DateTimeOffset(2022, 1, 2, 19, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
                         AvailableCash = 95,
                         BuyingPower = 95,
                         MainCurrency = "USD",
@@ -67,13 +70,15 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                                 MarketValue = 10,
                                 AverageEntryPrice = 5
                             }
-                        }
+                        },
+                        Mode = Mode.Backtest
                     },
                     new AssetsStateEntity
                     {
                         Id = Guid.NewGuid(),
                         CreationTimestamp =
-                            new DateTimeOffset(2022, 1, 3, 19, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+                            new DateTimeOffset(2022, 1, 3, 19, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
                         AvailableCash = 110,
                         BuyingPower = 110,
                         MainCurrency = "USD",
@@ -90,17 +95,20 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                                 MarketValue = 10,
                                 AverageEntryPrice = 5
                             }
-                        }
+                        },
+                        Mode = Mode.Backtest
                     },
                     new AssetsStateEntity
                     {
                         Id = Guid.NewGuid(),
                         CreationTimestamp =
-                            new DateTimeOffset(2022, 1, 4, 19, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+                            new DateTimeOffset(2022, 1, 4, 19, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
                         AvailableCash = 130,
                         BuyingPower = 130,
                         MainCurrency = "USD",
-                        EquityValue = 130
+                        EquityValue = 130,
+                        Mode = Mode.Backtest
                     }
                 },
                 TradingTasks = new[]
@@ -111,8 +119,12 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                         State = TradingTaskState.Success,
                         StateDetails = "Finished successfully",
                         StartTimestamp =
-                            new DateTimeOffset(2022, 1, 1, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
-                        EndTimestamp = new DateTimeOffset(2022, 1, 1, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds()
+                            new DateTimeOffset(2022, 1, 1, 20, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
+                        EndTimestamp =
+                            new DateTimeOffset(2022, 1, 1, 20, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
+                        Mode = Mode.Backtest
                     },
                     new TradingTaskEntity
                     {
@@ -120,8 +132,12 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                         State = TradingTaskState.Success,
                         StateDetails = "Finished successfully",
                         StartTimestamp =
-                            new DateTimeOffset(2022, 1, 2, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
-                        EndTimestamp = new DateTimeOffset(2022, 1, 2, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds()
+                            new DateTimeOffset(2022, 1, 2, 20, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
+                        EndTimestamp =
+                            new DateTimeOffset(2022, 1, 2, 20, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
+                        Mode = Mode.Backtest
                     },
                     new TradingTaskEntity
                     {
@@ -129,8 +145,12 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                         State = TradingTaskState.Success,
                         StateDetails = "Finished successfully",
                         StartTimestamp =
-                            new DateTimeOffset(2022, 1, 3, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
-                        EndTimestamp = new DateTimeOffset(2022, 1, 3, 20, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds()
+                            new DateTimeOffset(2022, 1, 3, 20, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
+                        EndTimestamp =
+                            new DateTimeOffset(2022, 1, 3, 20, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
+                        Mode = Mode.Backtest
                     }
                 }
             },
@@ -151,11 +171,13 @@ public sealed class BacktestTestSuite : IntegrationTestSuite, IAsyncLifetime
                     {
                         Id = Guid.NewGuid(),
                         CreationTimestamp =
-                            new DateTimeOffset(2022, 2, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+                            new DateTimeOffset(2022, 2, 1, 0, 0, 0, TimeSpan.Zero)
+                                .ToUnixTimeMilliseconds(),
                         AvailableCash = 200,
                         BuyingPower = 200,
                         MainCurrency = "USD",
-                        EquityValue = 200
+                        EquityValue = 200,
+                        Mode = Mode.Backtest
                     }
                 }
             },
@@ -659,7 +681,8 @@ public sealed class BacktestEndpointTests : IClassFixture<BacktestTestSuite>, IA
                         EquityValue = 10_000,
                         CreationTimestamp = new DateTimeOffset(2022, 1, 1, 0, 0, 0, TimeSpan.Zero)
                             .ToUnixTimeMilliseconds(),
-                        HeldPositions = Array.Empty<PositionEntity>()
+                        HeldPositions = Array.Empty<PositionEntity>(),
+                        Mode = Mode.Backtest
                     }
                 }
             }, options => options.For(b => b.AssetsStates)

@@ -11,6 +11,7 @@ using NSubstitute;
 using TradingBot.Database.Entities;
 using TradingBot.Dto;
 using TradingBot.Exceptions;
+using TradingBot.Models;
 using OrderType = TradingBot.Models.OrderType;
 
 namespace TradingBotTests;
@@ -19,92 +20,123 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
 {
     public static readonly DateTimeOffset Now = new(2023, 12, 1, 18, 11, 0, TimeSpan.Zero);
 
-    public IReadOnlyList<TradingActionEntity> Actions { get; } = new[]
+    public PerformanceTestSuite()
     {
-        new TradingActionEntity
+        Actions = new[]
         {
-            Id = Guid.NewGuid(),
-            AlpacaId = Guid.NewGuid(),
-            CreationTimestamp = (Now - TimeSpan.FromMinutes(20)).ToUnixTimeMilliseconds(),
-            Symbol = "AMZN",
-            OrderType = OrderType.LimitBuy,
-            Quantity = 12.5,
-            Price = 105.5,
-            InForce = TimeInForce.Day,
-            Status = OrderStatus.Filled,
-            ExecutionTimestamp = (Now - TimeSpan.FromMinutes(18)).ToUnixTimeMilliseconds(),
-            AverageFillPrice = 105.34,
-            ErrorCode = null,
-            ErrorMessage = null
-        },
-        new TradingActionEntity
-        {
-            Id = Guid.NewGuid(),
-            AlpacaId = Guid.NewGuid(),
-            CreationTimestamp = (Now - TimeSpan.FromMinutes(18)).ToUnixTimeMilliseconds(),
-            Symbol = "TSLA",
-            OrderType = OrderType.MarketSell,
-            Quantity = 34.4,
-            Price = null,
-            InForce = TimeInForce.Day,
-            Status = OrderStatus.Filled,
-            ExecutionTimestamp = (Now - TimeSpan.FromMinutes(17)).ToUnixTimeMilliseconds(),
-            AverageFillPrice = 56.7,
-            ErrorCode = null,
-            ErrorMessage = null
-        },
-        new TradingActionEntity
-        {
-            Id = Guid.NewGuid(),
-            AlpacaId = Guid.NewGuid(),
-            CreationTimestamp = (Now - TimeSpan.FromMinutes(15)).ToUnixTimeMilliseconds(),
-            Symbol = "TQQQ",
-            OrderType = OrderType.LimitBuy,
-            Quantity = 23.8,
-            Price = 33.4,
-            InForce = TimeInForce.Day,
-            Status = OrderStatus.Canceled,
-            ExecutionTimestamp = (Now - TimeSpan.FromMinutes(13)).ToUnixTimeMilliseconds(),
-            AverageFillPrice = null,
-            ErrorCode = null,
-            ErrorMessage = null
-        },
-        new TradingActionEntity
-        {
-            Id = Guid.NewGuid(),
-            AlpacaId = Guid.NewGuid(),
-            CreationTimestamp = (Now - TimeSpan.FromMinutes(13)).ToUnixTimeMilliseconds(),
-            Symbol = "F",
-            OrderType = OrderType.LimitSell,
-            Quantity = 35.8,
-            Price = 30,
-            InForce = TimeInForce.Day,
-            Status = OrderStatus.PartiallyFilled,
-            ExecutionTimestamp = null,
-            AverageFillPrice = 30.4,
-            ErrorCode = null,
-            ErrorMessage = null
-        },
-        new TradingActionEntity
-        {
-            Id = Guid.NewGuid(),
-            AlpacaId = null,
-            CreationTimestamp = (Now - TimeSpan.FromMinutes(12)).ToUnixTimeMilliseconds(),
-            Symbol = "AMZN",
-            OrderType = OrderType.MarketSell,
-            Quantity = 35.8,
-            Price = null,
-            InForce = TimeInForce.Day,
-            Status = null,
-            ExecutionTimestamp = null,
-            AverageFillPrice = null,
-            ErrorCode = "insufficient-assets",
-            ErrorMessage = "Requested asset amount in sell order is greater than available amount"
-        }
+            new TradingActionEntity
+            {
+                Id = Guid.NewGuid(),
+                AlpacaId = Guid.NewGuid(),
+                CreationTimestamp = (Now - TimeSpan.FromMinutes(20)).ToUnixTimeMilliseconds(),
+                Symbol = "AMZN",
+                OrderType = OrderType.LimitBuy,
+                Quantity = 12.5,
+                Price = 105.5,
+                InForce = TimeInForce.Day,
+                Status = OrderStatus.Filled,
+                ExecutionTimestamp = (Now - TimeSpan.FromMinutes(18)).ToUnixTimeMilliseconds(),
+                AverageFillPrice = 105.34,
+                ErrorCode = null,
+                ErrorMessage = null,
+                TradingTaskId = Task.Id
+            },
+            new TradingActionEntity
+            {
+                Id = Guid.NewGuid(),
+                AlpacaId = Guid.NewGuid(),
+                CreationTimestamp = (Now - TimeSpan.FromMinutes(18)).ToUnixTimeMilliseconds(),
+                Symbol = "TSLA",
+                OrderType = OrderType.MarketSell,
+                Quantity = 34.4,
+                Price = null,
+                InForce = TimeInForce.Day,
+                Status = OrderStatus.Filled,
+                ExecutionTimestamp = (Now - TimeSpan.FromMinutes(17)).ToUnixTimeMilliseconds(),
+                AverageFillPrice = 56.7,
+                ErrorCode = null,
+                ErrorMessage = null,
+                TradingTaskId = Task.Id
+            },
+            new TradingActionEntity
+            {
+                Id = Guid.NewGuid(),
+                AlpacaId = Guid.NewGuid(),
+                CreationTimestamp = (Now - TimeSpan.FromMinutes(15)).ToUnixTimeMilliseconds(),
+                Symbol = "TQQQ",
+                OrderType = OrderType.LimitBuy,
+                Quantity = 23.8,
+                Price = 33.4,
+                InForce = TimeInForce.Day,
+                Status = OrderStatus.Canceled,
+                ExecutionTimestamp = (Now - TimeSpan.FromMinutes(13)).ToUnixTimeMilliseconds(),
+                AverageFillPrice = null,
+                ErrorCode = null,
+                ErrorMessage = null,
+                TradingTaskId = Task.Id
+            },
+            new TradingActionEntity
+            {
+                Id = Guid.NewGuid(),
+                AlpacaId = Guid.NewGuid(),
+                CreationTimestamp = (Now - TimeSpan.FromMinutes(13)).ToUnixTimeMilliseconds(),
+                Symbol = "F",
+                OrderType = OrderType.LimitSell,
+                Quantity = 35.8,
+                Price = 30,
+                InForce = TimeInForce.Day,
+                Status = OrderStatus.PartiallyFilled,
+                ExecutionTimestamp = null,
+                AverageFillPrice = 30.4,
+                ErrorCode = null,
+                ErrorMessage = null,
+                TradingTaskId = Task.Id
+            },
+            new TradingActionEntity
+            {
+                Id = Guid.NewGuid(),
+                AlpacaId = null,
+                CreationTimestamp = (Now - TimeSpan.FromMinutes(12)).ToUnixTimeMilliseconds(),
+                Symbol = "AMZN",
+                OrderType = OrderType.MarketSell,
+                Quantity = 35.8,
+                Price = null,
+                InForce = TimeInForce.Day,
+                Status = null,
+                ExecutionTimestamp = null,
+                AverageFillPrice = null,
+                ErrorCode = "insufficient-assets",
+                ErrorMessage = "Requested asset amount in sell order is greater than available amount",
+                TradingTaskId = Task.Id
+            }
+        };
+    }
+
+    public TradingTaskEntity Task { get; } = new()
+    {
+        Id = Guid.NewGuid(),
+        StartTimestamp = new DateTimeOffset(2024, 2, 21, 14, 43, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(),
+        EndTimestamp = null,
+        State = TradingTaskState.Success,
+        StateDetails = "Finished successfully",
+        BacktestId = null,
+        Mode = Mode.TestMode
     };
+
+    public IReadOnlyList<TradingActionEntity> Actions { get; }
 
     public IReadOnlyList<AssetsStateEntity> AssetsStates { get; } = new[]
     {
+        new AssetsStateEntity
+        {
+            Id = Guid.NewGuid(),
+            CreationTimestamp = (Now - TimeSpan.FromDays(4)).ToUnixTimeMilliseconds(),
+            MainCurrency = "USD",
+            AvailableCash = 1000,
+            BuyingPower = 4000,
+            EquityValue = 2000,
+            Mode = Mode.LiveTrading
+        },
         new AssetsStateEntity
         {
             Id = Guid.NewGuid(),
@@ -112,7 +144,8 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
             MainCurrency = "USD",
             AvailableCash = 100,
             BuyingPower = 400,
-            EquityValue = 200
+            EquityValue = 200,
+            Mode = Mode.TestMode
         },
         new AssetsStateEntity
         {
@@ -121,7 +154,8 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
             MainCurrency = "USD",
             AvailableCash = 100,
             BuyingPower = 400,
-            EquityValue = 180
+            EquityValue = 180,
+            Mode = Mode.TestMode
         },
         new AssetsStateEntity
         {
@@ -130,7 +164,8 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
             MainCurrency = "USD",
             AvailableCash = 100,
             BuyingPower = 400,
-            EquityValue = 220
+            EquityValue = 220,
+            Mode = Mode.TestMode
         }
     };
 
@@ -157,7 +192,9 @@ public sealed class PerformanceTestSuite : IntegrationTestSuite, IAsyncLifetime
     {
         await using var context = await DbContextFactory.CreateDbContextAsync();
         await context.TradingActions.ExecuteDeleteAsync();
+        await context.TradingTasks.ExecuteDeleteAsync();
         await context.AssetsStates.ExecuteDeleteAsync();
+        context.TradingTasks.Add(Task);
         context.TradingActions.AddRange(Actions);
         context.AssetsStates.AddRange(AssetsStates);
         await context.SaveChangesAsync();
@@ -294,7 +331,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[0].ExecutionTimestamp!.Value),
                 AverageFillPrice = (decimal)_testSuite.Actions[0].AverageFillPrice!.Value,
                 Error = null,
-                TaskId = null
+                TaskId = _testSuite.Task.Id
             },
             new TradingActionResponse
             {
@@ -310,7 +347,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[1].ExecutionTimestamp!.Value),
                 AverageFillPrice = (decimal)_testSuite.Actions[1].AverageFillPrice!.Value,
                 Error = null,
-                TaskId = null
+                TaskId = _testSuite.Task.Id
             },
             new TradingActionResponse
             {
@@ -326,7 +363,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[2].ExecutionTimestamp!.Value),
                 AverageFillPrice = null,
                 Error = null,
-                TaskId = null
+                TaskId = _testSuite.Task.Id
             },
             new TradingActionResponse
             {
@@ -342,7 +379,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 ExecutedAt = PerformanceTestSuite.Now - TimeSpan.FromMinutes(10),
                 AverageFillPrice = 30.2m,
                 Error = null,
-                TaskId = null
+                TaskId = _testSuite.Task.Id
             },
             new TradingActionResponse
             {
@@ -362,7 +399,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                     Code = _testSuite.Actions[4].ErrorCode!,
                     Message = _testSuite.Actions[4].ErrorMessage!
                 },
-                TaskId = null
+                TaskId = _testSuite.Task.Id
             }
         });
 
@@ -399,7 +436,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[1].ExecutionTimestamp!.Value),
                 AverageFillPrice = (decimal)_testSuite.Actions[1].AverageFillPrice!.Value,
                 Error = null,
-                TaskId = null
+                TaskId = _testSuite.Task.Id
             },
             new TradingActionResponse
             {
@@ -415,7 +452,7 @@ public sealed class PerformanceEndpointTests : IClassFixture<PerformanceTestSuit
                 ExecutedAt = DateTimeOffset.FromUnixTimeMilliseconds(_testSuite.Actions[2].ExecutionTimestamp!.Value),
                 AverageFillPrice = null,
                 Error = null,
-                TaskId = null
+                TaskId = _testSuite.Task.Id
             }
         });
 
