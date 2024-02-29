@@ -18,6 +18,9 @@ public sealed class GreedyStrategy : IStrategy
         _tradingTask = tradingTask;
     }
 
+    public static string StrategyName => "Greedy optimal strategy";
+    public string Name => StrategyName;
+
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
     {
         /*
@@ -54,7 +57,7 @@ public sealed class GreedyStrategy : IStrategy
          *  Not caused by this strategy - sell all.
          *  Will do something smarter tomorrow.
          */
-        
+
         var predictions = await _predictor.GetPredictionsAsync(token);
         var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
 
@@ -62,11 +65,16 @@ public sealed class GreedyStrategy : IStrategy
         var heldPositionsCount = assets.Positions.Values.Count(position => position.Quantity > 0);
         var biggestHeldPosition = assets.Positions.Values.Where(position => position.Quantity > 0)
             .MaxBy(position => position.MarketValue);
-        if (heldPositionsCount > 1) return GetSellAllAssetsActions(assets, predictions);
+        if (heldPositionsCount > 1)
+        {
+            return GetSellAllAssetsActions(assets, predictions);
+        }
 
         // If haven't YOLO'd at least 90% into one stock...
         if (biggestHeldPosition is not null && biggestHeldPosition.MarketValue > assets.Cash.AvailableAmount * 9)
+        {
             return GetSellAllAssetsActions(assets, predictions);
+        }
 
         var normalizedPredictions = await GetNormalizedPredictionsAsync(predictions, token);
         var twoDayBest = DetermineBestTokensFor2DayBuy(normalizedPredictions);
@@ -82,8 +90,7 @@ public sealed class GreedyStrategy : IStrategy
             };
 
             return GetActionsIfHoldsStock(new AnalysisDetails(twoDayBest, threeDayBest, predictions),
-                biggestHeldPosition.Symbol,
-                biggestHeldPosition.Quantity, sellReturns);
+                biggestHeldPosition.Symbol, biggestHeldPosition.Quantity, sellReturns);
         }
 
         // If only holds money...

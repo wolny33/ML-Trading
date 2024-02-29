@@ -159,16 +159,20 @@ public sealed class Program
         services.AddScoped<IMarketDataSource, MarketDataSource>();
         services.AddScoped<IPricePredictor, PricePredictor>();
         services.AddScoped<IAssetsDataSource, AssetsDataSource>();
-        services.AddScoped<IStrategy, Strategy>();
+        services.AddScoped<IStrategyFactory, StrategyFactory>();
         services.AddScoped<IActionExecutor, ActionExecutor>();
         services.AddScoped<IExchangeCalendar, ExchangeCalendar>();
         services.AddScoped<ICurrentTradingTask, CurrentTradingTask>();
         services.AddScoped<TradingTaskExecutor>();
 
+        services.AddScoped<IStrategy, Strategy>();
+        services.AddScoped<IStrategy, GreedyStrategy>();
+
         services.AddTransient<CredentialsCommand>();
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();
         services.AddTransient<IInvestmentConfigService, InvestmentConfigService>();
         services.AddTransient<IStrategyParametersService, StrategyParametersService>();
+        services.AddTransient<IStrategySelectionService, StrategySelectionService>();
         services.AddTransient<ITradingActionQuery, TradingActionQuery>();
         services.AddTransient<ITradingActionCommand, TradingActionCommand>();
         services.AddTransient<ITradingTaskCommand, TradingTaskCommand>();

@@ -15,6 +15,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<InvestmentConfigEntity> InvestmentConfiguration => Set<InvestmentConfigEntity>();
     public DbSet<TradingTaskEntity> TradingTasks => Set<TradingTaskEntity>();
     public DbSet<StrategyParametersEntity> StrategyParameters => Set<StrategyParametersEntity>();
+    public DbSet<StrategySelectionEntity> StrategySelection => Set<StrategySelectionEntity>();
     public DbSet<AssetsStateEntity> AssetsStates => Set<AssetsStateEntity>();
     public DbSet<PositionEntity> Positions => Set<PositionEntity>();
     public DbSet<BacktestEntity> Backtests => Set<BacktestEntity>();

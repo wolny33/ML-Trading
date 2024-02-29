@@ -33,10 +33,14 @@ public sealed class ActionExecutorTests : IAsyncDisposable
         _tradingTask.CurrentBacktestId.Returns((Guid?)null);
 
         _strategy = Substitute.For<IStrategy>();
+        var strategyFactory = Substitute.For<IStrategyFactory>();
+        strategyFactory.CreateAsync(Arg.Any<CancellationToken>()).Returns(_strategy);
+
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
         _backtestAssets = Substitute.For<IBacktestAssets>();
-        _executor = new ActionExecutor(_strategy, clientFactory, logger, _tradingTask, callQueue, _backtestAssets);
+        _executor = new ActionExecutor(strategyFactory, clientFactory, logger, _tradingTask, callQueue,
+            _backtestAssets);
     }
 
     public ValueTask DisposeAsync()
