@@ -7,19 +7,19 @@ namespace TradingBot.Services;
 public interface IStrategySelectionService
 {
     Task<string> GetSelectedNameAsync(CancellationToken token = default);
-    bool IsNameValid(string name);
     Task SetNameAsync(string name, CancellationToken token = default);
 }
 
 public sealed class StrategySelectionService : IStrategySelectionService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly IReadOnlyList<string> _validNames = new[] { Strategy.StrategyName, GreedyStrategy.StrategyName };
 
     public StrategySelectionService(IDbContextFactory<AppDbContext> dbContextFactory)
     {
         _dbContextFactory = dbContextFactory;
     }
+
+    public static IReadOnlyList<string> ValidNames => new[] { Strategy.StrategyName, GreedyStrategy.StrategyName };
 
     public async Task<string> GetSelectedNameAsync(CancellationToken token = default)
     {
@@ -28,11 +28,6 @@ public sealed class StrategySelectionService : IStrategySelectionService
                      StrategySelectionEntity.MakeDefault();
 
         return entity.Name;
-    }
-
-    public bool IsNameValid(string name)
-    {
-        return _validNames.Contains(name);
     }
 
     public async Task SetNameAsync(string name, CancellationToken token = default)
@@ -52,5 +47,10 @@ public sealed class StrategySelectionService : IStrategySelectionService
 
         entity.Name = name;
         await context.SaveChangesAsync(token);
+    }
+
+    public static bool IsNameValid(string name)
+    {
+        return ValidNames.Contains(name);
     }
 }

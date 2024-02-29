@@ -7,7 +7,7 @@ public sealed class StrategySelectionEntity
 {
     [Key]
     public Guid Id { get; init; } = Guid.NewGuid();
-    
+
     public required string Name { get; set; }
 
     public static StrategySelectionEntity MakeDefault()
