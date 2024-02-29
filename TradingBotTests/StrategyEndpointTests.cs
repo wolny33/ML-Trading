@@ -25,6 +25,15 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
 
         var updateResponse = await client.Request("api", "strategy").PutJsonAsync(new { });
         updateResponse.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+
+        var selectionResponse = await client.Request("api", "strategy", "selection").GetAsync();
+        selectionResponse.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+
+        var updateSelectionResponse = await client.Request("api", "strategy", "selection").PutJsonAsync(new { });
+        updateSelectionResponse.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+
+        var namesResponse = await client.Request("api", "strategy", "selection", "names").GetAsync();
+        namesResponse.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
 
     [Fact]
@@ -73,14 +82,55 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
     }
 
     [Fact]
-    public async Task ShouldValidateRequest()
+    public async Task ShouldValidateStrategyParametersRequest()
     {
         using var client = _testSuite.CreateAuthenticatedClient().AllowAnyHttpStatus();
-        var response = await client.Request("api", "strategy").PutJsonAsync(new
-        {
-            disable = false
-        });
+        var response = await client.Request("api", "strategy").PutJsonAsync(new { disable = false });
 
         response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task ShouldGetSelectedStrategy()
+    {
+        using var client = _testSuite.CreateAuthenticatedClient();
+        var selectedStrategy =
+            await client.Request("api", "strategy", "selection").GetJsonAsync<StrategySelectionResponse>();
+
+        selectedStrategy.Should().BeEquivalentTo(new { Name = "Basic strategy" });
+    }
+
+    [Fact]
+    public async Task ShouldUpdateStrategySelection()
+    {
+        using var client = _testSuite.CreateAuthenticatedClient();
+        var response = await client.Request("api", "strategy", "selection").PutJsonAsync(new
+        {
+            name = "Greedy optimal strategy"
+        });
+        var strategySelection = await response.GetJsonAsync<StrategySelectionResponse>();
+
+        await client.Request("api", "strategy", "selection").PutJsonAsync(new { name = "Basic strategy" });
+
+        strategySelection.Should().BeEquivalentTo(new { Name = "Greedy optimal strategy" });
+    }
+
+    [Fact]
+    public async Task ShouldValidateStrategySelectionRequest()
+    {
+        using var client = _testSuite.CreateAuthenticatedClient().AllowAnyHttpStatus();
+        var response = await client.Request("api", "strategy", "selection").PutJsonAsync(new { name = "unknown name" });
+
+        response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task ShouldGetKnownStrategyNames()
+    {
+        using var client = _testSuite.CreateAuthenticatedClient();
+        var strategyNames = await client.Request("api", "strategy", "selection", "names")
+            .GetJsonAsync<StrategyNamesResponse>();
+
+        strategyNames.Names.Should().Contain("Basic strategy").And.Contain("Greedy optimal strategy");
     }
 }
