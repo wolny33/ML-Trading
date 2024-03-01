@@ -11,13 +11,15 @@ public interface IPairFinder
 public sealed class PairFinder : IPairFinder, IAsyncDisposable
 {
     private readonly IPairGroupCommand _pairGroupCommand;
-    private readonly ConcurrentDictionary<Guid, PairCreationTask> _tasksPerBacktest = new();
+    private readonly IServiceScopeFactory _scopeFactory;
 
+    private readonly ConcurrentDictionary<Guid, PairCreationTask> _tasksPerBacktest = new();
     private PairCreationTask? _pairCreationTask;
 
-    public PairFinder(IPairGroupCommand pairGroupCommand)
+    public PairFinder(IPairGroupCommand pairGroupCommand, IServiceScopeFactory scopeFactory)
     {
         _pairGroupCommand = pairGroupCommand;
+        _scopeFactory = scopeFactory;
     }
 
     public async ValueTask DisposeAsync()
@@ -70,9 +72,15 @@ public sealed class PairFinder : IPairFinder, IAsyncDisposable
         await _pairGroupCommand.SavePairGroupAsync(pairGroup, token);
     }
 
-    private Task<PairGroup> CreatePairsAsync(Guid pairGroupId, DateOnly start, DateOnly end,
+    private async Task<PairGroup> CreatePairsAsync(Guid pairGroupId, DateOnly start, DateOnly end,
         CancellationToken token = default)
     {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var marketDataSource = scope.ServiceProvider.GetRequiredService<IMarketDataSource>();
+
+        var marketData = await marketDataSource.GetPricesForAllSymbolsAsync(start, end, token);
+        // TODO: Continue...
+
         throw new NotImplementedException();
     }
 
