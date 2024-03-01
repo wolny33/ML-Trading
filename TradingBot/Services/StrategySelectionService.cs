@@ -19,7 +19,8 @@ public sealed class StrategySelectionService : IStrategySelectionService
         _dbContextFactory = dbContextFactory;
     }
 
-    public static IReadOnlyList<string> ValidNames => new[] { Strategy.StrategyName, GreedyStrategy.StrategyName };
+    public static IReadOnlyList<string> ValidNames =>
+        new[] { Strategy.StrategyName, GreedyStrategy.StrategyName, PairTradingStrategy.StrategyName };
 
     public async Task<string> GetSelectedNameAsync(CancellationToken token = default)
     {
