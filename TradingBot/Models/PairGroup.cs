@@ -4,6 +4,7 @@ namespace TradingBot.Models;
 
 public sealed class PairGroup
 {
+    public required Guid Id { get; init; }
     public required DateTimeOffset DeterminedAt { get; init; }
     public required IReadOnlyList<Pair> Pairs { get; init; }
 
@@ -11,6 +12,7 @@ public sealed class PairGroup
     {
         return new PairGroup
         {
+            Id = entity.Id,
             DeterminedAt = DateTimeOffset.FromUnixTimeMilliseconds(entity.CreationTimestamp),
             Pairs = entity.Pairs.Select(Pair.FromEntity).ToList()
         };
@@ -18,12 +20,11 @@ public sealed class PairGroup
 
     public PairGroupEntity ToEntity()
     {
-        var id = Guid.NewGuid();
         return new PairGroupEntity
         {
-            Id = id,
+            Id = Id,
             CreationTimestamp = DeterminedAt.ToUnixTimeMilliseconds(),
-            Pairs = Pairs.Select(p => p.ToEntity(id)).ToList()
+            Pairs = Pairs.Select(p => p.ToEntity(Id)).ToList()
         };
     }
 }

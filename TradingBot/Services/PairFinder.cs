@@ -1,19 +1,19 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Concurrent;
+using TradingBot.Models;
 
 namespace TradingBot.Services;
 
 public interface IPairFinder
 {
-    void StartNewPairGroupCreation();
-    bool IsPairCreationInProgress();
+    Task<Guid> StartNewPairGroupCreationAsync(DateOnly start, DateOnly end, Guid? backtestId);
 }
 
-// TODO: How should this work in backtests???
 public sealed class PairFinder : IPairFinder, IAsyncDisposable
 {
     private readonly IPairGroupCommand _pairGroupCommand;
-    private Task? _pairCreationTask;
-    private CancellationTokenSource _tokenSource = new();
+    private readonly ConcurrentDictionary<Guid, PairCreationTask> _tasksPerBacktest = new();
+
+    private PairCreationTask? _pairCreationTask;
 
     public PairFinder(IPairGroupCommand pairGroupCommand)
     {
@@ -22,38 +22,76 @@ public sealed class PairFinder : IPairFinder, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (!IsPairCreationInProgress())
+        foreach (var creationTask in _tasksPerBacktest.Values.Concat(_pairCreationTask is null
+                     ? Array.Empty<PairCreationTask>()
+                     : new[] { _pairCreationTask }))
         {
-            _tokenSource.Dispose();
-            return;
+            await creationTask.DisposeAsync();
+        }
+    }
+
+    public async Task<Guid> StartNewPairGroupCreationAsync(DateOnly start, DateOnly end, Guid? backtestId)
+    {
+        if (backtestId is null)
+        {
+            _pairCreationTask = await CreateNewTaskAsync(_pairCreationTask, start, end);
+            return _pairCreationTask.PairGroupId;
         }
 
-        _tokenSource.Cancel();
-        await _pairCreationTask;
-        _tokenSource.Dispose();
+        var newTask =
+            await CreateNewTaskAsync(_tasksPerBacktest.TryGetValue(backtestId.Value, out var oldTask) ? oldTask : null,
+                start, end);
+        _tasksPerBacktest[backtestId.Value] = newTask;
+        return newTask.PairGroupId;
     }
 
-    public void StartNewPairGroupCreation()
+    private async Task<PairCreationTask> CreateNewTaskAsync(PairCreationTask? oldTask, DateOnly start, DateOnly end)
     {
-        if (IsPairCreationInProgress())
+        if (oldTask is not null)
         {
-            return;
+            if (!oldTask.Task.IsCompleted)
+            {
+                throw new InvalidOperationException("There exists a conflicting pair creation task");
+            }
+
+            await oldTask.DisposeAsync();
         }
 
-        _tokenSource = new();
-        _pairCreationTask ??= CreatePairsAsync(_tokenSource.Token);
+        var id = Guid.NewGuid();
+        var tokenSource = new CancellationTokenSource();
+        return new PairCreationTask(id, start, end, tokenSource,
+            CreatePairsAndSaveAsync(id, start, end, tokenSource.Token));
     }
 
-    [MemberNotNullWhen(true, nameof(_pairCreationTask))]
-    public bool IsPairCreationInProgress()
-    {
-        return _pairCreationTask?.IsCompleted == false;
-    }
-
-    private async Task CreatePairsAsync(CancellationToken token)
+    private async Task CreatePairsAndSaveAsync(Guid pairGroupId, DateOnly start, DateOnly end, CancellationToken token)
     {
         await Task.Yield();
+        var pairGroup = await CreatePairsAsync(pairGroupId, start, end, token);
+        await _pairGroupCommand.SavePairGroupAsync(pairGroup, token);
+    }
 
+    private Task<PairGroup> CreatePairsAsync(Guid pairGroupId, DateOnly start, DateOnly end,
+        CancellationToken token = default)
+    {
         throw new NotImplementedException();
+    }
+
+    private sealed record PairCreationTask(
+        Guid PairGroupId,
+        DateOnly Start,
+        DateOnly End,
+        CancellationTokenSource TokenSource,
+        Task Task) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            if (!Task.IsCompleted)
+            {
+                TokenSource.Cancel();
+                await Task;
+            }
+
+            TokenSource.Dispose();
+        }
     }
 }

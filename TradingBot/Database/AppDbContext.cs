@@ -21,4 +21,5 @@ public sealed class AppDbContext : DbContext
     public DbSet<BacktestEntity> Backtests => Set<BacktestEntity>();
     public DbSet<PairGroupEntity> PairGroups => Set<PairGroupEntity>();
     public DbSet<PairEntity> Pairs => Set<PairEntity>();
+    public DbSet<PairTradingStrategyStateEntity> PairTradingStrategyStates => Set<PairTradingStrategyStateEntity>();
 }

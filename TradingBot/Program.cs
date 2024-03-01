@@ -184,6 +184,7 @@ public sealed class Program
         services.AddTransient<IBacktestQuery, BacktestQuery>();
         services.AddTransient<IPairGroupCommand, PairGroupCommand>();
         services.AddTransient<IPairGroupQuery, PairGroupQuery>();
+        services.AddTransient<IPairTradingStrategyStateService, PairTradingStrategyStateService>();
 
         services.AddSingleton<IPairFinder, PairFinder>();
 
