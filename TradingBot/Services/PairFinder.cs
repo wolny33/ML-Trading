@@ -79,9 +79,60 @@ public sealed class PairFinder : IPairFinder, IAsyncDisposable
         var marketDataSource = scope.ServiceProvider.GetRequiredService<IMarketDataSource>();
 
         var marketData = await marketDataSource.GetPricesForAllSymbolsAsync(start, end, token);
-        // TODO: Continue...
+        var normalizedPrices = GetNormalizedClosePrices(marketData);
+        var scoredPairs = ScoreAllPairs(normalizedPrices);
 
-        throw new NotImplementedException();
+        return new PairGroup
+        {
+            Id = pairGroupId,
+            DeterminedAt = DateTimeOffset.Now, // TODO: Change
+            Pairs = scoredPairs.OrderByDescending(pair => pair.Value).Select(pair => pair.Key).Take(5).ToList()
+        };
+    }
+
+    private static Dictionary<Pair, decimal> ScoreAllPairs(
+        Dictionary<TradingSymbol, IReadOnlyList<decimal>> normalizedPrices)
+    {
+        var scoredPairs = new Dictionary<Pair, decimal>();
+        foreach (var firstSymbol in normalizedPrices.Keys)
+        {
+            foreach (var secondSymbol in normalizedPrices.Keys)
+            {
+                if (firstSymbol == secondSymbol)
+                {
+                    continue;
+                }
+
+                var symbolPair = Pair.CreateOrdered(firstSymbol, secondSymbol);
+                if (scoredPairs.ContainsKey(symbolPair))
+                {
+                    continue;
+                }
+
+                scoredPairs[symbolPair] =
+                    CalculatePairCorrelation(normalizedPrices[firstSymbol], normalizedPrices[secondSymbol]);
+            }
+        }
+
+        return scoredPairs;
+    }
+
+    private static Dictionary<TradingSymbol, IReadOnlyList<decimal>> GetNormalizedClosePrices(
+        IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>> marketData)
+    {
+        var normalizedPrices = new Dictionary<TradingSymbol, IReadOnlyList<decimal>>();
+        foreach (var (symbol, data) in marketData)
+        {
+            var meanClosePrice = data.Select(d => d.Close).Sum() / data.Count;
+            normalizedPrices[symbol] = data.Select(d => d.Close / meanClosePrice).ToList();
+        }
+
+        return normalizedPrices;
+    }
+
+    private static decimal CalculatePairCorrelation(IReadOnlyList<decimal> first, IReadOnlyList<decimal> second)
+    {
+        return first.Zip(second).Sum(pair => (pair.First - pair.Second) * (pair.First - pair.Second));
     }
 
     private sealed record PairCreationTask(

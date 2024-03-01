@@ -31,6 +31,16 @@ public sealed class PairGroup
 
 public sealed record Pair(TradingSymbol First, TradingSymbol Second)
 {
+    public static Pair CreateOrdered(TradingSymbol first, TradingSymbol second)
+    {
+        if (string.Compare(first.Value, second.Value, StringComparison.Ordinal) < 0)
+        {
+            (first, second) = (second, first);
+        }
+
+        return new Pair(first, second);
+    }
+
     public static Pair FromEntity(PairEntity entity)
     {
         return new Pair(new(entity.FirstToken), new(entity.SecondToken));
