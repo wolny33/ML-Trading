@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TradingBot.Database.Entities;
 
-public sealed class SymbolToBuyEntity
+public sealed class LoserSymbolToBuyEntity
 {
     [Key]
     public required Guid Id { get; init; }

@@ -41,7 +41,7 @@ public class BuyLosersStrategyStateService : IBuyLosersStrategyStateService
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
 
         foreach (var symbol in symbols)
-            context.SymbolsToBuy.Add(new SymbolToBuyEntity
+            context.LoserSymbolsToBuy.Add(new LoserSymbolToBuyEntity
             {
                 Id = Guid.NewGuid(),
                 StrategyStateBacktestId = backtestId,
@@ -54,7 +54,7 @@ public class BuyLosersStrategyStateService : IBuyLosersStrategyStateService
     public async Task ClearSymbolsToBuyAsync(Guid? backtestId, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        await context.SymbolsToBuy.Where(s => s.StrategyStateBacktestId == backtestId).ExecuteDeleteAsync(token);
+        await context.LoserSymbolsToBuy.Where(s => s.StrategyStateBacktestId == backtestId).ExecuteDeleteAsync(token);
     }
 
     public async Task SetNextExecutionDay(DateOnly day, Guid? backtestId, CancellationToken token = default)

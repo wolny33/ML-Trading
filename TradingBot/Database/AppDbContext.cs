@@ -20,5 +20,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<PositionEntity> Positions => Set<PositionEntity>();
     public DbSet<BacktestEntity> Backtests => Set<BacktestEntity>();
     public DbSet<BuyLosersStrategyStateEntity> BuyLosersStrategyStates => Set<BuyLosersStrategyStateEntity>();
-    public DbSet<SymbolToBuyEntity> SymbolsToBuy => Set<SymbolToBuyEntity>();
+    public DbSet<BuyWinnersStrategyStateEntity> BuyWinnersStrategyStates => Set<BuyWinnersStrategyStateEntity>();
+    public DbSet<BuyWinnersEvaluationEntity> BuyWinnersEvaluations => Set<BuyWinnersEvaluationEntity>();
+    public DbSet<LoserSymbolToBuyEntity> LoserSymbolsToBuy => Set<LoserSymbolToBuyEntity>();
+    public DbSet<WinnerSymbolToBuyEntity> WinnerSymbolsToBuy => Set<WinnerSymbolToBuyEntity>();
 }

@@ -8,5 +8,5 @@ public sealed class BuyLosersStrategyStateEntity
     public required Guid? BacktestId { get; init; }
 
     public DateOnly? NextEvaluationDay { get; set; }
-    public IList<SymbolToBuyEntity> SymbolsToBuy { get; init; } = new List<SymbolToBuyEntity>();
+    public IList<LoserSymbolToBuyEntity> SymbolsToBuy { get; init; } = new List<LoserSymbolToBuyEntity>();
 }

@@ -20,7 +20,11 @@ public sealed class StrategySelectionService : IStrategySelectionService
     }
 
     public static IReadOnlyList<string> ValidNames =>
-        new[] { Strategy.StrategyName, GreedyStrategy.StrategyName, BuyLosersStrategy.StrategyName };
+        new[]
+        {
+            Strategy.StrategyName, GreedyStrategy.StrategyName, BuyLosersStrategy.StrategyName,
+            BuyWinnersStrategy.StrategyName
+        };
 
     public async Task<string> GetSelectedNameAsync(CancellationToken token = default)
     {
