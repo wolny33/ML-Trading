@@ -10,7 +10,10 @@ public interface IBuyWinnersStrategyStateService
     Task<BuyWinnersStrategyState> GetStateAsync(Guid? backtestId, CancellationToken token = default);
     Task SetNextExecutionDay(DateOnly day, Guid? backtestId, CancellationToken token = default);
     Task SaveNewEvaluationAsync(BuyWinnersEvaluation evaluation, Guid? backtestId, CancellationToken token = default);
-    Task MarkEvaluationAsBoughtAsync(Guid evaluationId, CancellationToken token = default);
+
+    Task MarkEvaluationAsBoughtAsync(IReadOnlyList<Guid> actionIds, Guid evaluationId,
+        CancellationToken token = default);
+
     Task DeleteEvaluationAsync(Guid evaluationId, CancellationToken token = default);
 }
 
@@ -53,14 +56,24 @@ public sealed class BuyWinnersStrategyStateService : IBuyWinnersStrategyStateSer
         await context.SaveChangesAsync(token);
     }
 
-    public async Task MarkEvaluationAsBoughtAsync(Guid evaluationId, CancellationToken token = default)
+    public async Task MarkEvaluationAsBoughtAsync(IReadOnlyList<Guid> actionIds, Guid evaluationId,
+        CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         await context.BuyWinnersEvaluations
             .Where(e => e.Id == evaluationId)
             .ExecuteUpdateAsync(evaluation =>
-                    evaluation.SetProperty(e => e.State, BuyWinnersEvaluationState.Bought),
+                    evaluation.SetProperty(e => e.Bought, true),
                 token);
+
+        context.WinnerBuyActions.AddRange(actionIds.Select(actionId => new BuyWinnersBuyActionEntity
+        {
+            Id = Guid.NewGuid(),
+            EvaluationId = evaluationId,
+            ActionId = actionId
+        }));
+
+        await context.SaveChangesAsync(token);
     }
 
     public async Task DeleteEvaluationAsync(Guid evaluationId, CancellationToken token = default)

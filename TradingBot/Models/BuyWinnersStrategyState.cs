@@ -23,8 +23,9 @@ public sealed class BuyWinnersEvaluation
 {
     public required Guid Id { get; init; }
     public required DateOnly CreatedAt { get; init; }
-    public required BuyWinnersEvaluationState State { get; init; }
+    public required bool Bought { get; init; }
     public required IReadOnlyList<TradingSymbol> SymbolsToBuy { get; init; }
+    public IReadOnlyList<Guid> ActionIds { get; init; } = new List<Guid>();
 
     public static BuyWinnersEvaluation FromEntity(BuyWinnersEvaluationEntity entity)
     {
@@ -32,8 +33,9 @@ public sealed class BuyWinnersEvaluation
         {
             Id = entity.Id,
             CreatedAt = entity.CreatedAt,
-            State = entity.State,
-            SymbolsToBuy = entity.SymbolsToBuy.Select(s => new TradingSymbol(s.Symbol)).ToList()
+            Bought = entity.Bought,
+            SymbolsToBuy = entity.SymbolsToBuy.Select(s => new TradingSymbol(s.Symbol)).ToList(),
+            ActionIds = entity.Actions.Select(a => a.ActionId).ToList()
         };
     }
 
@@ -44,7 +46,7 @@ public sealed class BuyWinnersEvaluation
             Id = Id,
             StrategyStateBacktestId = backtestId,
             CreatedAt = CreatedAt,
-            State = State,
+            Bought = Bought,
             SymbolsToBuy = SymbolsToBuy.Select(s => new WinnerSymbolToBuyEntity
             {
                 Id = Guid.NewGuid(),
@@ -53,11 +55,4 @@ public sealed class BuyWinnersEvaluation
             }).ToList()
         };
     }
-}
-
-public enum BuyWinnersEvaluationState
-{
-    Waiting,
-    Bought,
-    Sold
 }

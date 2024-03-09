@@ -24,4 +24,5 @@ public sealed class AppDbContext : DbContext
     public DbSet<BuyWinnersEvaluationEntity> BuyWinnersEvaluations => Set<BuyWinnersEvaluationEntity>();
     public DbSet<LoserSymbolToBuyEntity> LoserSymbolsToBuy => Set<LoserSymbolToBuyEntity>();
     public DbSet<WinnerSymbolToBuyEntity> WinnerSymbolsToBuy => Set<WinnerSymbolToBuyEntity>();
+    public DbSet<BuyWinnersBuyActionEntity> WinnerBuyActions => Set<BuyWinnersBuyActionEntity>();
 }

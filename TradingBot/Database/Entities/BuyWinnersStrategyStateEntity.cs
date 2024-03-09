@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using TradingBot.Models;
 
 namespace TradingBot.Database.Entities;
 
@@ -23,6 +22,19 @@ public sealed class BuyWinnersEvaluationEntity
 
     public required Guid? StrategyStateBacktestId { get; init; }
     public required DateOnly CreatedAt { get; init; }
-    public required BuyWinnersEvaluationState State { get; set; }
+    public required bool Bought { get; set; }
     public required IList<WinnerSymbolToBuyEntity> SymbolsToBuy { get; init; } = new List<WinnerSymbolToBuyEntity>();
+    public IList<BuyWinnersBuyActionEntity> Actions { get; init; } = new List<BuyWinnersBuyActionEntity>();
+}
+
+public sealed class BuyWinnersBuyActionEntity
+{
+    [Key]
+    public required Guid Id { get; init; }
+
+    [Required]
+    public BuyWinnersEvaluationEntity Evaluation { get; init; } = null!;
+
+    public required Guid EvaluationId { get; init; }
+    public required Guid ActionId { get; init; }
 }
