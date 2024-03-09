@@ -167,7 +167,7 @@ public sealed class Program
 
         services.AddScoped<IStrategy, Strategy>();
         services.AddScoped<IStrategy, GreedyStrategy>();
-        services.AddScoped<IStrategy, PairTradingStrategy>();
+        services.AddScoped<IStrategy, BuyLosersStrategy>();
 
         services.AddTransient<CredentialsCommand>();
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();
@@ -182,11 +182,7 @@ public sealed class Program
         services.AddTransient<IAssetsStateQuery, AssetsStateQuery>();
         services.AddTransient<IBacktestCommand, BacktestCommand>();
         services.AddTransient<IBacktestQuery, BacktestQuery>();
-        services.AddTransient<IPairGroupCommand, PairGroupCommand>();
-        services.AddTransient<IPairGroupQuery, PairGroupQuery>();
-        services.AddTransient<IPairTradingStrategyStateService, PairTradingStrategyStateService>();
-
-        services.AddSingleton<IPairFinder, PairFinder>();
+        services.AddTransient<IBuyLosersStrategyStateService, BuyLosersStrategyStateService>();
 
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
         services.AddSingleton<IAlpacaCallQueue, AlpacaCallQueue>();
