@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TradingBot.Dto;
-using TradingBot.Services;
+using TradingBot.Services.Strategy;
 
 namespace TradingBot.Controllers;
 

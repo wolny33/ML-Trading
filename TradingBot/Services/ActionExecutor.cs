@@ -3,6 +3,7 @@ using Alpaca.Markets;
 using TradingBot.Exceptions;
 using TradingBot.Exceptions.Alpaca;
 using TradingBot.Models;
+using TradingBot.Services.Strategy;
 using ILogger = Serilog.ILogger;
 using OrderType = TradingBot.Models.OrderType;
 

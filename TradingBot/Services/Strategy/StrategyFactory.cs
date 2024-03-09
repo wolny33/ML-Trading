@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace TradingBot.Services;
+namespace TradingBot.Services.Strategy;
 
 public interface IStrategyFactory
 {

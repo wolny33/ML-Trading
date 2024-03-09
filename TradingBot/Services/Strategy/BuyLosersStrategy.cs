@@ -1,6 +1,6 @@
 ﻿using TradingBot.Models;
 
-namespace TradingBot.Services;
+namespace TradingBot.Services.Strategy;
 
 public sealed class BuyLosersStrategy : IStrategy
 {

@@ -2,7 +2,7 @@
 using TradingBot.Database;
 using TradingBot.Database.Entities;
 
-namespace TradingBot.Services;
+namespace TradingBot.Services.Strategy;
 
 public interface IStrategySelectionService
 {

@@ -2,7 +2,7 @@
 using TradingBot.Configuration;
 using TradingBot.Database;
 
-namespace TradingBot.Services;
+namespace TradingBot.Services.Strategy;
 
 public interface IStrategyParametersService
 {

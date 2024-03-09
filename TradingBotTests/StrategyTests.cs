@@ -1,9 +1,10 @@
 ﻿using Alpaca.Markets;
+using FluentAssertions;
 using NSubstitute;
 using TradingBot.Models;
 using TradingBot.Services;
 using TradingBot.Configuration;
-using FluentAssertions;
+using TradingBot.Services.Strategy;
 
 namespace TradingBotTests
 {

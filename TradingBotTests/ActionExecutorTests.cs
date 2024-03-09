@@ -5,6 +5,7 @@ using Serilog;
 using TradingBot.Exceptions;
 using TradingBot.Models;
 using TradingBot.Services;
+using TradingBot.Services.Strategy;
 using OrderType = Alpaca.Markets.OrderType;
 
 namespace TradingBotTests;

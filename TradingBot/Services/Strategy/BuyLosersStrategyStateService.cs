@@ -3,7 +3,7 @@ using TradingBot.Database;
 using TradingBot.Database.Entities;
 using TradingBot.Models;
 
-namespace TradingBot.Services;
+namespace TradingBot.Services.Strategy;
 
 public interface IBuyLosersStrategyStateService
 {

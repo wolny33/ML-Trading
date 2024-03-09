@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using TradingBot.Services;
+using TradingBot.Services.Strategy;
 
 namespace TradingBot.Dto;
 

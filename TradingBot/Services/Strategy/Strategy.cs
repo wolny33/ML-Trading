@@ -1,7 +1,7 @@
 using TradingBot.Configuration;
 using TradingBot.Models;
 
-namespace TradingBot.Services;
+namespace TradingBot.Services.Strategy;
 
 public interface IStrategy
 {
