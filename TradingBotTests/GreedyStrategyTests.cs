@@ -19,7 +19,11 @@ public sealed class GreedyStrategyTests
         _assets = Substitute.For<IAssetsDataSource>();
         _marketData = Substitute.For<IMarketDataSource>();
         _predictor = Substitute.For<IPricePredictor>();
+
         var tradingTask = Substitute.For<ICurrentTradingTask>();
+        tradingTask.GetTaskDay().Returns(new DateOnly(2024, 3, 10));
+        tradingTask.GetTaskTime().Returns(new DateTimeOffset(2024, 3, 10, 12, 0, 0, TimeSpan.Zero));
+        tradingTask.CurrentBacktestId.Returns((Guid?)null);
 
         _strategy = new GreedyStrategy(_assets, _marketData, _predictor, tradingTask);
     }

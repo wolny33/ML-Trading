@@ -26,7 +26,7 @@ public sealed class BuyLosersStrategy : IStrategy
         var state = await _stateService.GetStateAsync(_tradingTask.CurrentBacktestId, token);
         if (state.SymbolsToBuy.Count > 0) return await BuyPendingSymbolsAsync(state, token);
 
-        if (state.NextEvaluationDay is { } nextDay && nextDay < _tradingTask.GetTaskDay())
+        if (state.NextEvaluationDay is { } nextDay && nextDay > _tradingTask.GetTaskDay())
             return Array.Empty<TradingAction>();
 
         var losers = await DetermineLosersAsync(token);
