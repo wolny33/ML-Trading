@@ -159,14 +159,14 @@ public sealed class GreedyStrategy : IStrategy
     private static SymbolWithReturn DetermineBestTokenForNDayBuyWithOffset(
         IDictionary<TradingSymbol, Prediction> normalizedPredictions, int n, int offset)
     {
-        if (normalizedPredictions.Values.Any(prediction => prediction.Prices.Count < n + offset - 1))
+        if (normalizedPredictions.Values.Any(prediction => prediction.Prices.Count < offset + n - 1))
             throw new InvalidOperationException(
-                $"Some predictions are shorter than {n + offset - 1} - can't determine best {n}-day buy on day {offset}");
+                $"Some predictions are shorter than {offset + n - 1} - can't determine best {n}-day buy on day {offset}");
 
         return normalizedPredictions.Keys.Select(symbol => new SymbolWithReturn(
                 symbol,
-                normalizedPredictions[symbol].Prices[n + offset - 1].HighPrice /
-                normalizedPredictions[symbol].Prices[n].LowPrice)
+                normalizedPredictions[symbol].Prices[offset + n - 1].HighPrice /
+                normalizedPredictions[symbol].Prices[offset].LowPrice)
             )
             .MaxBy(s => s.Return)!;
     }
@@ -258,6 +258,8 @@ public sealed class GreedyStrategy : IStrategy
 
     private sealed record SymbolWithReturn(TradingSymbol Symbol, decimal Return);
 
-    private sealed record AnalysisDetails(IReadOnlyList<SymbolWithReturn> TwoDayBest,
-        IReadOnlyList<SymbolWithReturn> ThreeDayBest, IDictionary<TradingSymbol, Prediction> Predictions);
+    private sealed record AnalysisDetails(
+        IReadOnlyList<SymbolWithReturn> TwoDayBest,
+        IReadOnlyList<SymbolWithReturn> ThreeDayBest,
+        IDictionary<TradingSymbol, Prediction> Predictions);
 }
