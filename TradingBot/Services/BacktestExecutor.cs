@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using TradingBot.Exceptions;
 using TradingBot.Models;
+using TradingBot.Services.Strategy;
 using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
@@ -73,8 +74,13 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
             await Task.Yield();
             await using var initializationScope = _scopeFactory.CreateAsyncScope();
             var marketDataSource = initializationScope.ServiceProvider.GetRequiredService<IMarketDataSource>();
-            // We need 10 valid days (excluding weekends and holidays) before start, so 20 days should be enough
-            await marketDataSource.InitializeBacktestDataAsync(details.Start.AddDays(-20), details.End, token);
+            var strategy = await initializationScope.ServiceProvider.GetRequiredService<IStrategyFactory>()
+                .CreateAsync(token);
+
+            // Predictor needs 10 valid days (excluding weekends and holidays) before start, so 20 days should be enough
+            // If strategy needs more data, we get more data
+            await marketDataSource.InitializeBacktestDataAsync(
+                details.Start.AddDays(-int.Max(20, strategy.RequiredPastDays+1)), details.End, token);
 
             for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {

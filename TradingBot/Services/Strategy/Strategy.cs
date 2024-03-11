@@ -6,6 +6,7 @@ namespace TradingBot.Services.Strategy;
 public interface IStrategy
 {
     string Name { get; }
+    int RequiredPastDays { get; }
     Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default);
 
     Task HandleDeselectionAsync(CancellationToken token = default)
@@ -34,6 +35,7 @@ public sealed class Strategy : IStrategy
 
     public static string StrategyName => "Basic strategy";
     public string Name => StrategyName;
+    public int RequiredPastDays => 1;
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
     {

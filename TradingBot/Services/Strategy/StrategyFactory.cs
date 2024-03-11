@@ -11,21 +11,23 @@ public sealed class StrategyFactory : IStrategyFactory
 {
     private readonly IReadOnlyDictionary<string, IStrategy> _strategies;
     private readonly IStrategySelectionService _strategySelection;
-    private string? _selectedName;
+    private readonly ICurrentTradingTask _tradingTask;
 
-    public StrategyFactory(IEnumerable<IStrategy> strategies, IStrategySelectionService strategySelection)
+    public StrategyFactory(IEnumerable<IStrategy> strategies, IStrategySelectionService strategySelection,
+        ICurrentTradingTask tradingTask)
     {
         _strategySelection = strategySelection;
+        _tradingTask = tradingTask;
         _strategies = strategies.ToDictionary(strategy => strategy.Name);
     }
 
     public async Task<IStrategy> CreateAsync(CancellationToken token = default)
     {
-        _selectedName ??= await _strategySelection.GetSelectedNameAsync(token);
+        var selectedName = await _strategySelection.GetSelectedNameAsync(_tradingTask.CurrentBacktestId, token);
 
-        if (!_strategies.TryGetValue(_selectedName, out var strategy))
+        if (!_strategies.TryGetValue(selectedName, out var strategy))
         {
-            throw new UnreachableException($"Selected name doe not correspond to a strategy: '{_selectedName}'");
+            throw new UnreachableException($"Selected name does not correspond to a strategy: '{selectedName}'");
         }
 
         return strategy;

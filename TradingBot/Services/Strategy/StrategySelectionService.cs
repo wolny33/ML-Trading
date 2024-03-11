@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
 using TradingBot.Database;
 using TradingBot.Database.Entities;
 
@@ -6,7 +7,7 @@ namespace TradingBot.Services.Strategy;
 
 public interface IStrategySelectionService
 {
-    Task<string> GetSelectedNameAsync(CancellationToken token = default);
+    Task<string> GetSelectedNameAsync(Guid? backtestId, CancellationToken token = default);
     Task SetNameAsync(string name, CancellationToken token = default);
 }
 
@@ -14,6 +15,7 @@ public sealed class StrategySelectionService : IStrategySelectionService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ConcurrentDictionary<Guid, string> _strategySelections = new();
 
     public StrategySelectionService(IDbContextFactory<AppDbContext> dbContextFactory, IServiceScopeFactory scopeFactory)
     {
@@ -28,11 +30,18 @@ public sealed class StrategySelectionService : IStrategySelectionService
             BuyWinnersStrategy.StrategyName
         };
 
-    public async Task<string> GetSelectedNameAsync(CancellationToken token = default)
+    public async Task<string> GetSelectedNameAsync(Guid? backtestId, CancellationToken token = default)
     {
+        if (_strategySelections.TryGetValue(backtestId ?? Guid.Empty, out var selection))
+        {
+            return selection;
+        }
+
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entity = await context.StrategySelection.SingleOrDefaultAsync(token) ??
                      StrategySelectionEntity.MakeDefault();
+
+        _strategySelections[backtestId ?? Guid.Empty] = entity.Name;
 
         return entity.Name;
     }

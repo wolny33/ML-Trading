@@ -59,7 +59,7 @@ public sealed class StrategyController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<StrategySelectionResponse> GetStrategySelection()
     {
-        var name = await _strategySelectionService.GetSelectedNameAsync(HttpContext.RequestAborted);
+        var name = await _strategySelectionService.GetSelectedNameAsync(null, HttpContext.RequestAborted);
         return new StrategySelectionResponse { Name = name };
     }
 

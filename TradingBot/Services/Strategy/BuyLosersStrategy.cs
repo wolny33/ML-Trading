@@ -5,6 +5,7 @@ namespace TradingBot.Services.Strategy;
 public sealed class BuyLosersStrategy : IStrategy
 {
     private const int EvaluationFrequency = 30;
+    private const int AnalysisLength = 30;
 
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IMarketDataSource _marketDataSource;
@@ -22,6 +23,7 @@ public sealed class BuyLosersStrategy : IStrategy
 
     public static string StrategyName => "Overreaction strategy";
     public string Name => StrategyName;
+    public int RequiredPastDays => AnalysisLength;
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
     {
@@ -54,7 +56,8 @@ public sealed class BuyLosersStrategy : IStrategy
     private async Task<List<TradingSymbol>> DetermineLosersAsync(CancellationToken token)
     {
         var today = _tradingTask.GetTaskDay();
-        var allSymbolsData = await _marketDataSource.GetPricesForAllSymbolsAsync(today.AddDays(-30), today, token);
+        var allSymbolsData =
+            await _marketDataSource.GetPricesForAllSymbolsAsync(today.AddDays(-AnalysisLength), today, token);
 
         var lastMonthReturns = new Dictionary<TradingSymbol, decimal>();
         foreach (var (symbol, symbolData) in allSymbolsData)

@@ -175,7 +175,6 @@ public sealed class Program
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();
         services.AddTransient<IInvestmentConfigService, InvestmentConfigService>();
         services.AddTransient<IStrategyParametersService, StrategyParametersService>();
-        services.AddTransient<IStrategySelectionService, StrategySelectionService>();
         services.AddTransient<ITradingActionQuery, TradingActionQuery>();
         services.AddTransient<ITradingActionCommand, TradingActionCommand>();
         services.AddTransient<ITradingTaskCommand, TradingTaskCommand>();
@@ -192,5 +191,6 @@ public sealed class Program
 
         services.AddSingleton<IBacktestExecutor, BacktestExecutor>();
         services.AddSingleton<IBacktestAssets, BacktestAssets>();
+        services.AddSingleton<IStrategySelectionService, StrategySelectionService>();
     }
 }

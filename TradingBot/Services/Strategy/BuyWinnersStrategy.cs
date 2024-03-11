@@ -28,6 +28,7 @@ public sealed class BuyWinnersStrategy : IStrategy
 
     public static string StrategyName => "Trend following strategy";
     public string Name => StrategyName;
+    public int RequiredPastDays => AnalysisLength;
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
     {
