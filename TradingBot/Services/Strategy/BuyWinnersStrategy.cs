@@ -42,7 +42,7 @@ public sealed class BuyWinnersStrategy : IStrategy
             return buyActions;
         }
 
-        if (state.NextEvaluationDay is { } nextDay && nextDay < _tradingTask.GetTaskDay())
+        if (state.NextEvaluationDay is { } nextDay && nextDay > _tradingTask.GetTaskDay())
             return Array.Empty<TradingAction>();
 
         await CreateNewEvaluationAsync(state, token);
