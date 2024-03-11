@@ -36,7 +36,7 @@ public sealed class BuyLosersStrategy : IStrategy
         var unownedLosers = losers.Where(s => !assets.Positions.ContainsKey(s)).ToList();
 
         await _stateService.SetSymbolsToBuyAsync(unownedLosers, _tradingTask.CurrentBacktestId, token);
-        await _stateService.SetNextExecutionDay((state.NextEvaluationDay ?? _tradingTask.GetTaskDay()).AddDays(30),
+        await _stateService.SetNextExecutionDayAsync((state.NextEvaluationDay ?? _tradingTask.GetTaskDay()).AddDays(30),
             _tradingTask.CurrentBacktestId, CancellationToken.None);
 
         return unwantedPositions
@@ -46,7 +46,7 @@ public sealed class BuyLosersStrategy : IStrategy
     private async Task<List<TradingSymbol>> DetermineLosersAsync(CancellationToken token)
     {
         var today = _tradingTask.GetTaskDay();
-        var allSymbolsData = await _marketDataSource.GetPricesForAllSymbolsAsync(today, today.AddDays(-30), token);
+        var allSymbolsData = await _marketDataSource.GetPricesForAllSymbolsAsync(today.AddDays(-30), today, token);
 
         var lastMonthReturns = new Dictionary<TradingSymbol, decimal>();
         foreach (var (symbol, symbolData) in allSymbolsData)

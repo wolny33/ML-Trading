@@ -14,7 +14,7 @@ public interface IBuyLosersStrategyStateService
 
     Task ClearSymbolsToBuyAsync(Guid? backtestId, CancellationToken token = default);
 
-    Task SetNextExecutionDay(DateOnly day, Guid? backtestId, CancellationToken token = default);
+    Task SetNextExecutionDayAsync(DateOnly day, Guid? backtestId, CancellationToken token = default);
 }
 
 public class BuyLosersStrategyStateService : IBuyLosersStrategyStateService
@@ -57,7 +57,7 @@ public class BuyLosersStrategyStateService : IBuyLosersStrategyStateService
         await context.LoserSymbolsToBuy.Where(s => s.StrategyStateBacktestId == backtestId).ExecuteDeleteAsync(token);
     }
 
-    public async Task SetNextExecutionDay(DateOnly day, Guid? backtestId, CancellationToken token = default)
+    public async Task SetNextExecutionDayAsync(DateOnly day, Guid? backtestId, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entity =
