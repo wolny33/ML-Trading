@@ -33,7 +33,6 @@ public sealed class BuyLosersStrategyTests
     {
         _stateService.GetStateAsync(null, Arg.Any<CancellationToken>()).Returns(new BuyLosersStrategyState
         {
-            BacktestId = null,
             NextEvaluationDay = new DateOnly(2024, 3, 17),
             SymbolsToBuy = Array.Empty<TradingSymbol>()
         });
@@ -48,7 +47,6 @@ public sealed class BuyLosersStrategyTests
     {
         _stateService.GetStateAsync(null, Arg.Any<CancellationToken>()).Returns(new BuyLosersStrategyState
         {
-            BacktestId = null,
             NextEvaluationDay = new DateOnly(2024, 3, 17),
             SymbolsToBuy = new[]
             {
@@ -94,7 +92,6 @@ public sealed class BuyLosersStrategyTests
     {
         _stateService.GetStateAsync(null, Arg.Any<CancellationToken>()).Returns(new BuyLosersStrategyState
         {
-            BacktestId = null,
             NextEvaluationDay = new DateOnly(2024, 3, 10),
             SymbolsToBuy = Array.Empty<TradingSymbol>()
         });
@@ -169,7 +166,6 @@ public sealed class BuyLosersStrategyTests
     {
         _stateService.GetStateAsync(null, Arg.Any<CancellationToken>()).Returns(new BuyLosersStrategyState
         {
-            BacktestId = null,
             NextEvaluationDay = null,
             SymbolsToBuy = Array.Empty<TradingSymbol>()
         });

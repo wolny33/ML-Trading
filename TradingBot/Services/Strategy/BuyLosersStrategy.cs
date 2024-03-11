@@ -4,6 +4,8 @@ namespace TradingBot.Services.Strategy;
 
 public sealed class BuyLosersStrategy : IStrategy
 {
+    private const int EvaluationFrequency = 30;
+
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IMarketDataSource _marketDataSource;
     private readonly IBuyLosersStrategyStateService _stateService;
@@ -36,7 +38,8 @@ public sealed class BuyLosersStrategy : IStrategy
         var unownedLosers = losers.Where(s => !assets.Positions.ContainsKey(s)).ToList();
 
         await _stateService.SetSymbolsToBuyAsync(unownedLosers, _tradingTask.CurrentBacktestId, token);
-        await _stateService.SetNextExecutionDayAsync((state.NextEvaluationDay ?? _tradingTask.GetTaskDay()).AddDays(30),
+        await _stateService.SetNextExecutionDayAsync(
+            (state.NextEvaluationDay ?? _tradingTask.GetTaskDay()).AddDays(EvaluationFrequency),
             _tradingTask.CurrentBacktestId, CancellationToken.None);
 
         return unwantedPositions

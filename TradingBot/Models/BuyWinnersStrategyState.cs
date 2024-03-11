@@ -4,7 +4,6 @@ namespace TradingBot.Models;
 
 public sealed class BuyWinnersStrategyState
 {
-    public required Guid? BacktestId { get; init; }
     public required DateOnly? NextEvaluationDay { get; init; }
     public required IReadOnlyList<BuyWinnersEvaluation> Evaluations { get; init; }
 
@@ -12,7 +11,6 @@ public sealed class BuyWinnersStrategyState
     {
         return new BuyWinnersStrategyState
         {
-            BacktestId = entity.BacktestId,
             NextEvaluationDay = entity.NextEvaluationDay,
             Evaluations = entity.Evaluations.OrderBy(e => e.CreatedAt).Select(BuyWinnersEvaluation.FromEntity).ToList()
         };

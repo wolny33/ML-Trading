@@ -8,7 +8,7 @@ namespace TradingBot.Services.Strategy;
 public interface IBuyWinnersStrategyStateService
 {
     Task<BuyWinnersStrategyState> GetStateAsync(Guid? backtestId, CancellationToken token = default);
-    Task SetNextExecutionDay(DateOnly day, Guid? backtestId, CancellationToken token = default);
+    Task SetNextExecutionDayAsync(DateOnly day, Guid? backtestId, CancellationToken token = default);
     Task SaveNewEvaluationAsync(BuyWinnersEvaluation evaluation, Guid? backtestId, CancellationToken token = default);
 
     Task MarkEvaluationAsBoughtAsync(IReadOnlyList<Guid> actionIds, Guid evaluationId,
@@ -37,7 +37,7 @@ public sealed class BuyWinnersStrategyStateService : IBuyWinnersStrategyStateSer
         return BuyWinnersStrategyState.FromEntity(EnsureEntityExists(entity, backtestId, context));
     }
 
-    public async Task SetNextExecutionDay(DateOnly day, Guid? backtestId, CancellationToken token = default)
+    public async Task SetNextExecutionDayAsync(DateOnly day, Guid? backtestId, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entity = await context.BuyWinnersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == backtestId, token);

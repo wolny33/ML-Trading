@@ -29,8 +29,9 @@ public class BuyLosersStrategyStateService : IBuyLosersStrategyStateService
     public async Task<BuyLosersStrategyState> GetStateAsync(Guid? backtestId, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity =
-            await context.BuyLosersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == backtestId, token);
+        var entity = await context.BuyLosersStrategyStates
+            .Include(s => s.SymbolsToBuy)
+            .FirstOrDefaultAsync(s => s.BacktestId == backtestId, token);
 
         return BuyLosersStrategyState.FromEntity(EnsureEntityExists(entity, backtestId, context));
     }
