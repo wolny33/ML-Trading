@@ -9,6 +9,7 @@ public interface IBuyWinnersStrategyStateService
 {
     Task<BuyWinnersStrategyState> GetStateAsync(Guid? backtestId, CancellationToken token = default);
     Task SetNextExecutionDayAsync(DateOnly day, Guid? backtestId, CancellationToken token = default);
+    Task ClearNextExecutionDayAsync(CancellationToken token = default);
     Task SaveNewEvaluationAsync(BuyWinnersEvaluation evaluation, Guid? backtestId, CancellationToken token = default);
 
     Task MarkEvaluationAsBoughtAsync(IReadOnlyList<Guid> actionIds, Guid evaluationId,
@@ -44,6 +45,17 @@ public sealed class BuyWinnersStrategyStateService : IBuyWinnersStrategyStateSer
         entity = EnsureEntityExists(entity, backtestId, context);
 
         entity.NextEvaluationDay = day;
+
+        await context.SaveChangesAsync(token);
+    }
+
+    public async Task ClearNextExecutionDayAsync(CancellationToken token = default)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+        var entity = await context.BuyWinnersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == null, token);
+        if (entity is null) return;
+
+        entity.NextEvaluationDay = null;
 
         await context.SaveChangesAsync(token);
     }

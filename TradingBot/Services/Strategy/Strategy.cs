@@ -6,7 +6,12 @@ namespace TradingBot.Services.Strategy;
 public interface IStrategy
 {
     string Name { get; }
-    public Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default);
+    Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default);
+
+    Task HandleDeselectionAsync(CancellationToken token = default)
+    {
+        return Task.CompletedTask;
+    }
 }
 
 public sealed class Strategy : IStrategy

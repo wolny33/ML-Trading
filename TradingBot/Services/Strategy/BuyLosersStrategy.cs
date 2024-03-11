@@ -46,6 +46,11 @@ public sealed class BuyLosersStrategy : IStrategy
             .Select(p => TradingAction.MarketSell(p.Symbol, p.AvailableQuantity, _tradingTask.GetTaskTime())).ToList();
     }
 
+    public Task HandleDeselectionAsync(CancellationToken token = default)
+    {
+        return _stateService.ClearNextExecutionDayAsync(token);
+    }
+
     private async Task<List<TradingSymbol>> DetermineLosersAsync(CancellationToken token)
     {
         var today = _tradingTask.GetTaskDay();

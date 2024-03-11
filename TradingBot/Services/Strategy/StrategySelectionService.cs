@@ -13,10 +13,12 @@ public interface IStrategySelectionService
 public sealed class StrategySelectionService : IStrategySelectionService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public StrategySelectionService(IDbContextFactory<AppDbContext> dbContextFactory)
+    public StrategySelectionService(IDbContextFactory<AppDbContext> dbContextFactory, IServiceScopeFactory scopeFactory)
     {
         _dbContextFactory = dbContextFactory;
+        _scopeFactory = scopeFactory;
     }
 
     public static IReadOnlyList<string> ValidNames =>
@@ -40,6 +42,12 @@ public sealed class StrategySelectionService : IStrategySelectionService
         if (!IsNameValid(name))
         {
             throw new ArgumentException($"'{name}' is not a valid strategy name", nameof(name));
+        }
+
+        await using (var scope = _scopeFactory.CreateAsyncScope())
+        {
+            var strategy = await scope.ServiceProvider.GetRequiredService<IStrategyFactory>().CreateAsync(token);
+            await strategy.HandleDeselectionAsync(token);
         }
 
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);

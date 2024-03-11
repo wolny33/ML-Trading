@@ -56,6 +56,11 @@ public sealed class BuyWinnersStrategy : IStrategy
         return await GetSellActionsForEndingEvaluations(endingEvaluations, token);
     }
 
+    public Task HandleDeselectionAsync(CancellationToken token = default)
+    {
+        return _stateService.ClearNextExecutionDayAsync(token);
+    }
+
     private async Task CreateNewEvaluationAsync(BuyWinnersStrategyState state, CancellationToken token)
     {
         var winners = await DetermineWinnersAsync(token);
