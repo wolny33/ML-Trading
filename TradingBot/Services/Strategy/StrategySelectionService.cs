@@ -32,7 +32,7 @@ public sealed class StrategySelectionService : IStrategySelectionService
 
     public async Task<string> GetSelectedNameAsync(Guid? backtestId, CancellationToken token = default)
     {
-        if (_strategySelections.TryGetValue(backtestId ?? Guid.Empty, out var selection))
+        if (backtestId is not null && _strategySelections.TryGetValue(backtestId.Value, out var selection))
         {
             return selection;
         }
@@ -41,7 +41,10 @@ public sealed class StrategySelectionService : IStrategySelectionService
         var entity = await context.StrategySelection.SingleOrDefaultAsync(token) ??
                      StrategySelectionEntity.MakeDefault();
 
-        _strategySelections[backtestId ?? Guid.Empty] = entity.Name;
+        if(backtestId is not null)
+        {
+            _strategySelections[backtestId.Value] = entity.Name;
+        }
 
         return entity.Name;
     }
