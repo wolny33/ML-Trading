@@ -308,6 +308,29 @@ public sealed class BuyWinnersStrategyTests
                     pair => pair.Data as IReadOnlyList<DailyTradingData>)
         );
 
+        _assets.GetCurrentAssetsAsync(Arg.Any<CancellationToken>()).Returns(new Assets
+        {
+            EquityValue = 600m,
+            Cash = new Cash
+            {
+                MainCurrency = "USD",
+                BuyingPower = 600m,
+                AvailableAmount = 600m
+            },
+            Positions = new Dictionary<TradingSymbol, Position>
+            {
+                [new TradingSymbol("TKN2")] = new()
+                {
+                    Symbol = new TradingSymbol("TKN2"),
+                    SymbolId = Guid.NewGuid(),
+                    Quantity = 1m,
+                    AvailableQuantity = 1m,
+                    MarketValue = 90m,
+                    AverageEntryPrice = 100m
+                }
+            }
+        });
+
         _actionQuery.GetTradingActionByIdAsync(actionIds[0], Arg.Any<CancellationToken>())
             .Returns((TradingAction?)null);
         _actionQuery.GetTradingActionByIdAsync(actionIds[1], Arg.Any<CancellationToken>())
@@ -365,7 +388,6 @@ public sealed class BuyWinnersStrategyTests
     [Fact]
     public async Task ShouldPerformEvaluationOnFirstDay()
     {
-        var actionIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
         _stateService.GetStateAsync(null, Arg.Any<CancellationToken>()).Returns(new BuyWinnersStrategyState
         {
             NextEvaluationDay = null,
@@ -389,9 +411,35 @@ public sealed class BuyWinnersStrategyTests
                     pair => pair.Data as IReadOnlyList<DailyTradingData>)
         );
 
+        _assets.GetCurrentAssetsAsync(Arg.Any<CancellationToken>()).Returns(new Assets
+        {
+            EquityValue = 600m,
+            Cash = new Cash
+            {
+                MainCurrency = "USD",
+                BuyingPower = 600m,
+                AvailableAmount = 600m
+            },
+            Positions = new Dictionary<TradingSymbol, Position>
+            {
+                [new TradingSymbol("TKN2")] = new()
+                {
+                    Symbol = new TradingSymbol("TKN2"),
+                    SymbolId = Guid.NewGuid(),
+                    Quantity = 1m,
+                    AvailableQuantity = 1m,
+                    MarketValue = 90m,
+                    AverageEntryPrice = 100m
+                }
+            }
+        });
+
         var actions = await _strategy.GetTradingActionsAsync();
 
-        actions.Should().BeEmpty();
+        actions.Should().HaveCount(1).And.ContainSingle(a =>
+            a.Symbol == new TradingSymbol("TKN2") &&
+            a.OrderType == OrderType.MarketSell &&
+            a.Quantity == 1m);
 
         await _stateService.Received(1)
             .SetNextExecutionDayAsync(new DateOnly(2024, 4, 9), null, Arg.Any<CancellationToken>());

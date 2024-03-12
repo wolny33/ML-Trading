@@ -80,7 +80,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
             // Predictor needs 10 valid days (excluding weekends and holidays) before start, so 20 days should be enough
             // If strategy needs more data, we get more data
             await marketDataSource.InitializeBacktestDataAsync(
-                details.Start.AddDays(-int.Max(20, strategy.RequiredPastDays+1)), details.End, token);
+                details.Start.AddDays(-int.Max(20, strategy.RequiredPastDays + 1)), details.End, token);
 
             for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {

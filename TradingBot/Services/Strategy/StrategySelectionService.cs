@@ -41,7 +41,7 @@ public sealed class StrategySelectionService : IStrategySelectionService
         var entity = await context.StrategySelection.SingleOrDefaultAsync(token) ??
                      StrategySelectionEntity.MakeDefault();
 
-        if(backtestId is not null)
+        if (backtestId is not null)
         {
             _strategySelections[backtestId.Value] = entity.Name;
         }

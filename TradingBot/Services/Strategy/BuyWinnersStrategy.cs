@@ -39,7 +39,7 @@ public sealed class BuyWinnersStrategy : IStrategy
         if (pendingEvaluations.Count > 0)
         {
             var buyActions =
-                await GetBuyActionsForPendingEvaluations(pendingEvaluations, state.Evaluations.Count, token);
+                await GetBuyActionsForPendingEvaluationsAsync(pendingEvaluations, state.Evaluations.Count, token);
             return buyActions;
         }
 
@@ -48,13 +48,19 @@ public sealed class BuyWinnersStrategy : IStrategy
 
         await CreateNewEvaluationAsync(state, token);
 
+        if (state.NextEvaluationDay is null)
+        {
+            // If the strategy was just selected, we sell everything in preparation
+            return GetSellActionsForAllHeldAssets(await _assetsDataSource.GetCurrentAssetsAsync(token));
+        }
+
         var endingEvaluations =
             state.Evaluations.Where(e =>
                     e.CreatedAt.AddDays(EvaluationFrequency * SimultaneousEvaluations - 10) <=
                     _tradingTask.GetTaskDay())
                 .ToList();
 
-        return await GetSellActionsForEndingEvaluations(endingEvaluations, token);
+        return await GetSellActionsForEndingEvaluationsAsync(endingEvaluations, token);
     }
 
     public Task HandleDeselectionAsync(CancellationToken token = default)
@@ -78,9 +84,11 @@ public sealed class BuyWinnersStrategy : IStrategy
             _tradingTask.CurrentBacktestId, CancellationToken.None);
     }
 
-    private async Task<IReadOnlyList<TradingAction>> GetSellActionsForEndingEvaluations(
+    private async Task<IReadOnlyList<TradingAction>> GetSellActionsForEndingEvaluationsAsync(
         IReadOnlyList<BuyWinnersEvaluation> endingEvaluations, CancellationToken token)
     {
+        var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
+
         var sellActions = new List<TradingAction>();
         foreach (var endingEvaluation in endingEvaluations)
         {
@@ -88,6 +96,8 @@ public sealed class BuyWinnersStrategy : IStrategy
             {
                 var action = await _tradingActionQuery.GetTradingActionByIdAsync(actionId, token);
                 if (action?.Status is not (OrderStatus.Fill or OrderStatus.Filled)) continue;
+                if (assets.Positions.TryGetValue(action.Symbol, out var position) &&
+                    position.AvailableQuantity < action.Quantity) continue;
 
                 sellActions.Add(TradingAction.MarketSell(action.Symbol, action.Quantity, _tradingTask.GetTaskTime()));
             }
@@ -96,6 +106,12 @@ public sealed class BuyWinnersStrategy : IStrategy
         }
 
         return sellActions;
+    }
+
+    private IReadOnlyList<TradingAction> GetSellActionsForAllHeldAssets(Assets assets)
+    {
+        return assets.Positions.Values
+            .Select(p => TradingAction.MarketSell(p.Symbol, p.AvailableQuantity, _tradingTask.GetTaskTime())).ToList();
     }
 
     private async Task<List<TradingSymbol>> DetermineWinnersAsync(CancellationToken token)
@@ -112,7 +128,7 @@ public sealed class BuyWinnersStrategy : IStrategy
         return sortedSymbols.Take(sortedSymbols.Count / 10).ToList();
     }
 
-    private async Task<IReadOnlyList<TradingAction>> GetBuyActionsForPendingEvaluations(
+    private async Task<IReadOnlyList<TradingAction>> GetBuyActionsForPendingEvaluationsAsync(
         IReadOnlyList<BuyWinnersEvaluation> evaluations,
         int activeEvaluations, CancellationToken token)
     {
