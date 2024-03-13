@@ -88,7 +88,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 
                 _logger.Debug("Executing day {Day} for backtest {Id}", day, backtestId);
 
-                using var scope = _scopeFactory.CreateScope();
+                await using var scope = _scopeFactory.CreateAsyncScope();
                 var task = scope.ServiceProvider.GetRequiredService<ICurrentTradingTask>();
                 task.SetBacktestDetails(backtestId, day, details.ShouldUsePredictor);
 

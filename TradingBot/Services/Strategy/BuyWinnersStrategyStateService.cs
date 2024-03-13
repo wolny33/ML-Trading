@@ -33,16 +33,23 @@ public sealed class BuyWinnersStrategyStateService : IBuyWinnersStrategyStateSer
         var entity = await context.BuyWinnersStrategyStates
             .Include(s => s.Evaluations)
             .ThenInclude(e => e.SymbolsToBuy)
-            .FirstOrDefaultAsync(s => s.BacktestId == backtestId, token);
+            .FirstOrDefaultAsync(s => s.BacktestId == (backtestId ?? Guid.Empty), token);
 
-        return BuyWinnersStrategyState.FromEntity(EnsureEntityExists(entity, backtestId, context));
+        return entity is not null
+            ? BuyWinnersStrategyState.FromEntity(entity)
+            : new BuyWinnersStrategyState
+                { NextEvaluationDay = null, Evaluations = Array.Empty<BuyWinnersEvaluation>() };
     }
 
     public async Task SetNextExecutionDayAsync(DateOnly day, Guid? backtestId, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.BuyWinnersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == backtestId, token);
-        entity = EnsureEntityExists(entity, backtestId, context);
+        var entity = await context.BuyWinnersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == (backtestId ?? Guid.Empty), token);
+        if (entity is null)
+        {
+            entity = new BuyWinnersStrategyStateEntity { BacktestId = (backtestId ?? Guid.Empty), NextEvaluationDay = null };
+            context.BuyWinnersStrategyStates.Add(entity);
+        }
 
         entity.NextEvaluationDay = day;
 
@@ -52,7 +59,7 @@ public sealed class BuyWinnersStrategyStateService : IBuyWinnersStrategyStateSer
     public async Task ClearNextExecutionDayAsync(CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.BuyWinnersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == null, token);
+        var entity = await context.BuyWinnersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == Guid.Empty, token);
         if (entity is null) return;
 
         entity.NextEvaluationDay = null;
@@ -63,6 +70,8 @@ public sealed class BuyWinnersStrategyStateService : IBuyWinnersStrategyStateSer
     public async Task SaveNewEvaluationAsync(BuyWinnersEvaluation evaluation, Guid? backtestId,
         CancellationToken token = default)
     {
+        await EnsureEntityExistsAsync(backtestId, token);
+        
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         context.BuyWinnersEvaluations.Add(evaluation.ToEntity(backtestId));
         await context.SaveChangesAsync(token);
@@ -93,13 +102,15 @@ public sealed class BuyWinnersStrategyStateService : IBuyWinnersStrategyStateSer
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         await context.BuyWinnersEvaluations.Where(e => e.Id == evaluationId).ExecuteDeleteAsync(token);
     }
-
-    private static BuyWinnersStrategyStateEntity EnsureEntityExists(BuyWinnersStrategyStateEntity? entity,
-        Guid? backtestId, AppDbContext context)
+    
+    private async Task EnsureEntityExistsAsync(Guid? backtestId, CancellationToken token = default)
     {
-        if (entity is not null) return entity;
-        var newEntity = new BuyWinnersStrategyStateEntity { BacktestId = backtestId, NextEvaluationDay = null };
-        context.BuyWinnersStrategyStates.Add(newEntity);
-        return newEntity;
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+        var entity = await context.BuyLosersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == (backtestId ?? Guid.Empty), token);
+        if (entity is not null) return;
+        
+        var newEntity = new BuyLosersStrategyStateEntity { BacktestId = (backtestId ?? Guid.Empty), NextEvaluationDay = null };
+        context.BuyLosersStrategyStates.Add(newEntity);
+        await context.SaveChangesAsync(token);
     }
 }

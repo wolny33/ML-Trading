@@ -42,7 +42,7 @@ public sealed class BuyWinnersEvaluation
         return new BuyWinnersEvaluationEntity
         {
             Id = Id,
-            StrategyStateBacktestId = backtestId,
+            StrategyStateBacktestId = backtestId ?? Guid.Empty,
             CreatedAt = CreatedAt,
             Bought = Bought,
             SymbolsToBuy = SymbolsToBuy.Select(s => new WinnerSymbolToBuyEntity

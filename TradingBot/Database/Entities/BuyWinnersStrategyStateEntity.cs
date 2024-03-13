@@ -5,7 +5,7 @@ namespace TradingBot.Database.Entities;
 public sealed class BuyWinnersStrategyStateEntity
 {
     [Key]
-    public required Guid? BacktestId { get; init; }
+    public required Guid BacktestId { get; init; }
 
     public required DateOnly? NextEvaluationDay { get; set; }
 
@@ -20,7 +20,7 @@ public sealed class BuyWinnersEvaluationEntity
     [Required]
     public BuyWinnersStrategyStateEntity StrategyState { get; init; } = null!;
 
-    public required Guid? StrategyStateBacktestId { get; init; }
+    public required Guid StrategyStateBacktestId { get; init; }
     public required DateOnly CreatedAt { get; init; }
     public required bool Bought { get; set; }
     public required IList<WinnerSymbolToBuyEntity> SymbolsToBuy { get; init; } = new List<WinnerSymbolToBuyEntity>();

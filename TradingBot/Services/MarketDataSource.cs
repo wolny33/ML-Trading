@@ -156,7 +156,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         var availableAssets = await _callQueue.SendRequestWithRetriesAsync(() =>
             tradingClient.ListAssetsAsync(assetsRequest, token), _logger).ExecuteWithErrorHandling(_logger);
         return availableAssets.Where(a => a is { Fractionable: true, IsTradable: true })
-            .Select(a => new TradingSymbol(a.Symbol)).ToHashSet();
+            .Select(a => new TradingSymbol(a.Symbol)).Take(500).ToHashSet();
     }
 
     private Task<IEnumerable<TradingSymbol>> GetInterestingSymbolsAsync(CancellationToken token = default)
