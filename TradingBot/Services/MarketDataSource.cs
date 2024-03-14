@@ -162,7 +162,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     private Task<IEnumerable<TradingSymbol>> GetInterestingSymbolsAsync(CancellationToken token = default)
     {
         return _tradingTask.CurrentBacktestId is not null
-            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForDay(_tradingTask.GetTaskDay()))
+            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForLastValidDay(_tradingTask.GetTaskDay()))
             : SendInterestingSymbolsRequestsAsync(token);
     }
 

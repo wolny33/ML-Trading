@@ -117,14 +117,14 @@ public sealed class BuyWinnersStrategyStateService : IBuyWinnersStrategyStateSer
     private async Task EnsureEntityExistsAsync(Guid backtestId, CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        var entity = await context.BuyLosersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == backtestId, token);
+        var entity = await context.BuyWinnersStrategyStates.FirstOrDefaultAsync(s => s.BacktestId == backtestId, token);
         if (entity is not null)
         {
             return;
         }
 
-        var newEntity = new BuyLosersStrategyStateEntity { BacktestId = backtestId, NextEvaluationDay = null };
-        context.BuyLosersStrategyStates.Add(newEntity);
+        var newEntity = new BuyWinnersStrategyStateEntity { BacktestId = backtestId, NextEvaluationDay = null };
+        context.BuyWinnersStrategyStates.Add(newEntity);
         await context.SaveChangesAsync(token);
     }
 }

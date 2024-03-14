@@ -148,7 +148,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
                 Volume = 1000m
             }
         });
-        _marketDataCache.GetMostActiveCachedSymbolsForDay(new DateOnly(2023, 12, 19))
+        _marketDataCache.GetMostActiveCachedSymbolsForLastValidDay(new DateOnly(2023, 12, 19))
             .Returns(new[] { new TradingSymbol("TKN4") });
 
         var result = await _marketDataSource.GetPricesAsync(DateOnly.MinValue, DateOnly.MaxValue);
