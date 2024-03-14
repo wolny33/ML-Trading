@@ -71,8 +71,8 @@ public sealed class GreedyStrategy : IStrategy
             return GetSellAllAssetsActions(assets, predictions);
         }
 
-        // If haven't YOLO'd at least 90% into one stock...
-        if (biggestHeldPosition is not null && biggestHeldPosition.MarketValue > assets.Cash.AvailableAmount * 9)
+        // If haven't YOLO'd at least 80% into one stock...
+        if (biggestHeldPosition is not null && biggestHeldPosition.MarketValue > assets.Cash.AvailableAmount * 4)
         {
             return GetSellAllAssetsActions(assets, predictions);
         }
@@ -197,7 +197,7 @@ public sealed class GreedyStrategy : IStrategy
             var price = predictions[toBuy].Prices[0].LowPrice;
             return new[]
             {
-                TradingAction.LimitBuy(toBuy, availableCash / price, price, _tradingTask.GetTaskTime())
+                TradingAction.LimitBuy(toBuy, (int)(availableCash / price), price, _tradingTask.GetTaskTime())
             };
         }
 
@@ -207,7 +207,7 @@ public sealed class GreedyStrategy : IStrategy
             var price = predictions[toBuy].Prices[0].LowPrice;
             return new[]
             {
-                TradingAction.LimitBuy(toBuy, availableCash / price, price, _tradingTask.GetTaskTime())
+                TradingAction.LimitBuy(toBuy, (int)(availableCash / price), price, _tradingTask.GetTaskTime())
             };
         }
 
@@ -238,7 +238,8 @@ public sealed class GreedyStrategy : IStrategy
 
         return new[]
         {
-            TradingAction.LimitSell(held, heldAmount, predictions[held].Prices[0].HighPrice, _tradingTask.GetTaskTime())
+            TradingAction.LimitSell(held, (int)heldAmount, predictions[held].Prices[0].HighPrice,
+                _tradingTask.GetTaskTime())
         };
     }
 
@@ -250,8 +251,13 @@ public sealed class GreedyStrategy : IStrategy
         {
             if (position.Quantity <= 0) continue;
 
-            result.Add(TradingAction.LimitSell(symbol, position.Quantity, predictions[symbol].Prices[0].HighPrice,
+            result.Add(TradingAction.LimitSell(symbol, (int)position.Quantity, predictions[symbol].Prices[0].HighPrice,
                 _tradingTask.GetTaskTime()));
+            if (position.Quantity != (int)position.Quantity)
+            {
+                result.Add(TradingAction.MarketSell(symbol, position.Quantity - (int)position.Quantity,
+                    _tradingTask.GetTaskTime()));
+            }
         }
 
         return result;
