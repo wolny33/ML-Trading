@@ -4,6 +4,7 @@ namespace TradingBot.Models;
 
 public sealed class BuyWinnersStrategyState
 {
+    public static Guid NormalExecutionStateId => Guid.NewGuid();
     public required DateOnly? NextEvaluationDay { get; init; }
     public required IReadOnlyList<BuyWinnersEvaluation> Evaluations { get; init; }
 
@@ -12,7 +13,8 @@ public sealed class BuyWinnersStrategyState
         return new BuyWinnersStrategyState
         {
             NextEvaluationDay = entity.NextEvaluationDay,
-            Evaluations = entity.Evaluations.OrderBy(e => e.CreatedAt).Select(BuyWinnersEvaluation.FromEntity).ToList()
+            Evaluations = entity.Evaluations.OrderBy(e => e.CreatedAt).Select(BuyWinnersEvaluation.FromEntity)
+                .ToList()
         };
     }
 }
@@ -37,12 +39,12 @@ public sealed class BuyWinnersEvaluation
         };
     }
 
-    public BuyWinnersEvaluationEntity ToEntity(Guid? backtestId)
+    public BuyWinnersEvaluationEntity ToEntity(Guid backtestId)
     {
         return new BuyWinnersEvaluationEntity
         {
             Id = Id,
-            StrategyStateBacktestId = backtestId ?? Guid.Empty,
+            StrategyStateBacktestId = backtestId,
             CreatedAt = CreatedAt,
             Bought = Bought,
             SymbolsToBuy = SymbolsToBuy.Select(s => new WinnerSymbolToBuyEntity

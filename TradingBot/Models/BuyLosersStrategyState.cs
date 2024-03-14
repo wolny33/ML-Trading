@@ -4,6 +4,7 @@ namespace TradingBot.Models;
 
 public sealed class BuyLosersStrategyState
 {
+    public static Guid NormalExecutionStateId => Guid.NewGuid();
     public required DateOnly? NextEvaluationDay { get; init; }
     public required IReadOnlyList<TradingSymbol> SymbolsToBuy { get; init; }
 

@@ -10,6 +10,6 @@ public sealed class LoserSymbolToBuyEntity
     [Required]
     public BuyLosersStrategyStateEntity StrategyState { get; init; } = null!;
 
-    public required Guid? StrategyStateBacktestId { get; init; }
+    public required Guid StrategyStateBacktestId { get; init; }
     public required string Symbol { get; init; }
 }
