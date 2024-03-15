@@ -185,6 +185,7 @@ public sealed class Program
         services.AddTransient<IBacktestQuery, BacktestQuery>();
         services.AddTransient<IBuyLosersStrategyStateService, BuyLosersStrategyStateService>();
         services.AddTransient<IBuyWinnersStrategyStateService, BuyWinnersStrategyStateService>();
+        services.AddTransient<IPcaDecompositionService, PcaDecompositionService>();
 
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
         services.AddSingleton<IAlpacaCallQueue, AlpacaCallQueue>();
@@ -192,5 +193,6 @@ public sealed class Program
         services.AddSingleton<IBacktestExecutor, BacktestExecutor>();
         services.AddSingleton<IBacktestAssets, BacktestAssets>();
         services.AddSingleton<IStrategySelectionService, StrategySelectionService>();
+        services.AddSingleton<IPcaDecompositionCreator, PcaDecompositionCreator>();
     }
 }

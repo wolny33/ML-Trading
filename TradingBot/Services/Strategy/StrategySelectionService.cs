@@ -27,7 +27,7 @@ public sealed class StrategySelectionService : IStrategySelectionService
         new[]
         {
             Strategy.StrategyName, GreedyStrategy.StrategyName, BuyLosersStrategy.StrategyName,
-            BuyWinnersStrategy.StrategyName
+            BuyWinnersStrategy.StrategyName, PcaStrategy.StrategyName
         };
 
     public async Task<string> GetSelectedNameAsync(Guid? backtestId, CancellationToken token = default)
