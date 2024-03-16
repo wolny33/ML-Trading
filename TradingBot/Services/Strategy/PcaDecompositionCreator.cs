@@ -1,4 +1,8 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
+using MathNet.Numerics.Statistics;
 using TradingBot.Models;
 
 namespace TradingBot.Services.Strategy;
@@ -38,7 +42,7 @@ public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDi
         if (task is not null) await task.DisposeAsync();
 
         _tasks[new BacktestId(backtestId)] =
-            new PcaDecompositionTask(marketData.AsReadOnly(), backtestId,
+            new PcaDecompositionTask(marketData.AsReadOnly(), backtestId, currentDay,
                 scope.ServiceProvider.GetRequiredService<IPcaDecompositionService>());
     }
 
@@ -55,16 +59,21 @@ public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDi
 
 public sealed class PcaDecompositionTask : IAsyncDisposable
 {
+    private const double VarianceFraction = 0.9;
+    private const int DecompositionExpiration = 7;
+
     private readonly Guid? _backtestId;
+    private readonly DateOnly _date;
     private readonly IPcaDecompositionService _decompositionService;
     private readonly IReadOnlyDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>> _marketData;
     private readonly CancellationTokenSource _tokenSource = new();
 
     public PcaDecompositionTask(IReadOnlyDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>> marketData,
-        Guid? backtestId, IPcaDecompositionService decompositionService)
+        Guid? backtestId, DateOnly date, IPcaDecompositionService decompositionService)
     {
         _marketData = marketData;
         _backtestId = backtestId;
+        _date = date;
         _decompositionService = decompositionService;
 
         Task = CreateAndSaveNewDecompositionAsync(_tokenSource.Token);
@@ -82,17 +91,83 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
 
     private async Task CreateAndSaveNewDecompositionAsync(CancellationToken token)
     {
-        var decomposition = await CreateDecompositionAsync(token);
+        await Task.Yield();
+        var decomposition = CreateDecomposition(token);
         await _decompositionService.SaveDecompositionAsync(decomposition, _backtestId, token);
     }
 
-    private Task<PcaDecomposition> CreateDecompositionAsync(CancellationToken token)
+    private PcaDecomposition CreateDecomposition(CancellationToken token)
     {
-        throw new NotImplementedException();
+        var (symbols, dataLength) = GetDecompositionSymbols(_marketData);
+
+        var priceMatrix =
+            DenseMatrix.OfColumnArrays(symbols.Select(s =>
+                _marketData[s].Select(data => (double)data.Close).ToArray()));
+
+        var means = priceMatrix.ColumnSums() / dataLength;
+        var stdDevs = DenseVector.OfEnumerable(priceMatrix.EnumerateColumns().Select(c => c.StandardDeviation()));
+
+        var standardizedMatrix =
+            DenseMatrix.OfColumnVectors(
+                priceMatrix.EnumerateColumns().Select((col, i) => (col - means[i]) / stdDevs[i]));
+
+        var covarianceMatrix = standardizedMatrix.Transpose() * standardizedMatrix / (dataLength - 1);
+
+        var evd = covarianceMatrix.Evd();
+
+        var selectedEigenVectors = ReduceComponents(evd.EigenVectors, evd.EigenValues.Real().ToList());
+
+        return new PcaDecomposition
+        {
+            CreatedAt = _date,
+            ExpiresAt = _date.AddDays(DecompositionExpiration),
+            Symbols = symbols,
+            Means = means,
+            StandardDeviations = stdDevs,
+            PrincipalVectors = selectedEigenVectors
+        };
+    }
+
+    private static SymbolsAndDataLength GetDecompositionSymbols(
+        IReadOnlyDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>> marketData)
+    {
+        var longestLength = marketData.Values.Max(data => data.Count);
+        var validSymbols = marketData.Keys
+            .Where(symbol => marketData[symbol].Count >= longestLength)
+            .OrderBy(symbol => symbol.Value)
+            .ToList();
+
+        if (validSymbols.Count < 0.5 * marketData.Keys.Count())
+            // TODO: Use logger instead
+            throw new UnreachableException("A lot of symbols have missing data");
+
+        return new SymbolsAndDataLength(validSymbols, longestLength);
+    }
+
+    private static Matrix<double> ReduceComponents(Matrix<double> eigenVectors, IReadOnlyList<double> eigenValues)
+    {
+        var sortedIndices = eigenValues.Select((value, index) => new { Value = value, Index = index })
+            .OrderByDescending(x => x.Value)
+            .Select(x => x.Index);
+
+        var selectedIndices = new List<int>();
+        var totalVariance = eigenValues.Sum();
+        var accumulatedVariance = 0.0;
+        foreach (var index in sortedIndices)
+        {
+            if (accumulatedVariance >= totalVariance * VarianceFraction) break;
+
+            selectedIndices.Add(index);
+            accumulatedVariance += eigenValues[index];
+        }
+
+        return DenseMatrix.OfColumnVectors(selectedIndices.Select(eigenVectors.Column));
     }
 
     public void Cancel()
     {
         if (!Task.IsCompleted) _tokenSource.Cancel();
     }
+
+    private sealed record SymbolsAndDataLength(IReadOnlyList<TradingSymbol> Symbols, int DataLength);
 }

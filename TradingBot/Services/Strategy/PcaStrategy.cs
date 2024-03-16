@@ -29,19 +29,27 @@ public sealed class PcaStrategy : IStrategy
         var latestDecomposition =
             await _decompositionService.GetLatestDecompositionAsync(_tradingTask.CurrentBacktestId, token);
 
-        // If no decomposition was created, we start the task and do nothing (since it may take a long time)
-        if (latestDecomposition is null)
+        // If no decomposition was created or if decomposition is outdated, we start the task and do nothing (since it
+        // may take a long time)
+        if (latestDecomposition is null || latestDecomposition.ExpiresAt < _tradingTask.GetTaskDay())
         {
             await _decompositionCreator.StartNewDecompositionCreationAsync(_tradingTask.CurrentBacktestId,
                 _tradingTask.GetTaskDay(), token);
             return Array.Empty<TradingAction>();
         }
 
+        // If decomposition expires soon, start new creation task
+        if (latestDecomposition.ExpiresAt < _tradingTask.GetTaskDay().AddDays(-3))
+        {
+            await _decompositionCreator.StartNewDecompositionCreationAsync(_tradingTask.CurrentBacktestId,
+                _tradingTask.GetTaskDay(), token);
+        }
+
         var lastDayData =
             await _marketDataSource.GetPricesForAllSymbolsAsync(_tradingTask.GetTaskDay(), _tradingTask.GetTaskDay(),
                 token);
         var lastPrices = lastDayData.Keys.ToDictionary(symbol => symbol, symbol => lastDayData[symbol][0].Close);
-        var differences = CalculatePriceDifferences(latestDecomposition, lastPrices);
+        var differences = latestDecomposition.CalculatePriceDifferences(lastPrices);
 
         var undervalued = differences.Where(d => d.NormalizedDifference < -1).ToList();
         var overvalued = differences.Where(d => d.NormalizedDifference > 0).ToList();
@@ -71,12 +79,4 @@ public sealed class PcaStrategy : IStrategy
 
         return actions;
     }
-
-    private IReadOnlyList<SymbolWithNormalizedPriceDifference> CalculatePriceDifferences(PcaDecomposition decomposition,
-        IReadOnlyDictionary<TradingSymbol, decimal> lastPrices)
-    {
-        throw new NotImplementedException();
-    }
-
-    private sealed record SymbolWithNormalizedPriceDifference(TradingSymbol Symbol, double NormalizedDifference);
 }
