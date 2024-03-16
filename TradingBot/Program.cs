@@ -170,6 +170,7 @@ public sealed class Program
         services.AddScoped<IStrategy, GreedyStrategy>();
         services.AddScoped<IStrategy, BuyLosersStrategy>();
         services.AddScoped<IStrategy, BuyWinnersStrategy>();
+        services.AddScoped<IStrategy, PcaStrategy>();
 
         services.AddTransient<CredentialsCommand>();
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();

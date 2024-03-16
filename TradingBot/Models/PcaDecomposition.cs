@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
@@ -54,7 +55,7 @@ public sealed class PcaDecomposition
             Symbols = string.Join(';', Symbols.Select(s => s.Value)),
             Means = JsonSerializer.Serialize(Means.ToArray()),
             StandardDeviations = JsonSerializer.Serialize(StandardDeviations.ToArray()),
-            PrincipalVectors = JsonSerializer.Serialize(PrincipalVectors.ToArray())
+            PrincipalVectors = JsonSerializer.Serialize(ConvertToJaggedArray(PrincipalVectors.ToArray()))
         };
     }
 
@@ -67,8 +68,41 @@ public sealed class PcaDecomposition
             Symbols = entity.Symbols.Split(';').Select(v => new TradingSymbol(v)).ToList(),
             Means = DenseVector.OfArray(JsonSerializer.Deserialize<double[]>(entity.Means)),
             StandardDeviations = DenseVector.OfArray(JsonSerializer.Deserialize<double[]>(entity.StandardDeviations)),
-            PrincipalVectors = DenseMatrix.OfArray(JsonSerializer.Deserialize<double[,]>(entity.PrincipalVectors))
+            PrincipalVectors = DenseMatrix.OfArray(ConvertTo2DArray(
+                JsonSerializer.Deserialize<double[][]>(entity.PrincipalVectors) ??
+                throw new UnreachableException(
+                    $"{nameof(entity.PrincipalVectors)} saved in database have invalid format")))
         };
+    }
+
+    private static double[][] ConvertToJaggedArray(double[,] multiArray)
+    {
+        var rows = multiArray.GetLength(0);
+        var cols = multiArray.GetLength(1);
+        var jaggedArray = new double[rows][];
+
+        for (var i = 0; i < rows; i++)
+        {
+            jaggedArray[i] = new double[cols];
+            for (var j = 0; j < cols; j++) jaggedArray[i][j] = multiArray[i, j];
+        }
+
+        return jaggedArray;
+    }
+
+    private static double[,] ConvertTo2DArray(double[][] jaggedArray)
+    {
+        var rows = jaggedArray.Length;
+        if (rows <= 0) return new double[0, 0];
+
+        var cols = jaggedArray[0].Length;
+        var multiArray = new double[rows, cols];
+
+        for (var i = 0; i < rows; i++)
+            for (var j = 0; j < cols; j++)
+                multiArray[i, j] = jaggedArray[i][j];
+
+        return multiArray;
     }
 }
 
