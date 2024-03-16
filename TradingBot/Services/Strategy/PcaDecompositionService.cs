@@ -19,14 +19,21 @@ public sealed class PcaDecompositionService : IPcaDecompositionService
         _dbContextFactory = dbContextFactory;
     }
 
-    public Task<PcaDecomposition?> GetLatestDecompositionAsync(Guid? backtestId, CancellationToken token = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task SaveDecompositionAsync(PcaDecomposition decomposition, Guid? backtestId,
+    public async Task<PcaDecomposition?> GetLatestDecompositionAsync(Guid? backtestId,
         CancellationToken token = default)
     {
-        throw new NotImplementedException();
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+        var entity = await context.PcaDecompositions
+            .OrderByDescending(e => e.CreationTimestamp)
+            .FirstOrDefaultAsync(e => e.BacktestId == (backtestId ?? PcaDecomposition.NormalExecutionId), token);
+        return entity is null ? null : PcaDecomposition.FromEntity(entity);
+    }
+
+    public async Task SaveDecompositionAsync(PcaDecomposition decomposition, Guid? backtestId,
+        CancellationToken token = default)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
+        context.PcaDecompositions.Add(decomposition.ToEntity(backtestId));
+        await context.SaveChangesAsync(token);
     }
 }
