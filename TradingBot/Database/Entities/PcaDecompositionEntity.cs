@@ -9,7 +9,7 @@ public sealed class PcaDecompositionEntity
     [Key]
     public required Guid Id { get; init; }
 
-    public required Guid BacktestId { get; init; }
+    public required Guid? BacktestId { get; init; }
     public required long CreationTimestamp { get; init; }
     public required DateOnly CreatedAt { get; init; }
     public required DateOnly ExpiresAt { get; init; }

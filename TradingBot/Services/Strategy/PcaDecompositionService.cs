@@ -25,7 +25,7 @@ public sealed class PcaDecompositionService : IPcaDecompositionService
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entity = await context.PcaDecompositions
             .OrderByDescending(e => e.CreationTimestamp)
-            .FirstOrDefaultAsync(e => e.BacktestId == (backtestId ?? PcaDecomposition.NormalExecutionId), token);
+            .FirstOrDefaultAsync(e => e.BacktestId == backtestId, token);
         return entity is null ? null : PcaDecomposition.FromEntity(entity);
     }
 

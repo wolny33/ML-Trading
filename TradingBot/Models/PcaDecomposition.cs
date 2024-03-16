@@ -7,8 +7,6 @@ namespace TradingBot.Models;
 
 public sealed class PcaDecomposition
 {
-    public static Guid NormalExecutionId => Guid.NewGuid();
-
     public required DateOnly CreatedAt { get; init; }
     public required DateOnly ExpiresAt { get; init; }
     public required IReadOnlyList<TradingSymbol> Symbols { get; init; }
@@ -47,7 +45,7 @@ public sealed class PcaDecomposition
         return new PcaDecompositionEntity
         {
             Id = Guid.NewGuid(),
-            BacktestId = backtestId ?? NormalExecutionId,
+            BacktestId = backtestId,
             CreationTimestamp =
                 new DateTimeOffset(CreatedAt.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero)), TimeSpan.Zero)
                     .ToUnixTimeMilliseconds(),
