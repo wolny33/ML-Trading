@@ -35,6 +35,8 @@ public sealed class BuyWinnersStrategyStateService : IBuyWinnersStrategyStateSer
         var entity = await context.BuyWinnersStrategyStates
             .Include(s => s.Evaluations)
             .ThenInclude(e => e.SymbolsToBuy)
+            .Include(e => e.Evaluations)
+            .ThenInclude(e => e.Actions)
             .FirstOrDefaultAsync(s => s.BacktestId == backtestId, token);
 
         return entity is not null
