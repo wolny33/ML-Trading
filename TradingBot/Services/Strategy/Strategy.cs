@@ -9,7 +9,7 @@ public interface IStrategy
     int RequiredPastDays { get; }
     Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default);
 
-    Task HandleDeselectionAsync(CancellationToken token = default)
+    Task HandleDeselectionAsync(string newStrategyName, CancellationToken token = default)
     {
         return Task.CompletedTask;
     }

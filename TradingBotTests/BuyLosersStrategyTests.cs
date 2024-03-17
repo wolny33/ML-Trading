@@ -43,7 +43,7 @@ public sealed class BuyLosersStrategyTests
     }
 
     [Fact]
-    public async Task ShouldBuyPendingSymbols()
+    public async Task ShouldBuyPendingSymbolsAndClearAlreadyOwned()
     {
         _stateService.GetStateAsync(null, Arg.Any<CancellationToken>()).Returns(new BuyLosersStrategyState
         {
@@ -51,7 +51,8 @@ public sealed class BuyLosersStrategyTests
             SymbolsToBuy = new[]
             {
                 new TradingSymbol("AMZN"),
-                new TradingSymbol("TSLA")
+                new TradingSymbol("TSLA"),
+                new TradingSymbol("TQQQ")
             }
         });
 
@@ -64,7 +65,18 @@ public sealed class BuyLosersStrategyTests
                 BuyingPower = 100m,
                 AvailableAmount = 100m
             },
-            Positions = new Dictionary<TradingSymbol, Position>()
+            Positions = new Dictionary<TradingSymbol, Position>
+            {
+                [new TradingSymbol("TQQQ")] = new()
+                {
+                    Symbol = new TradingSymbol("TQQQ"),
+                    SymbolId = Guid.NewGuid(),
+                    Quantity = 1,
+                    AvailableQuantity = 1,
+                    MarketValue = 100,
+                    AverageEntryPrice = 90
+                }
+            }
         });
 
         _marketData.GetLastAvailablePriceForSymbolAsync(new TradingSymbol("AMZN"), Arg.Any<CancellationToken>())
@@ -84,7 +96,8 @@ public sealed class BuyLosersStrategyTests
             a.Quantity == 5m
         );
 
-        await _stateService.Received(1).ClearSymbolsToBuyAsync(null, Arg.Any<CancellationToken>());
+        await _stateService.Received(1)
+            .ClearSymbolToBuyAsync(new TradingSymbol("TQQQ"), null, Arg.Any<CancellationToken>());
     }
 
     [Fact]

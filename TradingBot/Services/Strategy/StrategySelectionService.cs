@@ -27,7 +27,7 @@ public sealed class StrategySelectionService : IStrategySelectionService
         new[]
         {
             Strategy.StrategyName, GreedyStrategy.StrategyName, BuyLosersStrategy.StrategyName,
-            BuyWinnersStrategy.StrategyName, PcaStrategy.StrategyName
+            BuyLosersWithPredictionsStrategy.StrategyName, BuyWinnersStrategy.StrategyName, PcaStrategy.StrategyName
         };
 
     public async Task<string> GetSelectedNameAsync(Guid? backtestId, CancellationToken token = default)
@@ -59,7 +59,7 @@ public sealed class StrategySelectionService : IStrategySelectionService
         await using (var scope = _scopeFactory.CreateAsyncScope())
         {
             var strategy = await scope.ServiceProvider.GetRequiredService<IStrategyFactory>().CreateAsync(token);
-            await strategy.HandleDeselectionAsync(token);
+            await strategy.HandleDeselectionAsync(name, token);
         }
 
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);

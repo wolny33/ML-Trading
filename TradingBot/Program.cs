@@ -169,6 +169,7 @@ public sealed class Program
         services.AddScoped<IStrategy, Strategy>();
         services.AddScoped<IStrategy, GreedyStrategy>();
         services.AddScoped<IStrategy, BuyLosersStrategy>();
+        services.AddScoped<IStrategy, BuyLosersWithPredictionsStrategy>();
         services.AddScoped<IStrategy, BuyWinnersStrategy>();
         services.AddScoped<IStrategy, PcaStrategy>();
 

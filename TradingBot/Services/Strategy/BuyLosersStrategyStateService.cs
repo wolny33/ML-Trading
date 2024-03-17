@@ -12,7 +12,7 @@ public interface IBuyLosersStrategyStateService
     Task SetSymbolsToBuyAsync(IReadOnlyList<TradingSymbol> symbols, Guid? backtestId,
         CancellationToken token = default);
 
-    Task ClearSymbolsToBuyAsync(Guid? backtestId, CancellationToken token = default);
+    Task ClearSymbolToBuyAsync(TradingSymbol symbol, Guid? backtestId, CancellationToken token = default);
 
     Task SetNextExecutionDayAsync(DateOnly day, Guid? backtestId, CancellationToken token = default);
     Task ClearNextExecutionDayAsync(CancellationToken token = default);
@@ -61,11 +61,14 @@ public class BuyLosersStrategyStateService : IBuyLosersStrategyStateService
         await context.SaveChangesAsync(token);
     }
 
-    public async Task ClearSymbolsToBuyAsync(Guid? backtestId, CancellationToken token = default)
+    public async Task ClearSymbolToBuyAsync(TradingSymbol symbol, Guid? backtestId, CancellationToken token = default)
     {
         backtestId ??= BuyLosersStrategyState.NormalExecutionStateId;
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        await context.LoserSymbolsToBuy.Where(s => s.StrategyStateBacktestId == backtestId).ExecuteDeleteAsync(token);
+        await context.LoserSymbolsToBuy
+            .Where(s => s.StrategyStateBacktestId == backtestId)
+            .Where(s => s.Symbol == symbol.Value)
+            .ExecuteDeleteAsync(token);
     }
 
     public async Task SetNextExecutionDayAsync(DateOnly day, Guid? backtestId, CancellationToken token = default)

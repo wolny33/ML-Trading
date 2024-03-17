@@ -63,7 +63,7 @@ public sealed class BuyWinnersStrategy : IStrategy
         return await GetSellActionsForEndingEvaluationsAsync(endingEvaluations, token);
     }
 
-    public Task HandleDeselectionAsync(CancellationToken token = default)
+    public Task HandleDeselectionAsync(string newStrategyName, CancellationToken token = default)
     {
         return _stateService.ClearNextExecutionDayAsync(token);
     }
