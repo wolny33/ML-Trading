@@ -193,7 +193,7 @@ public abstract class BuyWinnersStrategyBase : IStrategy
         var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
 
         var actions = new List<TradingAction>();
-        var usableMoney = assets.Cash.AvailableAmount < SimultaneousEvaluations
+        var usableMoney = activeEvaluations < SimultaneousEvaluations
             ? assets.Cash.AvailableAmount / (SimultaneousEvaluations + 1 - activeEvaluations)
             : assets.Cash.AvailableAmount;
 

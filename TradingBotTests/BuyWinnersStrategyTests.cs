@@ -331,9 +331,9 @@ public sealed class BuyWinnersStrategyTests
             }
         });
 
-        _actionQuery.GetTradingActionByIdAsync(actionIds[0], Arg.Any<CancellationToken>())
+        _actionQuery.GetLatestTradingActionStateByIdAsync(actionIds[0], Arg.Any<CancellationToken>())
             .Returns((TradingAction?)null);
-        _actionQuery.GetTradingActionByIdAsync(actionIds[1], Arg.Any<CancellationToken>())
+        _actionQuery.GetLatestTradingActionStateByIdAsync(actionIds[1], Arg.Any<CancellationToken>())
             .Returns(new TradingAction
             {
                 Id = actionIds[1],
@@ -349,7 +349,7 @@ public sealed class BuyWinnersStrategyTests
                 Error = null,
                 AverageFillPrice = null
             });
-        _actionQuery.GetTradingActionByIdAsync(actionIds[2], Arg.Any<CancellationToken>())
+        _actionQuery.GetLatestTradingActionStateByIdAsync(actionIds[2], Arg.Any<CancellationToken>())
             .Returns(new TradingAction
             {
                 Id = actionIds[2],
