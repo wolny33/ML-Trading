@@ -3,7 +3,7 @@ using TradingBot.Models;
 
 namespace TradingBot.Services.Strategy;
 
-public sealed class BuyWinnersStrategy : IStrategy
+public abstract class BuyWinnersStrategyBase : IStrategy
 {
     private const int BuyWaitTime = 7;
     private const int EvaluationFrequency = 30;
@@ -16,7 +16,7 @@ public sealed class BuyWinnersStrategy : IStrategy
     private readonly ITradingActionQuery _tradingActionQuery;
     private readonly ICurrentTradingTask _tradingTask;
 
-    public BuyWinnersStrategy(ICurrentTradingTask tradingTask, IBuyWinnersStrategyStateService stateService,
+    protected BuyWinnersStrategyBase(ICurrentTradingTask tradingTask, IBuyWinnersStrategyStateService stateService,
         IMarketDataSource marketDataSource, IAssetsDataSource assetsDataSource, ITradingActionQuery tradingActionQuery)
     {
         _tradingTask = tradingTask;
@@ -26,20 +26,18 @@ public sealed class BuyWinnersStrategy : IStrategy
         _tradingActionQuery = tradingActionQuery;
     }
 
-    public static string StrategyName => "Trend following strategy";
-    public string Name => StrategyName;
+    public abstract string Name { get; }
     public int RequiredPastDays => AnalysisLength;
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
     {
         var state = await _stateService.GetStateAsync(_tradingTask.CurrentBacktestId, token);
-        var pendingEvaluations = state.Evaluations.Where(e =>
-            !e.Bought &&
-            e.CreatedAt.AddDays(BuyWaitTime) <= _tradingTask.GetTaskDay()).ToList();
-        if (pendingEvaluations.Count > 0)
+        var pendingSymbolsPerEvaluation = await GetPendingSymbolsForEvaluationsAsync(state.Evaluations, token);
+        if (pendingSymbolsPerEvaluation.Count > 0)
         {
             var buyActions =
-                await GetBuyActionsForPendingEvaluationsAsync(pendingEvaluations, state.Evaluations.Count, token);
+                await GetBuyActionsForPendingEvaluationsAsync(pendingSymbolsPerEvaluation, state.Evaluations.Count,
+                    token);
             return buyActions;
         }
 
@@ -65,7 +63,67 @@ public sealed class BuyWinnersStrategy : IStrategy
 
     public Task HandleDeselectionAsync(string newStrategyName, CancellationToken token = default)
     {
+        if (newStrategyName == BuyWinnersStrategy.StrategyName ||
+            newStrategyName == BuyWinnersWithPredictionsStrategy.StrategyName)
+        {
+            return Task.CompletedTask;
+        }
+
         return _stateService.ClearNextExecutionDayAsync(token);
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<TradingSymbol>>> GetPendingSymbolsForEvaluationsAsync(
+        IReadOnlyList<BuyWinnersEvaluation> evaluations, CancellationToken token)
+    {
+        var pendingEvaluations = evaluations
+            .Where(e => !e.Bought && e.CreatedAt.AddDays(BuyWaitTime) <= _tradingTask.GetTaskDay()).ToList();
+
+        var toBuy = new Dictionary<Guid, IReadOnlyList<TradingSymbol>>();
+        foreach (var evaluation in pendingEvaluations)
+        {
+            var symbolsToBuy = await GetPendingSymbolsForEvaluationAsync(evaluation, token);
+            if (symbolsToBuy is null || evaluation.CreatedAt.AddDays(2 * BuyWaitTime) < _tradingTask.GetTaskDay())
+            {
+                await _stateService.MarkEvaluationAsBoughtAsync(evaluation.Id, token);
+                continue;
+            }
+
+            if (symbolsToBuy.Count > 0)
+            {
+                toBuy[evaluation.Id] = symbolsToBuy;
+            }
+        }
+
+        return toBuy;
+    }
+
+    private async Task<IReadOnlyList<TradingSymbol>?> GetPendingSymbolsForEvaluationAsync(
+        BuyWinnersEvaluation evaluation,
+        CancellationToken token)
+    {
+        var actions = (await Task.WhenAll(evaluation.ActionIds.Select(async id =>
+                await _tradingActionQuery.GetLatestTradingActionStateByIdAsync(id, token))))
+            .Where(a => a is not null)
+            .Select(a => a!)
+            .ToList();
+
+        var bought = actions.Where(a => a.ExecutedAt is not null)
+            .Where(a => a.Status is OrderStatus.Fill or OrderStatus.Filled)
+            .Select(a => a.Symbol)
+            .Distinct()
+            .ToList();
+
+        var pending = actions.Where(a => a.ExecutedAt is null)
+            .Select(a => a.Symbol)
+            .Distinct()
+            .Except(bought)
+            .ToList();
+
+        var toBuy = evaluation.SymbolsToBuy.Except(bought).Except(pending).ToList();
+
+        if (toBuy.Count == 0 && pending.Count == 0) return null;
+
+        return toBuy;
     }
 
     private async Task CreateNewEvaluationAsync(BuyWinnersStrategyState state, CancellationToken token)
@@ -94,7 +152,7 @@ public sealed class BuyWinnersStrategy : IStrategy
         {
             foreach (var actionId in endingEvaluation.ActionIds)
             {
-                var action = await _tradingActionQuery.GetTradingActionByIdAsync(actionId, token);
+                var action = await _tradingActionQuery.GetLatestTradingActionStateByIdAsync(actionId, token);
                 if (action?.Status is not (OrderStatus.Fill or OrderStatus.Filled)) continue;
                 if (assets.Positions.TryGetValue(action.Symbol, out var position) &&
                     position.AvailableQuantity < action.Quantity) continue;
@@ -129,28 +187,56 @@ public sealed class BuyWinnersStrategy : IStrategy
     }
 
     private async Task<IReadOnlyList<TradingAction>> GetBuyActionsForPendingEvaluationsAsync(
-        IReadOnlyList<BuyWinnersEvaluation> evaluations,
-        int activeEvaluations, CancellationToken token)
+        IReadOnlyDictionary<Guid, IReadOnlyList<TradingSymbol>> symbolsToBuy, int activeEvaluations,
+        CancellationToken token)
     {
         var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
 
         var actions = new List<TradingAction>();
-        var availableMoney = assets.Cash.AvailableAmount * 0.95m;
-        var usableMoney = activeEvaluations < SimultaneousEvaluations
-            ? availableMoney / (SimultaneousEvaluations + 1 - activeEvaluations)
-            : availableMoney;
+        var usableMoney = assets.Cash.AvailableAmount < SimultaneousEvaluations
+            ? assets.Cash.AvailableAmount / (SimultaneousEvaluations + 1 - activeEvaluations)
+            : assets.Cash.AvailableAmount;
 
-        foreach (var evaluation in evaluations)
+        foreach (var (evaluationId, symbols) in symbolsToBuy)
         {
-            foreach (var symbol in evaluation.SymbolsToBuy)
-            {
-                var investmentValue = usableMoney / evaluation.SymbolsToBuy.Count / evaluations.Count;
-                var lastPrice = await _marketDataSource.GetLastAvailablePriceForSymbolAsync(symbol, token);
-                actions.Add(TradingAction.MarketBuy(symbol, investmentValue / lastPrice, _tradingTask.GetTaskTime()));
-            }
+            var evaluationActions = await GetBuyActionsAsync(symbols, usableMoney / symbolsToBuy.Count, token);
+            await _stateService.SaveActionIdsForEvaluationAsync(evaluationActions.Select(action => action.Id).ToList(),
+                evaluationId, token);
+            actions.AddRange(evaluationActions);
+        }
 
-            await _stateService.MarkEvaluationAsBoughtAsync(actions.Select(action => action.Id).ToList(), evaluation.Id,
-                token);
+        return actions;
+    }
+
+    protected abstract Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(IReadOnlyList<TradingSymbol> symbols,
+        decimal usableMoney, CancellationToken token);
+}
+
+public sealed class BuyWinnersStrategy : BuyWinnersStrategyBase
+{
+    private readonly IMarketDataSource _marketDataSource;
+    private readonly ICurrentTradingTask _tradingTask;
+
+    public BuyWinnersStrategy(ICurrentTradingTask tradingTask, IBuyWinnersStrategyStateService stateService,
+        IMarketDataSource marketDataSource, IAssetsDataSource assetsDataSource, ITradingActionQuery tradingActionQuery)
+        : base(tradingTask, stateService, marketDataSource, assetsDataSource, tradingActionQuery)
+    {
+        _tradingTask = tradingTask;
+        _marketDataSource = marketDataSource;
+    }
+
+    public static string StrategyName => "Trend following strategy";
+    public override string Name => StrategyName;
+
+    protected override async Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(IReadOnlyList<TradingSymbol> symbols,
+        decimal usableMoney, CancellationToken token)
+    {
+        var actions = new List<TradingAction>();
+        foreach (var symbol in symbols)
+        {
+            var investmentValue = usableMoney / symbols.Count * 0.95m;
+            var lastPrice = await _marketDataSource.GetLastAvailablePriceForSymbolAsync(symbol, token);
+            actions.Add(TradingAction.MarketBuy(symbol, investmentValue / lastPrice, _tradingTask.GetTaskTime()));
         }
 
         return actions;

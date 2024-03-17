@@ -102,7 +102,7 @@ public sealed class BuyWinnersStrategyTests
             a.OrderType == OrderType.MarketBuy &&
             a.Quantity == 0.25m);
 
-        await _stateService.Received(1).MarkEvaluationAsBoughtAsync(
+        await _stateService.Received(1).SaveActionIdsForEvaluationAsync(
             Arg.Is<IReadOnlyList<Guid>>(list => list.Count == 3),
             pendingEvaluationId, Arg.Any<CancellationToken>());
     }
@@ -169,7 +169,7 @@ public sealed class BuyWinnersStrategyTests
             a.OrderType == OrderType.MarketBuy &&
             a.Quantity == 0.25m);
 
-        await _stateService.Received(1).MarkEvaluationAsBoughtAsync(
+        await _stateService.Received(1).SaveActionIdsForEvaluationAsync(
             Arg.Is<IReadOnlyList<Guid>>(list => list.Count == 3),
             pendingEvaluationId, Arg.Any<CancellationToken>());
     }

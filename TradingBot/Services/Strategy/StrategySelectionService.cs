@@ -27,7 +27,8 @@ public sealed class StrategySelectionService : IStrategySelectionService
         new[]
         {
             Strategy.StrategyName, GreedyStrategy.StrategyName, BuyLosersStrategy.StrategyName,
-            BuyLosersWithPredictionsStrategy.StrategyName, BuyWinnersStrategy.StrategyName, PcaStrategy.StrategyName,
+            BuyLosersWithPredictionsStrategy.StrategyName, BuyWinnersStrategy.StrategyName,
+            BuyWinnersWithPredictionsStrategy.StrategyName, PcaStrategy.StrategyName,
             PcaWithPredictionsStrategy.StrategyName
         };
 

@@ -49,9 +49,13 @@ public abstract class BuyLosersStrategyBase : IStrategy
 
     public Task HandleDeselectionAsync(string newStrategyName, CancellationToken token = default)
     {
-        return newStrategyName == BuyLosersWithPredictionsStrategy.StrategyName
-            ? Task.CompletedTask
-            : _stateService.ClearNextExecutionDayAsync(token);
+        if (newStrategyName == BuyLosersStrategy.StrategyName ||
+            newStrategyName == BuyLosersWithPredictionsStrategy.StrategyName)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _stateService.ClearNextExecutionDayAsync(token);
     }
 
     private async Task<List<TradingSymbol>> DetermineLosersAsync(CancellationToken token)
