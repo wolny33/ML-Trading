@@ -3,7 +3,7 @@ using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services.Strategy;
 
-public sealed class PcaStrategy : IStrategy
+public abstract class PcaStrategyBase : IStrategy
 {
     private readonly IAssetsDataSource _assetsDataSource;
     private readonly IPcaDecompositionCreator _decompositionCreator;
@@ -12,7 +12,8 @@ public sealed class PcaStrategy : IStrategy
     private readonly IMarketDataSource _marketDataSource;
     private readonly ICurrentTradingTask _tradingTask;
 
-    public PcaStrategy(IPcaDecompositionService decompositionService, IPcaDecompositionCreator decompositionCreator,
+    protected PcaStrategyBase(IPcaDecompositionService decompositionService,
+        IPcaDecompositionCreator decompositionCreator,
         IAssetsDataSource assetsDataSource, IMarketDataSource marketDataSource, ICurrentTradingTask tradingTask,
         ILogger logger)
     {
@@ -21,11 +22,10 @@ public sealed class PcaStrategy : IStrategy
         _assetsDataSource = assetsDataSource;
         _marketDataSource = marketDataSource;
         _tradingTask = tradingTask;
-        _logger = logger.ForContext<PcaStrategy>();
+        _logger = logger.ForContext<PcaStrategyBase>();
     }
 
-    public static string StrategyName => "PCA strategy";
-    public string Name => StrategyName;
+    public abstract string Name { get; }
     public int RequiredPastDays => 90;
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
@@ -82,13 +82,7 @@ public sealed class PcaStrategy : IStrategy
         // If haves money, buy undervalued symbols
         if (assets.Cash.AvailableAmount > assets.EquityValue * 0.01m)
         {
-            var availableMoney = assets.Cash.AvailableAmount;
-            foreach (var (symbol, _) in undervalued)
-            {
-                var investmentValue = availableMoney * 0.3m;
-                actions.Add(TradingAction.MarketBuy(symbol, investmentValue / lastPrices[symbol],
-                    _tradingTask.GetTaskTime()));
-            }
+            actions.AddRange(await GetBuyActionsAsync(undervalued, assets, lastPrices, token));
         }
         else
         {
@@ -96,12 +90,57 @@ public sealed class PcaStrategy : IStrategy
         }
 
         // Sell overvalued held symbols
-        foreach (var position in assets.Positions.Values.Where(p => overvalued.Any(s => s.Symbol == p.Symbol)))
+        actions.AddRange(
+            await GetSellActionsAsync(assets.Positions.Values.Where(p => overvalued.Any(s => s.Symbol == p.Symbol)),
+                token));
+
+        return actions;
+    }
+
+    protected abstract Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(
+        IReadOnlyList<SymbolWithNormalizedDifference> undervalued, Assets assets,
+        IReadOnlyDictionary<TradingSymbol, decimal> lastPrices, CancellationToken token);
+
+    protected abstract Task<IReadOnlyList<TradingAction>> GetSellActionsAsync(IEnumerable<Position> positions,
+        CancellationToken token);
+}
+
+public sealed class PcaStrategy : PcaStrategyBase
+{
+    private readonly ICurrentTradingTask _tradingTask;
+
+    public PcaStrategy(IPcaDecompositionService decompositionService, IPcaDecompositionCreator decompositionCreator,
+        IAssetsDataSource assetsDataSource, IMarketDataSource marketDataSource, ICurrentTradingTask tradingTask,
+        ILogger logger)
+        : base(decompositionService, decompositionCreator, assetsDataSource, marketDataSource, tradingTask, logger)
+    {
+        _tradingTask = tradingTask;
+    }
+
+    public static string StrategyName => "PCA strategy";
+    public override string Name => StrategyName;
+
+    protected override Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(
+        IReadOnlyList<SymbolWithNormalizedDifference> undervalued, Assets assets,
+        IReadOnlyDictionary<TradingSymbol, decimal> lastPrices, CancellationToken token)
+    {
+        var actions = new List<TradingAction>();
+        var availableMoney = assets.Cash.AvailableAmount * 0.95m;
+        var sumOfDifferences = undervalued.Sum(pair => pair.NormalizedDifference);
+        foreach (var (symbol, difference) in undervalued)
         {
-            actions.Add(TradingAction.MarketSell(position.Symbol, position.AvailableQuantity,
+            var investmentValue = availableMoney * (decimal)(difference / sumOfDifferences);
+            actions.Add(TradingAction.MarketBuy(symbol, investmentValue / lastPrices[symbol],
                 _tradingTask.GetTaskTime()));
         }
 
-        return actions;
+        return Task.FromResult<IReadOnlyList<TradingAction>>(actions);
+    }
+
+    protected override Task<IReadOnlyList<TradingAction>> GetSellActionsAsync(IEnumerable<Position> positions,
+        CancellationToken token)
+    {
+        return Task.FromResult<IReadOnlyList<TradingAction>>(positions.Select(p =>
+            TradingAction.MarketSell(p.Symbol, p.AvailableQuantity, _tradingTask.GetTaskTime())).ToList());
     }
 }

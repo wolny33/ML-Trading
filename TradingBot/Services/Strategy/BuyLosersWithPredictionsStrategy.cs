@@ -30,8 +30,11 @@ public sealed class BuyLosersWithPredictionsStrategy : BuyLosersStrategyBase
             var investmentValue = assets.Cash.AvailableAmount / unownedSymbols.Count;
             var lastPrice = await _marketDataSource.GetLastAvailablePriceForSymbolAsync(symbol, token);
             var prediction = await _predictor.GetPredictionForSingleSymbolAsync(symbol, token);
-            actions.Add(TradingAction.LimitBuy(symbol, investmentValue / lastPrice,
-                prediction is null ? lastPrice : GetBuyPrice(lastPrice, prediction.Prices[0].LowPrice),
+            var buyPrice = prediction is null ? lastPrice : GetBuyPrice(lastPrice, prediction.Prices[0].LowPrice);
+
+            if (investmentValue < buyPrice) continue;
+
+            actions.Add(TradingAction.LimitBuy(symbol, (int)(investmentValue / buyPrice), buyPrice,
                 _tradingTask.GetTaskTime()));
         }
 
