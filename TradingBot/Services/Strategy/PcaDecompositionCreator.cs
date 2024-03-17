@@ -117,9 +117,9 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
     private async Task CreateAndSaveNewDecompositionAsync(CancellationToken token)
     {
         await Task.Yield();
-        _logger.Debug("({BacktestId}/{Day}) Starting PCA task", _backtestId, _date);
+        _logger.Debug("({BacktestId}: {Day}) Starting PCA task", _backtestId, _date);
         var decomposition = await Task.Run(() => CreateDecomposition(token), token);
-        _logger.Debug("({BacktestId}/{Day}) PCA decomposition created - saving into db", _backtestId, _date);
+        _logger.Debug("({BacktestId}: {Day}) PCA decomposition created - saving into db", _backtestId, _date);
         await _decompositionService.SaveDecompositionAsync(decomposition, _backtestId, token);
     }
 
@@ -127,7 +127,7 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
     {
         var (symbols, dataLength) = GetDecompositionSymbols(_marketData);
 
-        _logger.Debug("({BacktestId}/{Day}) Decomposition will include {Count} symbols (data has length {Length})",
+        _logger.Debug("({BacktestId}: {Day}) Decomposition will include {Count} symbols (data has length {Length})",
             _backtestId, _date, symbols.Count, dataLength);
         _logger.Verbose("Symbols: {Symbols}", symbols.Select(s => s.Value));
 
@@ -142,13 +142,13 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
             DenseMatrix.OfColumnVectors(
                 priceMatrix.EnumerateColumns().Select((col, i) => (col - means[i]) / stdDevs[i]));
 
-        _logger.Verbose("({BacktestId}/{Day}) Creating covariance matrix", _backtestId, _date);
+        _logger.Verbose("({BacktestId}: {Day}) Creating covariance matrix", _backtestId, _date);
         var covarianceMatrix = standardizedMatrix.Transpose() * standardizedMatrix / (dataLength - 1);
 
-        _logger.Verbose("({BacktestId}/{Day}) Finding eigenvectors", _backtestId, _date);
+        _logger.Verbose("({BacktestId}: {Day}) Finding eigenvectors", _backtestId, _date);
         var evd = covarianceMatrix.Evd();
 
-        _logger.Verbose("({BacktestId}/{Day}) Determining most important components", _backtestId, _date);
+        _logger.Verbose("({BacktestId}: {Day}) Determining most important components", _backtestId, _date);
         var selectedEigenVectors = ReduceComponents(evd.EigenVectors, evd.EigenValues.Real().ToList());
 
         return new PcaDecomposition
@@ -174,13 +174,13 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
         if (validSymbols.Count < 0.5 * marketData.Keys.Count())
         {
             _logger.Warning(
-                "({BacktestId}/{Day}) A lot of symbols has missing data - {Valid} out of {All} (distinct data lengths: {Lengths})",
+                "({BacktestId}: {Day}) A lot of symbols has missing data - {Valid} out of {All} (distinct data lengths: {Lengths})",
                 _backtestId, _date, validSymbols.Count, marketData.Keys.Count(),
                 marketData.Values.Select(data => data.Count).Distinct().OrderDescending());
         }
         else
         {
-            _logger.Verbose("({BacktestId}/{Day}) {Valid} of {All} symbols didn't have missing data", _backtestId,
+            _logger.Verbose("({BacktestId}: {Day}) {Valid} of {All} symbols didn't have missing data", _backtestId,
                 _date, validSymbols.Count, marketData.Keys.Count());
         }
 
@@ -205,7 +205,7 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
         }
 
         _logger.Debug(
-            "({BacktestId}/{Day}) Selected {Count} out of {All} components, accounting for {Percentage}% of variance",
+            "({BacktestId}: {Day}) Selected {Count} out of {All} components, accounting for {Percentage}% of variance",
             _backtestId, _date, selectedIndices.Count, eigenValues.Count, accumulatedVariance / totalVariance * 100);
 
         return DenseMatrix.OfColumnVectors(selectedIndices.Select(eigenVectors.Column));
@@ -214,7 +214,7 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
     public void Cancel()
     {
         if (Task.IsCompleted) return;
-        _logger.Debug("({BacktestId}/{Day}) PCA task was cancelled", _backtestId, _date);
+        _logger.Debug("({BacktestId}: {Day}) PCA task was cancelled", _backtestId, _date);
         _tokenSource.Cancel();
     }
 
