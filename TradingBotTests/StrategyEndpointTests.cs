@@ -44,11 +44,36 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
 
         strategySettings.Should().BeEquivalentTo(new
         {
-            MaxStocksBuyCount = 10,
-            MinDaysDecreasing = 5,
-            MinDaysIncreasing = 5,
-            TopGrowingSymbolsBuyRatio = 0.4
-        });
+            LimitPriceDamping = 0.5m,
+            Basic = new
+            {
+                MaxStocksBuyCount = 10,
+                MinDaysDecreasing = 5,
+                MinDaysIncreasing = 5,
+                TopGrowingSymbolsBuyRatio = 0.4
+            },
+            BuyLosers = new
+            {
+                AnalysisLengthInDays = 30,
+                EvaluationFrequencyInDays = 30
+            },
+            BuyWinners = new
+            {
+                AnalysisLengthInDays = 360,
+                EvaluationFrequencyInDays = 30,
+                SimultaneousEvaluations = 3,
+                BuyWaitTimeInDays = 7
+            },
+            Pca = new
+            {
+                AnalysisLengthInDays = 90,
+                DecompositionExpirationInDays = 7,
+                UndervaluedThreshold = 1,
+                VarianceFraction = 0.9
+            }
+        }, options => options.Excluding(r => r.Pca.VarianceFraction));
+
+        strategySettings.Pca.VarianceFraction.Should().BeApproximately(0.9, 1e-5);
     }
 
     [Fact]
@@ -57,28 +82,99 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
         using var client = _testSuite.CreateAuthenticatedClient();
         var response = await client.Request("api", "strategy").PutJsonAsync(new
         {
-            MaxStocksBuyCount = 12,
-            MinDaysDecreasing = 3,
-            MinDaysIncreasing = 3,
-            TopGrowingSymbolsBuyRatio = 0.5
+            LimitPriceDamping = 0.5m,
+            Basic = new
+            {
+                MaxStocksBuyCount = 12,
+                MinDaysDecreasing = 3,
+                MinDaysIncreasing = 3,
+                TopGrowingSymbolsBuyRatio = 0.5
+            },
+            BuyLosers = new
+            {
+                AnalysisLengthInDays = 30,
+                EvaluationFrequencyInDays = 30
+            },
+            BuyWinners = new
+            {
+                AnalysisLengthInDays = 360,
+                EvaluationFrequencyInDays = 30,
+                SimultaneousEvaluations = 3,
+                BuyWaitTimeInDays = 7
+            },
+            Pca = new
+            {
+                AnalysisLengthInDays = 90,
+                DecompositionExpirationInDays = 7,
+                UndervaluedThreshold = 1,
+                VarianceFraction = 0.9
+            }
         });
         var strategySettings = await response.GetJsonAsync<StrategyParametersResponse>();
 
         await client.Request("api", "strategy").PutJsonAsync(new
         {
-            MaxStocksBuyCount = 10,
-            MinDaysDecreasing = 5,
-            MinDaysIncreasing = 5,
-            TopGrowingSymbolsBuyRatio = 0.4
+            LimitPriceDamping = 0.5m,
+            Basic = new
+            {
+                MaxStocksBuyCount = 10,
+                MinDaysDecreasing = 5,
+                MinDaysIncreasing = 5,
+                TopGrowingSymbolsBuyRatio = 0.4
+            },
+            BuyLosers = new
+            {
+                AnalysisLengthInDays = 30,
+                EvaluationFrequencyInDays = 30
+            },
+            BuyWinners = new
+            {
+                AnalysisLengthInDays = 360,
+                EvaluationFrequencyInDays = 30,
+                SimultaneousEvaluations = 3,
+                BuyWaitTimeInDays = 7
+            },
+            Pca = new
+            {
+                AnalysisLengthInDays = 90,
+                DecompositionExpirationInDays = 7,
+                UndervaluedThreshold = 1,
+                VarianceFraction = 0.9
+            }
         });
 
         strategySettings.Should().BeEquivalentTo(new
         {
-            MaxStocksBuyCount = 12,
-            MinDaysDecreasing = 3,
-            MinDaysIncreasing = 3,
-            TopGrowingSymbolsBuyRatio = 0.5
-        });
+            LimitPriceDamping = 0.5m,
+            Basic = new
+            {
+                MaxStocksBuyCount = 12,
+                MinDaysDecreasing = 3,
+                MinDaysIncreasing = 3,
+                TopGrowingSymbolsBuyRatio = 0.5
+            },
+            BuyLosers = new
+            {
+                AnalysisLengthInDays = 30,
+                EvaluationFrequencyInDays = 30
+            },
+            BuyWinners = new
+            {
+                AnalysisLengthInDays = 360,
+                EvaluationFrequencyInDays = 30,
+                SimultaneousEvaluations = 3,
+                BuyWaitTimeInDays = 7
+            },
+            Pca = new
+            {
+                AnalysisLengthInDays = 90,
+                DecompositionExpirationInDays = 7,
+                UndervaluedThreshold = 1,
+                VarianceFraction = 0.9
+            }
+        }, options => options.Excluding(r => r.Pca.VarianceFraction));
+
+        strategySettings.Pca.VarianceFraction.Should().BeApproximately(0.9, 1e-5);
     }
 
     [Fact]
