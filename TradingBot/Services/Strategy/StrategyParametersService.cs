@@ -6,10 +6,10 @@ namespace TradingBot.Services.Strategy;
 
 public interface IStrategyParametersService
 {
-    public Task<StrategyParametersConfiguration> GetConfigurationAsync(CancellationToken token = default);
+    Task<StrategyParametersConfiguration> GetConfigurationAsync(CancellationToken token = default);
 
-    public Task<StrategyParametersConfiguration> SetParametersAsync(int maxStocksBuyCount, int minDaysDecreasing,
-        int minDaysIncreasing, double topGrowingSymbolsBuyRatio, CancellationToken token = default);
+    Task<StrategyParametersConfiguration> SetParametersAsync(StrategyParametersConfiguration newConfig,
+        CancellationToken token = default);
 }
 
 public sealed class StrategyParametersService : IStrategyParametersService
@@ -30,8 +30,8 @@ public sealed class StrategyParametersService : IStrategyParametersService
         return StrategyParametersConfiguration.FromEntity(entity);
     }
 
-    public async Task<StrategyParametersConfiguration> SetParametersAsync(int maxStocksBuyCount, int minDaysDecreasing,
-        int minDaysIncreasing, double topGrowingSymbolsBuyRatio, CancellationToken token = default)
+    public async Task<StrategyParametersConfiguration> SetParametersAsync(StrategyParametersConfiguration newConfig,
+        CancellationToken token = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(token);
         var entity = await context.StrategyParameters.SingleOrDefaultAsync(token);
@@ -41,12 +41,9 @@ public sealed class StrategyParametersService : IStrategyParametersService
             context.StrategyParameters.Add(entity);
         }
 
-        entity.MaxStocksBuyCount = maxStocksBuyCount;
-        entity.MinDaysDecreasing = minDaysDecreasing;
-        entity.MinDaysIncreasing = minDaysIncreasing;
-        entity.TopGrowingSymbolsBuyRatio = topGrowingSymbolsBuyRatio;
+        newConfig.UpdateEntity(entity);
         await context.SaveChangesAsync(token);
 
-        return StrategyParametersConfiguration.FromEntity(entity);
+        return newConfig;
     }
 }
