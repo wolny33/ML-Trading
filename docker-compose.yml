@@ -9,7 +9,7 @@ services:
     depends_on:
       - predictor
     volumes:
-      - ./Data:/app/Data
+      - ./TradingBot/Data:/app/Data
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
       interval: 10s
