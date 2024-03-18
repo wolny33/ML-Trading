@@ -85,11 +85,11 @@ public sealed class PcaWithPredictionsStrategy : PcaStrategyBase
 
     private static decimal GetBuyPrice(decimal last, decimal predictedLow)
     {
-        return (last + predictedLow) / 2;
+        return last > predictedLow ? (last + predictedLow) / 2 : predictedLow;
     }
 
     private static decimal GetSellPrice(decimal last, decimal predictedHigh)
     {
-        return (last + predictedHigh) / 2;
+        return last < predictedHigh ? (last + predictedHigh) / 2 : predictedHigh;
     }
 }

@@ -35,7 +35,9 @@ public abstract class BuyWinnersStrategyBase : IStrategy
         var pendingSymbolsPerEvaluation = await GetPendingSymbolsForEvaluationsAsync(state.Evaluations, token);
         if (pendingSymbolsPerEvaluation.Count > 0)
         {
-            var buyActions = await GetBuyActionsForPendingEvaluationsAsync(pendingSymbolsPerEvaluation, token);
+            var buyActions =
+                await GetBuyActionsForPendingEvaluationsAsync(pendingSymbolsPerEvaluation, state.Evaluations.Count,
+                    token);
             return buyActions;
         }
 
@@ -184,13 +186,13 @@ public abstract class BuyWinnersStrategyBase : IStrategy
     }
 
     private async Task<IReadOnlyList<TradingAction>> GetBuyActionsForPendingEvaluationsAsync(
-        IReadOnlyList<EvaluationsWithPendingSymbols> evaluations, CancellationToken token)
+        IReadOnlyList<EvaluationsWithPendingSymbols> evaluations, int allEvaluationsCount, CancellationToken token)
     {
         var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
 
         var actions = new List<TradingAction>();
         var parts = evaluations.Select(pair => (decimal)pair.PendingSymbols.Count / pair.Evaluation.SymbolsToBuy.Count)
-            .Sum() + (SimultaneousEvaluations - evaluations.Count);
+            .Sum() + (SimultaneousEvaluations - allEvaluationsCount);
 
         foreach (var (evaluation, symbols) in evaluations)
         {

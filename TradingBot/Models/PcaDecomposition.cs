@@ -23,6 +23,8 @@ public sealed class PcaDecomposition
             .Where(pair => lastPrices.ContainsKey(pair.Symbol))
             .ToList();
 
+        if (filteredIndices.Count == 0) return Array.Empty<SymbolWithNormalizedDifference>();
+
         var newData = DenseVector.OfEnumerable(filteredIndices.Select(pair => (double)lastPrices[pair.Symbol]));
         var means = DenseVector.OfEnumerable(filteredIndices.Select(pair => Means[pair.Index]));
         var stdDeviations =

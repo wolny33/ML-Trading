@@ -43,6 +43,6 @@ public sealed class BuyLosersWithPredictionsStrategy : BuyLosersStrategyBase
 
     private static decimal GetBuyPrice(decimal last, decimal predictedLow)
     {
-        return (last + predictedLow) / 2;
+        return last > predictedLow ? (last + predictedLow) / 2 : predictedLow;
     }
 }

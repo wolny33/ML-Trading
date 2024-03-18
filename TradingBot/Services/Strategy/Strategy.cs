@@ -126,9 +126,7 @@ public sealed class Strategy : IStrategy
         decimal currentPrice)
     {
         var nextDayLowPrice = prediction.Value.Prices.Select(dailyPrice => dailyPrice.LowPrice).ToList()[0];
-        var buyLimitPrice = (currentPrice + nextDayLowPrice) / 2;
-
-        return buyLimitPrice;
+        return currentPrice > nextDayLowPrice ? (currentPrice + nextDayLowPrice) / 2 : nextDayLowPrice;
     }
 
     private List<TradingAction> GetBuyActions(IReadOnlyList<AverageGrowthRate> growthRates, decimal cashAvailable,

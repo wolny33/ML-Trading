@@ -127,6 +127,14 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
     {
         var (symbols, dataLength) = GetDecompositionSymbols(_marketData);
 
+        if (symbols.Count == 0 || dataLength < 2)
+        {
+            _logger.Warning(
+                "({BacktestId}: {Day}) Not enough data to create decomposition: {Symbols} symbols with {Days} days",
+                _backtestId, _date, symbols.Count, dataLength);
+            return CreateEmptyDecomposition(symbols.Count > 0 ? symbols : new[] { new TradingSymbol("None") });
+        }
+
         _logger.Debug("({BacktestId}: {Day}) Decomposition will include {Count} symbols (data has length {Length})",
             _backtestId, _date, symbols.Count, dataLength);
         _logger.Verbose("Symbols: {Symbols}", symbols.Select(s => s.Value));
@@ -165,6 +173,11 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
     private SymbolsAndDataLength GetDecompositionSymbols(
         IReadOnlyDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>> marketData)
     {
+        if (marketData.Count == 0)
+        {
+            return new SymbolsAndDataLength(Array.Empty<TradingSymbol>(), 0);
+        }
+
         var longestLength = marketData.Values.Max(data => data.Count);
         var validSymbols = marketData.Keys
             .Where(symbol => marketData[symbol].Count >= longestLength)
@@ -209,6 +222,19 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
             _backtestId, _date, selectedIndices.Count, eigenValues.Count, accumulatedVariance / totalVariance * 100);
 
         return DenseMatrix.OfColumnVectors(selectedIndices.Select(eigenVectors.Column));
+    }
+
+    private PcaDecomposition CreateEmptyDecomposition(IReadOnlyList<TradingSymbol> symbols)
+    {
+        return new PcaDecomposition
+        {
+            CreatedAt = _date,
+            ExpiresAt = _date,
+            Symbols = symbols,
+            Means = DenseVector.OfEnumerable(Enumerable.Repeat(0.0, symbols.Count)),
+            StandardDeviations = DenseVector.OfEnumerable(Enumerable.Repeat(1.0, symbols.Count)),
+            PrincipalVectors = DenseMatrix.OfDiagonalArray(Enumerable.Repeat(1.0, symbols.Count).ToArray())
+        };
     }
 
     public void Cancel()
