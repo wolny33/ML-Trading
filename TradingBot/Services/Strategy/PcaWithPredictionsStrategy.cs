@@ -12,13 +12,15 @@ public sealed class PcaWithPredictionsStrategy : PcaStrategyBase
 
     public PcaWithPredictionsStrategy(IPcaDecompositionService decompositionService,
         IPcaDecompositionCreator decompositionCreator, IAssetsDataSource assetsDataSource,
-        IMarketDataSource marketDataSource, ICurrentTradingTask tradingTask, ILogger logger, IPricePredictor predictor)
-        : base(decompositionService, decompositionCreator, assetsDataSource, marketDataSource, tradingTask, logger)
+        IMarketDataSource marketDataSource, ICurrentTradingTask tradingTask, ILogger logger,
+        IStrategyParametersService strategyParameters, IPricePredictor predictor)
+        : base(decompositionService, decompositionCreator, assetsDataSource, marketDataSource, tradingTask, logger,
+            strategyParameters)
     {
+        _logger = logger;
         _marketDataSource = marketDataSource;
-        _tradingTask = tradingTask;
-        _logger = logger.ForContext<PcaWithPredictionsStrategy>();
         _predictor = predictor;
+        _tradingTask = tradingTask;
     }
 
     public static string StrategyName => "PCA strategy with predictions";
@@ -26,7 +28,7 @@ public sealed class PcaWithPredictionsStrategy : PcaStrategyBase
 
     protected override async Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(
         IReadOnlyList<SymbolWithNormalizedDifference> undervalued, Assets assets,
-        IReadOnlyDictionary<TradingSymbol, decimal> lastPrices, CancellationToken token)
+        IReadOnlyDictionary<TradingSymbol, decimal> lastPrices, decimal damping, CancellationToken token)
     {
         var predictions = new Dictionary<TradingSymbol, Prediction?>();
         foreach (var (symbol, _) in undervalued)
@@ -50,7 +52,7 @@ public sealed class PcaWithPredictionsStrategy : PcaStrategyBase
         {
             var investmentValue = assets.Cash.AvailableAmount * (decimal)(difference / sumOfDifferences);
             var buyPrice = predictions[symbol] is { } prediction
-                ? GetBuyPrice(lastPrices[symbol], prediction.Prices[0].LowPrice)
+                ? GetBuyPrice(lastPrices[symbol], prediction.Prices[0].LowPrice, damping)
                 : lastPrices[symbol];
 
             actions.Add(TradingAction.LimitBuy(symbol, (int)(investmentValue / buyPrice), buyPrice,
@@ -61,7 +63,7 @@ public sealed class PcaWithPredictionsStrategy : PcaStrategyBase
     }
 
     protected override async Task<IReadOnlyList<TradingAction>> GetSellActionsAsync(IEnumerable<Position> positions,
-        CancellationToken token)
+        decimal damping, CancellationToken token)
     {
         var actions = new List<TradingAction>();
         foreach (var position in positions)
@@ -69,7 +71,7 @@ public sealed class PcaWithPredictionsStrategy : PcaStrategyBase
             var lastPrice = await _marketDataSource.GetLastAvailablePriceForSymbolAsync(position.Symbol, token);
             var prediction = await _predictor.GetPredictionForSingleSymbolAsync(position.Symbol, token);
             var action = TradingAction.LimitSell(position.Symbol, (int)position.AvailableQuantity,
-                prediction is null ? lastPrice : GetSellPrice(lastPrice, prediction.Prices[0].HighPrice),
+                prediction is null ? lastPrice : GetSellPrice(lastPrice, prediction.Prices[0].HighPrice, damping),
                 _tradingTask.GetTaskTime());
             actions.Add(action);
 
@@ -83,13 +85,13 @@ public sealed class PcaWithPredictionsStrategy : PcaStrategyBase
         return actions;
     }
 
-    private static decimal GetBuyPrice(decimal last, decimal predictedLow)
+    private static decimal GetBuyPrice(decimal last, decimal predictedLow, decimal damping)
     {
-        return last > predictedLow ? (last + predictedLow) / 2 : predictedLow;
+        return last > predictedLow ? last * damping + predictedLow * (1 - damping) : predictedLow;
     }
 
-    private static decimal GetSellPrice(decimal last, decimal predictedHigh)
+    private static decimal GetSellPrice(decimal last, decimal predictedHigh, decimal damping)
     {
-        return last < predictedHigh ? (last + predictedHigh) / 2 : predictedHigh;
+        return last < predictedHigh ? last * damping + predictedHigh * (1 - damping) : predictedHigh;
     }
 }

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NSubstitute;
+using TradingBot.Configuration;
 using TradingBot.Models;
 using TradingBot.Services;
 using TradingBot.Services.Strategy;
@@ -25,7 +26,22 @@ public sealed class BuyLosersStrategyTests
         tradingTask.GetTaskTime().Returns(new DateTimeOffset(2024, 3, 10, 12, 0, 0, TimeSpan.Zero));
         tradingTask.CurrentBacktestId.Returns((Guid?)null);
 
-        _strategy = new BuyLosersStrategy(tradingTask, _stateService, _marketData, _assets);
+        var strategyParameters = Substitute.For<IStrategyParametersService>();
+        strategyParameters.GetConfigurationAsync(Arg.Any<CancellationToken>()).Returns(
+            new StrategyParametersConfiguration
+            {
+                LimitPriceDamping = 0.5m,
+                BuyLosers = new BuyLosersOptions
+                {
+                    AnalysisLengthInDays = 30,
+                    EvaluationFrequencyInDays = 30
+                },
+                Basic = null!,
+                BuyWinners = null!,
+                Pca = null!
+            });
+
+        _strategy = new BuyLosersStrategy(tradingTask, _stateService, _marketData, _assets, strategyParameters);
     }
 
     [Fact]

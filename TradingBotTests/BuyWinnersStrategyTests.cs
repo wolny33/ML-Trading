@@ -1,6 +1,7 @@
 ﻿using Alpaca.Markets;
 using FluentAssertions;
 using NSubstitute;
+using TradingBot.Configuration;
 using TradingBot.Models;
 using TradingBot.Services;
 using TradingBot.Services.Strategy;
@@ -29,7 +30,25 @@ public sealed class BuyWinnersStrategyTests
         tradingTask.GetTaskTime().Returns(new DateTimeOffset(2024, 3, 10, 12, 0, 0, TimeSpan.Zero));
         tradingTask.CurrentBacktestId.Returns((Guid?)null);
 
-        _strategy = new BuyWinnersStrategy(tradingTask, _stateService, _marketData, _assets, _actionQuery);
+        var strategyParameters = Substitute.For<IStrategyParametersService>();
+        strategyParameters.GetConfigurationAsync(Arg.Any<CancellationToken>()).Returns(
+            new StrategyParametersConfiguration
+            {
+                LimitPriceDamping = 0.5m,
+                BuyWinners = new BuyWinnersOptions
+                {
+                    SimultaneousEvaluations = 3,
+                    AnalysisLengthInDays = 12 * 30,
+                    BuyWaitTimeInDays = 7,
+                    EvaluationFrequencyInDays = 30
+                },
+                BuyLosers = null!,
+                Basic = null!,
+                Pca = null!
+            });
+
+        _strategy = new BuyWinnersStrategy(tradingTask, _stateService, _marketData, _assets, _actionQuery,
+            strategyParameters);
     }
 
     [Fact]

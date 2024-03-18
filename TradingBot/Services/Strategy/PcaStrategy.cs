@@ -10,32 +10,39 @@ public abstract class PcaStrategyBase : IStrategy
     private readonly IPcaDecompositionService _decompositionService;
     private readonly ILogger _logger;
     private readonly IMarketDataSource _marketDataSource;
+    private readonly IStrategyParametersService _strategyParameters;
     private readonly ICurrentTradingTask _tradingTask;
 
     protected PcaStrategyBase(IPcaDecompositionService decompositionService,
         IPcaDecompositionCreator decompositionCreator,
         IAssetsDataSource assetsDataSource, IMarketDataSource marketDataSource, ICurrentTradingTask tradingTask,
-        ILogger logger)
+        ILogger logger, IStrategyParametersService strategyParameters)
     {
         _decompositionService = decompositionService;
         _decompositionCreator = decompositionCreator;
         _assetsDataSource = assetsDataSource;
         _marketDataSource = marketDataSource;
         _tradingTask = tradingTask;
+        _strategyParameters = strategyParameters;
         _logger = logger.ForContext<PcaStrategyBase>();
     }
 
     public abstract string Name { get; }
-    public int RequiredPastDays => 90;
+
+    public async Task<int> GetRequiredPastDaysAsync(CancellationToken token = default)
+    {
+        return (await _strategyParameters.GetConfigurationAsync(token)).Pca.AnalysisLengthInDays;
+    }
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
     {
         var latestDecomposition =
             await _decompositionService.GetLatestDecompositionAsync(_tradingTask.CurrentBacktestId, token);
+        var config = await _strategyParameters.GetConfigurationAsync(token);
 
-        // If no decomposition was created or if decomposition is outdated, we start the task and do nothing (since it
-        // may take a long time)
-        if (latestDecomposition is null || latestDecomposition.ExpiresAt < _tradingTask.GetTaskDay())
+        // If no decomposition was created or if decomposition expired earlier than 3 days ago, we start the task and do
+        // nothing (since it may take a long time)
+        if (latestDecomposition is null || latestDecomposition.ExpiresAt.AddDays(3) < _tradingTask.GetTaskDay())
         {
             if (latestDecomposition is null)
             {
@@ -48,17 +55,17 @@ public abstract class PcaStrategyBase : IStrategy
             }
 
             await _decompositionCreator.StartNewDecompositionCreationAsync(_tradingTask.CurrentBacktestId,
-                _tradingTask.GetTaskDay(), token);
+                _tradingTask.GetTaskDay(), config.Pca, token);
             return Array.Empty<TradingAction>();
         }
 
-        // If decomposition expires soon, start new creation task
-        if (latestDecomposition.ExpiresAt < _tradingTask.GetTaskDay().AddDays(3))
+        // If decomposition expired, start new creation task
+        if (latestDecomposition.ExpiresAt < _tradingTask.GetTaskDay())
         {
             _logger.Debug("Latest decomposition will expire in less than 3 days (on {Expiration})",
                 latestDecomposition.ExpiresAt);
             await _decompositionCreator.StartNewDecompositionCreationAsync(_tradingTask.CurrentBacktestId,
-                _tradingTask.GetTaskDay(), token);
+                _tradingTask.GetTaskDay(), config.Pca, token);
         }
 
         var lastDayData =
@@ -67,7 +74,7 @@ public abstract class PcaStrategyBase : IStrategy
         var lastPrices = lastDayData.Keys.ToDictionary(symbol => symbol, symbol => lastDayData[symbol][0].Close);
         var differences = latestDecomposition.CalculatePriceDifferences(lastPrices);
 
-        var undervalued = differences.Where(d => d.NormalizedDifference < -1).ToList();
+        var undervalued = differences.Where(d => d.NormalizedDifference < -config.Pca.UndervaluedThreshold).ToList();
         var overvalued = differences.Where(d => d.NormalizedDifference > 0).ToList();
 
         _logger.Verbose("Undervalued symbols: {Symbols}",
@@ -82,7 +89,8 @@ public abstract class PcaStrategyBase : IStrategy
         // If haves money, buy undervalued symbols
         if (assets.Cash.AvailableAmount > assets.EquityValue * 0.01m)
         {
-            actions.AddRange(await GetBuyActionsAsync(undervalued, assets, lastPrices, token));
+            actions.AddRange(await GetBuyActionsAsync(undervalued, assets, lastPrices, config.LimitPriceDamping,
+                token));
         }
         else
         {
@@ -90,19 +98,19 @@ public abstract class PcaStrategyBase : IStrategy
         }
 
         // Sell overvalued held symbols
-        actions.AddRange(
-            await GetSellActionsAsync(assets.Positions.Values.Where(p => overvalued.Any(s => s.Symbol == p.Symbol)),
-                token));
+        actions.AddRange(await GetSellActionsAsync(
+            assets.Positions.Values.Where(p => overvalued.Any(s => s.Symbol == p.Symbol)), config.LimitPriceDamping,
+            token));
 
         return actions;
     }
 
     protected abstract Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(
         IReadOnlyList<SymbolWithNormalizedDifference> undervalued, Assets assets,
-        IReadOnlyDictionary<TradingSymbol, decimal> lastPrices, CancellationToken token);
+        IReadOnlyDictionary<TradingSymbol, decimal> lastPrices, decimal damping, CancellationToken token);
 
     protected abstract Task<IReadOnlyList<TradingAction>> GetSellActionsAsync(IEnumerable<Position> positions,
-        CancellationToken token);
+        decimal damping, CancellationToken token);
 }
 
 public sealed class PcaStrategy : PcaStrategyBase
@@ -111,8 +119,9 @@ public sealed class PcaStrategy : PcaStrategyBase
 
     public PcaStrategy(IPcaDecompositionService decompositionService, IPcaDecompositionCreator decompositionCreator,
         IAssetsDataSource assetsDataSource, IMarketDataSource marketDataSource, ICurrentTradingTask tradingTask,
-        ILogger logger)
-        : base(decompositionService, decompositionCreator, assetsDataSource, marketDataSource, tradingTask, logger)
+        ILogger logger, IStrategyParametersService strategyParameters)
+        : base(decompositionService, decompositionCreator, assetsDataSource, marketDataSource, tradingTask, logger,
+            strategyParameters)
     {
         _tradingTask = tradingTask;
     }
@@ -122,7 +131,7 @@ public sealed class PcaStrategy : PcaStrategyBase
 
     protected override Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(
         IReadOnlyList<SymbolWithNormalizedDifference> undervalued, Assets assets,
-        IReadOnlyDictionary<TradingSymbol, decimal> lastPrices, CancellationToken token)
+        IReadOnlyDictionary<TradingSymbol, decimal> lastPrices, decimal damping, CancellationToken token)
     {
         var actions = new List<TradingAction>();
         var availableMoney = assets.Cash.AvailableAmount * 0.95m;
@@ -138,7 +147,7 @@ public sealed class PcaStrategy : PcaStrategyBase
     }
 
     protected override Task<IReadOnlyList<TradingAction>> GetSellActionsAsync(IEnumerable<Position> positions,
-        CancellationToken token)
+        decimal damping, CancellationToken token)
     {
         return Task.FromResult<IReadOnlyList<TradingAction>>(positions.Select(p =>
             TradingAction.MarketSell(p.Symbol, p.AvailableQuantity, _tradingTask.GetTaskTime())).ToList());

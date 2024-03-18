@@ -10,19 +10,20 @@ public sealed class BuyWinnersWithPredictionsStrategy : BuyWinnersStrategyBase
 
     public BuyWinnersWithPredictionsStrategy(ICurrentTradingTask tradingTask,
         IBuyWinnersStrategyStateService stateService, IMarketDataSource marketDataSource,
-        IAssetsDataSource assetsDataSource, ITradingActionQuery tradingActionQuery, IPricePredictor predictor)
-        : base(tradingTask, stateService, marketDataSource, assetsDataSource, tradingActionQuery)
+        IAssetsDataSource assetsDataSource, ITradingActionQuery tradingActionQuery,
+        IStrategyParametersService strategyParameters, IPricePredictor predictor)
+        : base(tradingTask, stateService, marketDataSource, assetsDataSource, tradingActionQuery, strategyParameters)
     {
-        _tradingTask = tradingTask;
         _marketDataSource = marketDataSource;
         _predictor = predictor;
+        _tradingTask = tradingTask;
     }
 
     public static string StrategyName => "Trend following strategy with predictions";
     public override string Name => StrategyName;
 
     protected override async Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(IReadOnlyList<TradingSymbol> symbols,
-        decimal usableMoney, CancellationToken token)
+        decimal usableMoney, decimal damping, CancellationToken token)
     {
         var actions = new List<TradingAction>();
         foreach (var symbol in symbols)
@@ -30,7 +31,9 @@ public sealed class BuyWinnersWithPredictionsStrategy : BuyWinnersStrategyBase
             var investmentValue = usableMoney / symbols.Count;
             var lastPrice = await _marketDataSource.GetLastAvailablePriceForSymbolAsync(symbol, token);
             var prediction = await _predictor.GetPredictionForSingleSymbolAsync(symbol, token);
-            var buyPrice = prediction is null ? lastPrice : GetBuyPrice(lastPrice, prediction.Prices[0].LowPrice);
+            var buyPrice = prediction is null
+                ? lastPrice
+                : GetBuyPrice(lastPrice, prediction.Prices[0].LowPrice, damping);
 
             if (investmentValue < buyPrice) continue;
 
@@ -41,8 +44,8 @@ public sealed class BuyWinnersWithPredictionsStrategy : BuyWinnersStrategyBase
         return actions;
     }
 
-    private static decimal GetBuyPrice(decimal last, decimal predictedLow)
+    private static decimal GetBuyPrice(decimal last, decimal predictedLow, decimal damping)
     {
-        return last > predictedLow ? (last + predictedLow) / 2 : predictedLow;
+        return last > predictedLow ? last * damping + predictedLow * (1 - damping) : predictedLow;
     }
 }

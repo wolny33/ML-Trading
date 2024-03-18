@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
 using MathNet.Numerics.Statistics;
+using TradingBot.Configuration;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 
@@ -9,7 +10,9 @@ namespace TradingBot.Services.Strategy;
 
 public interface IPcaDecompositionCreator
 {
-    Task StartNewDecompositionCreationAsync(Guid? backtestId, DateOnly currentDay, CancellationToken token = default);
+    Task StartNewDecompositionCreationAsync(Guid? backtestId, DateOnly currentDay, PcaOptions options,
+        CancellationToken token = default);
+
     Task WaitForTaskAsync(Guid? backtestId, CancellationToken token = default);
 }
 
@@ -33,7 +36,7 @@ public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDi
         await Task.WhenAll(_tasks.Values.Select(async task => await task.DisposeAsync()));
     }
 
-    public async Task StartNewDecompositionCreationAsync(Guid? backtestId, DateOnly currentDay,
+    public async Task StartNewDecompositionCreationAsync(Guid? backtestId, DateOnly currentDay, PcaOptions options,
         CancellationToken token = default)
     {
         if (_tasks.TryGetValue(new BacktestId(backtestId), out var task) && !task.IsCompleted)
@@ -51,9 +54,8 @@ public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDi
 
         if (task is not null) await task.DisposeAsync();
 
-        _tasks[new BacktestId(backtestId)] =
-            new PcaDecompositionTask(marketData.AsReadOnly(), backtestId, currentDay,
-                scope.ServiceProvider.GetRequiredService<IPcaDecompositionService>(), _logger);
+        _tasks[new BacktestId(backtestId)] = new PcaDecompositionTask(marketData.AsReadOnly(), backtestId, currentDay,
+            scope.ServiceProvider.GetRequiredService<IPcaDecompositionService>(), _logger, options);
 
         _logger.Debug("PCA task for backtest {BacktestId} for day {Day} was started", backtestId, currentDay);
     }
@@ -81,24 +83,24 @@ public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDi
 
 public sealed class PcaDecompositionTask : IAsyncDisposable
 {
-    private const double VarianceFraction = 0.9;
-    private const int DecompositionExpiration = 7;
-
     private readonly Guid? _backtestId;
     private readonly DateOnly _date;
-    private readonly CancellationTokenSource _tokenSource = new();
-    private readonly IReadOnlyDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>> _marketData;
 
     private readonly IPcaDecompositionService _decompositionService;
     private readonly ILogger _logger;
+    private readonly IReadOnlyDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>> _marketData;
+    private readonly PcaOptions _options;
+    private readonly CancellationTokenSource _tokenSource = new();
 
     public PcaDecompositionTask(IReadOnlyDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>> marketData,
-        Guid? backtestId, DateOnly date, IPcaDecompositionService decompositionService, ILogger logger)
+        Guid? backtestId, DateOnly date, IPcaDecompositionService decompositionService, ILogger logger,
+        PcaOptions options)
     {
         _marketData = marketData;
         _backtestId = backtestId;
         _date = date;
         _decompositionService = decompositionService;
+        _options = options;
         _logger = logger.ForContext<PcaDecompositionTask>();
 
         Task = CreateAndSaveNewDecompositionAsync(_tokenSource.Token);
@@ -162,7 +164,7 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
         return new PcaDecomposition
         {
             CreatedAt = _date,
-            ExpiresAt = _date.AddDays(DecompositionExpiration),
+            ExpiresAt = _date.AddDays(_options.DecompositionExpirationInDays),
             Symbols = symbols,
             Means = means,
             StandardDeviations = stdDevs,
@@ -211,7 +213,7 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
         var accumulatedVariance = 0.0;
         foreach (var index in sortedIndices)
         {
-            if (accumulatedVariance >= totalVariance * VarianceFraction) break;
+            if (accumulatedVariance >= totalVariance * _options.VarianceFraction) break;
 
             selectedIndices.Add(index);
             accumulatedVariance += eigenValues[index];

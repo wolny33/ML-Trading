@@ -20,7 +20,11 @@ public sealed class GreedyStrategy : IStrategy
 
     public static string StrategyName => "Greedy optimal strategy";
     public string Name => StrategyName;
-    public int RequiredPastDays => 1;
+
+    public Task<int> GetRequiredPastDaysAsync(CancellationToken token = default)
+    {
+        return Task.FromResult(1);
+    }
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
     {
