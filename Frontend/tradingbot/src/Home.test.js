@@ -104,6 +104,21 @@ const setupAxiosMocks = () => {
             }]
         })
     );
+
+    axios.get.mockImplementationOnce(() =>
+      Promise.resolve({ data: {
+        "names": [
+          "Basic strategy",
+          "Greedy optimal strategy"
+        ]
+      }
+    }));
+
+    axios.get.mockImplementationOnce(() =>
+      Promise.resolve({ data: {
+        "name": "Basic strategy"
+      }
+    }));
 };
 
   test('renders correctly', async () => {
@@ -114,7 +129,7 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await waitFor(() => {
-        expect(axios.get).toHaveBeenCalledTimes(7);
+        expect(axios.get).toHaveBeenCalledTimes(9);
     });
     expect(axios.get).toHaveBeenCalledWith('/assets', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/test-mode', expect.anything());
@@ -141,7 +156,7 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await act(async () => {
-        expect(axios.get).toHaveBeenCalledTimes(6);
+        expect(axios.get).toHaveBeenCalledTimes(8);
     });
     const switchTestModeButton = screen.getByTestId('test-mode-on-button');
     
@@ -179,7 +194,7 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await act(async () => {
-        expect(axios.get).toHaveBeenCalledTimes(6);
+        expect(axios.get).toHaveBeenCalledTimes(8);
     });
     const switchTestModeButton = screen.getByTestId("investment-on-button");
     
