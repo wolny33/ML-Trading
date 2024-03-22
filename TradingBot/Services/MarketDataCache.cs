@@ -86,7 +86,7 @@ public sealed class MarketDataCache : IMarketDataCache
             if (!_cache.TryGetValue<DailyTradingData?>(new CacheKey(symbol, day), out data)) return null;
 
             day = day.AddDays(-1);
-        } while (data is null);
+        } while (data is null || data.Close <= 0 || data.Volume <= 0);
 
         return data.Close;
     }

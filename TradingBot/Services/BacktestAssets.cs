@@ -412,7 +412,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
     private void FreeReservedCash(decimal amount, Guid backtestId)
     {
         var assets = _assets[backtestId];
-        if (assets.Cash.BuyingPower + amount > assets.Cash.AvailableAmount)
+        if (assets.Cash.BuyingPower + amount > assets.Cash.AvailableAmount + 1e-5m)
             throw new UnreachableException("Money cannot be freed");
 
         var newAssets = new Assets
