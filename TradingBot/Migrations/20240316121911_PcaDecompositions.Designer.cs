@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TradingBot.Database;
 
@@ -10,9 +11,11 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240316121911_PcaDecompositions")]
+    partial class PcaDecompositions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.13");
@@ -278,27 +281,6 @@ namespace TradingBot.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("BuyLosersAnalysisLengthInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyLosersEvaluationFrequencyInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyWinnersAnalysisLengthInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyWinnersBuyWaitTimeInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyWinnersEvaluationFrequencyInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyWinnersSimultaneousEvaluations")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("LimitPriceDamping")
-                        .HasColumnType("REAL");
-
                     b.Property<int>("MaxStocksBuyCount")
                         .HasColumnType("INTEGER");
 
@@ -307,18 +289,6 @@ namespace TradingBot.Migrations
 
                     b.Property<int>("MinDaysIncreasing")
                         .HasColumnType("INTEGER");
-
-                    b.Property<int>("PcaAnalysisLengthInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PcaDecompositionExpirationInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("PcaUndervaluedThreshold")
-                        .HasColumnType("REAL");
-
-                    b.Property<double>("PcaVarianceFraction")
-                        .HasColumnType("REAL");
 
                     b.Property<double>("TopGrowingSymbolsBuyRatio")
                         .HasColumnType("REAL");

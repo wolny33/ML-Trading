@@ -4,6 +4,24 @@ namespace TradingBot.Dto;
 
 public sealed class StrategyParametersResponse
 {
+    [Required]
+    public required decimal LimitPriceDamping { get; init; }
+
+    [Required]
+    public required BasicStrategyOptionResponse Basic { get; init; }
+
+    [Required]
+    public required BuyLosersOptionsResponse BuyLosers { get; init; }
+
+    [Required]
+    public required BuyWinnersOptionsResponse BuyWinners { get; init; }
+
+    [Required]
+    public required PcaOptionsResponse Pca { get; init; }
+}
+
+public sealed class BasicStrategyOptionResponse
+{
     /// <summary>
     ///     Max number of stocks that can be bought during a single trading task
     /// </summary>
@@ -32,4 +50,43 @@ public sealed class StrategyParametersResponse
     /// </remarks>
     [Required]
     public required double TopGrowingSymbolsBuyRatio { get; init; }
+}
+
+public sealed class BuyLosersOptionsResponse
+{
+    [Required]
+    public required int EvaluationFrequencyInDays { get; init; }
+
+    [Required]
+    public required int AnalysisLengthInDays { get; init; }
+}
+
+public sealed class BuyWinnersOptionsResponse
+{
+    [Required]
+    public required int EvaluationFrequencyInDays { get; init; }
+
+    [Required]
+    public required int AnalysisLengthInDays { get; init; }
+
+    [Required]
+    public required int SimultaneousEvaluations { get; init; }
+
+    [Required]
+    public required int BuyWaitTimeInDays { get; init; }
+}
+
+public sealed class PcaOptionsResponse
+{
+    [Required]
+    public required double VarianceFraction { get; init; }
+
+    [Required]
+    public required int AnalysisLengthInDays { get; init; }
+
+    [Required]
+    public required int DecompositionExpirationInDays { get; init; }
+
+    [Required]
+    public required double UndervaluedThreshold { get; init; }
 }

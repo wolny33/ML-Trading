@@ -6,7 +6,10 @@ namespace TradingBot.Services;
 
 public interface IMarketDataSource
 {
-    Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesAsync(DateOnly start,
+    Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesAsync(DateOnly start, DateOnly end,
+        CancellationToken token = default);
+
+    Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesForAllSymbolsAsync(DateOnly start,
         DateOnly end, CancellationToken token = default);
 
     Task<IReadOnlyList<DailyTradingData>?> GetDataForSingleSymbolAsync(TradingSymbol symbol, DateOnly start,
@@ -50,7 +53,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     public async Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesAsync(DateOnly start,
         DateOnly end, CancellationToken token = default)
     {
-        _logger.Debug("Getting prices from {Start} to {End}", start, end);
+        _logger.Debug("Getting prices for interesting and held symbols from {Start} to {End}", start, end);
 
         var valid = await GetValidSymbolsAsync(token);
         var interestingValidSymbols = (await GetInterestingSymbolsAsync(token)).Where(s => valid.Contains(s));
@@ -59,8 +62,25 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
             .ToAsyncEnumerable()
             .SelectManyAwait(async chunk =>
                 (await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)))).ToAsyncEnumerable())
+            .Where(pair => IsDataValid(pair.TradingData)).Take(15)
+            .ToDictionaryAsync(pair => pair.Symbol, pair => pair.TradingData, token);
+    }
+
+    public async Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesForAllSymbolsAsync(
+        DateOnly start, DateOnly end, CancellationToken token = default)
+    {
+        _logger.Debug("Getting prices for all symbols from {Start} to {End}", start, end);
+
+        var valid = await GetValidSymbolsAsync(token);
+        return await valid.Chunk(50)
+            .ToAsyncEnumerable()
+            .SelectManyAwait(async chunk =>
+            {
+                _logger.Verbose("Getting data for chunk: {Symbols}", chunk.Select(t => t.Value).ToList());
+                var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)));
+                return dataForChunk.ToAsyncEnumerable();
+            })
             .Where(pair => IsDataValid(pair.TradingData))
-            .Take(15)
             .ToDictionaryAsync(pair => pair.Symbol, pair => pair.TradingData, token);
     }
 
@@ -136,13 +156,13 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         var availableAssets = await _callQueue.SendRequestWithRetriesAsync(() =>
             tradingClient.ListAssetsAsync(assetsRequest, token), _logger).ExecuteWithErrorHandling(_logger);
         return availableAssets.Where(a => a is { Fractionable: true, IsTradable: true })
-            .Select(a => new TradingSymbol(a.Symbol)).ToHashSet();
+            .Select(a => new TradingSymbol(a.Symbol)).OrderBy(s => s.Value).ToHashSet();
     }
 
     private Task<IEnumerable<TradingSymbol>> GetInterestingSymbolsAsync(CancellationToken token = default)
     {
         return _tradingTask.CurrentBacktestId is not null
-            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForDay(_tradingTask.GetTaskDay()))
+            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForLastValidDay(_tradingTask.GetTaskDay()))
             : SendInterestingSymbolsRequestsAsync(token);
     }
 

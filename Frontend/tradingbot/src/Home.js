@@ -2,7 +2,7 @@ import React from "react";
 import { useState, useEffect } from "react";
 import { useMemo } from 'react';
 import { MaterialReactTable, useMaterialReactTable } from 'material-react-table';
-import { IconButton } from '@mui/material';
+import { IconButton, Divider, MenuItem, Select } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import axios from './API/axios';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,8 @@ const INVESTMENT_URL = '/investment';
 const PERFORMANCE_URL = '/performance';
 const TRADING_TASKS_URL = '/trading-tasks';
 const STRATEGY_URL = '/strategy';
+const STRATEGY_SELECTION_URL = '/strategy/selection';
+const STRATEGY_NAMES_URL = '/strategy/selection/names';
 const ASSETS_URL = '/assets';
 const tradingActionsForTaskUrl = (id) => '/trading-tasks/' + id + '/trading-actions';
 
@@ -31,9 +33,14 @@ export const displayErrorAlert = (errorBody, customMessage = '') => {
     Trace ID: ${errorBody.traceId}
     
     Errors:
-    ${Object.entries(errorBody.errors)
-      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
-      .join('\n')}
+    ${errorBody.errors ? 
+      `${Object.entries(errorBody.errors)
+        .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+        .join('\n')}`
+      : 'Unknown error occurred'}
+    ${errorBody.Message ? 
+      `Message:
+      ${errorBody.Message}` : ''}
   ` : '';
   window.alert(customMessage + '\n' + errorMessage);
 };
@@ -288,6 +295,10 @@ const Home = () => {
   const [editingStrategyParameters, setEditingStrategyParameters] = useState(false);
   const [newStrategyParameters, setNewStrategyParameters] = useState({});
 
+  const [strategySelection, setStrategySelection] = useState('Basic strategy');
+  const [newStrategySelection, setNewStrategySelection] = useState('Basic strategy');
+  const [validStrategyNames, setValidStrategyNames] = useState([]);
+
   const [maxChartValue, setMaxChartValue] = useState(0);
   const [areTasksReady, setTasksReady] = useState(false);
 
@@ -417,6 +428,41 @@ const Home = () => {
           displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
         }
       });
+
+    axios.get(STRATEGY_NAMES_URL,
+      {
+        auth: {
+          username: storedUserName,
+          password: storedPwd
+        }
+      }
+    ).then(result => {
+      setValidStrategyNames(result.data.names);
+    }).catch(err => {
+      if (!err?.response || err.response?.status === 401) {
+        logout();
+      } else {
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
+      }
+    });
+
+    axios.get(STRATEGY_SELECTION_URL,
+      {
+        auth: {
+          username: storedUserName,
+          password: storedPwd
+        }
+      }
+    ).then(result => {
+      setStrategySelection(result.data.name);
+      setNewStrategySelection(result.data.name);
+    }).catch(err => {
+      if (!err?.response || err.response?.status === 401) {
+        logout();
+      } else {
+        displayErrorAlert(err.response?.data, errorStatusString(err.response?.config?.url, err.response.status, err.response.statusText));
+      }
+    });
   }, []);
 
   const logout = () => {
@@ -495,12 +541,7 @@ const Home = () => {
   const handleConfirmEditStrategyParametersClick = async () => {
     try {
       const response = await axios.put(STRATEGY_URL,
-        {
-          "maxStocksBuyCount": newStrategyParameters.maxStocksBuyCount,
-          "minDaysDecreasing": newStrategyParameters.minDaysDecreasing,
-          "minDaysIncreasing": newStrategyParameters.minDaysIncreasing,
-          "topGrowingSymbolsBuyRatio": newStrategyParameters.topGrowingSymbolsBuyRatio
-        },
+        newStrategyParameters,
         {
           auth: {
             username: userName,
@@ -514,6 +555,27 @@ const Home = () => {
       );
       setStrategyParameters(response.data);
       setNewStrategyParameters(response.data);
+
+      const selectionResponse = await axios.put(STRATEGY_SELECTION_URL,
+        {
+          name: newStrategySelection
+        },
+        {
+          auth: {
+            username: userName,
+            password: pwd
+          }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          withCredentials: false
+        }
+      );
+      setStrategySelection(selectionResponse.data.name);
+      setNewStrategySelection(selectionResponse.data.name);
+
     } catch (err) {
       if (!err?.response || err.response?.status === 401) {
         logout();
@@ -529,17 +591,22 @@ const Home = () => {
     setEditingStrategyParameters(false);
   }
 
-  const handleStrategyParameterChange = (field, value) => {
-    if (value < 0)
-      value = 0;
+  const clipNumberToRange = (min, max) => (value) => Math.min(Math.max(isNaN(value) ? 0 : value, min), max);
 
-    if (field === 'topGrowingSymbolsBuyRatio') {
-      if (value > 1)
-        value = 1.0;
-    }
+  const handleGeneralParameterChange = (field, value) => {
     setNewStrategyParameters((prevParameters) => ({
       ...prevParameters,
-      [field]: value,
+      [field]: value
+    }));
+  }
+
+  const handleStrategyParameterChange = (strategy, field, value) => {
+    setNewStrategyParameters((prevParameters) => ({
+      ...prevParameters,
+      [strategy]: {
+        ...prevParameters[strategy],
+        [field]: value
+      },
     }));
   };
 
@@ -614,13 +681,13 @@ const Home = () => {
             Trading task history
           </h3>
           <TradingTasksTable tradingTasks={tradingTasksData} onRowClicked={setSelectedTaskId} />
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4 text-center" style={{paddingTop: '20px'}}>
+          <h3 className="text-2xl font-semibold text-gray-700 mb-4 text-center" style={{ paddingTop: '20px' }}>
             Trading actions
           </h3>
           {selectedTaskId !== null ? (
             <TradingActionsTable tradingActions={tradingTasksData.find((task) => task.id === selectedTaskId).actions} />
           ) : (
-            <div style={{border: '1px solid gray', width: '100%', fontStyle: 'italic', color: 'gray', textAlign: 'center'}}>
+            <div style={{ border: '1px solid gray', width: '100%', fontStyle: 'italic', color: 'gray', textAlign: 'center' }}>
               No task selected
             </div>
           )}
@@ -634,35 +701,155 @@ const Home = () => {
             <div className="bg-white p-6 rounded-xl shadow-lg overflow-x-auto mt-4">
               {editingStrategyParameters ? (
                 <div>
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Selected strategy:
+                  </h3>
+                  <Select
+                    labelId="strategy-select-label"
+                    id="strategy-select"
+                    value={newStrategySelection}
+                    label="Strategy"
+                    onChange={(e) => setNewStrategySelection(e.target.value)}
+                  >
+                    {validStrategyNames.map((strategyName) => (
+                      <MenuItem value={strategyName}>
+                        {strategyName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <h3 className="mb-2">Prediction damping for limit orders:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.limitPriceDamping}
+                    onChange={(e) => handleGeneralParameterChange('limitPriceDamping', clipNumberToRange(0, 1)(e.target.value))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <Divider variant="middle"/>
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Basic strategy parameters
+                  </h3>
                   <h3 className="mb-2">Max Stocks Buy Count:</h3>
                   <input
                     type="text"
-                    value={newStrategyParameters.maxStocksBuyCount}
-                    onChange={(e) => handleStrategyParameterChange('maxStocksBuyCount', e.target.value)}
+                    value={newStrategyParameters.basic.maxStocksBuyCount}
+                    onChange={(e) => handleStrategyParameterChange('basic', 'maxStocksBuyCount', clipNumberToRange(1, 100)(Math.floor(e.target.value)))}
                     className="border border-gray-300 p-0.5 mb-2 mr-1.5"
                     style={{ width: "150px", height: "35px" }}
                   />
                   <h3 className="mb-2">Min Days Decreasing:</h3>
                   <input
                     type="text"
-                    value={newStrategyParameters.minDaysDecreasing}
-                    onChange={(e) => handleStrategyParameterChange('minDaysDecreasing', e.target.value)}
+                    value={newStrategyParameters.basic.minDaysDecreasing}
+                    onChange={(e) => handleStrategyParameterChange('basic', 'minDaysDecreasing', clipNumberToRange(1, 5)(Math.floor(e.target.value)))}
                     className="border border-gray-300 p-0.5 mb-2 mr-1.5"
                     style={{ width: "150px", height: "35px" }}
                   />
                   <h3 className="mb-2">Min Days Increasing:</h3>
                   <input
                     type="text"
-                    value={newStrategyParameters.minDaysIncreasing}
-                    onChange={(e) => handleStrategyParameterChange('minDaysIncreasing', e.target.value)}
+                    value={newStrategyParameters.basic.minDaysIncreasing}
+                    onChange={(e) => handleStrategyParameterChange('basic', 'minDaysIncreasing', clipNumberToRange(1, 5)(Math.floor(e.target.value)))}
                     className="border border-gray-300 p-0.5 mb-2 mr-1.5"
                     style={{ width: "150px", height: "35px" }}
                   />
                   <h3 className="mb-2">Top Growing Symbols Buy Ratio:</h3>
                   <input
                     type="text"
-                    value={newStrategyParameters.topGrowingSymbolsBuyRatio}
-                    onChange={(e) => handleStrategyParameterChange('topGrowingSymbolsBuyRatio', e.target.value)}
+                    value={newStrategyParameters.basic.topGrowingSymbolsBuyRatio}
+                    onChange={(e) => handleStrategyParameterChange('basic', 'topGrowingSymbolsBuyRatio', clipNumberToRange(0.01, 1)(e.target.value))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <Divider variant="middle"/>
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Overreaction strategy parameters
+                  </h3>
+                  <h3 className="mb-2">Evaluation frequency:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.buyLosers.evaluationFrequencyInDays}
+                    onChange={(e) => handleStrategyParameterChange('buyLosers', 'evaluationFrequencyInDays', clipNumberToRange(1, 100)(Math.floor(e.target.value)))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <h3 className="mb-2">Analysis length:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.buyLosers.analysisLengthInDays}
+                    onChange={(e) => handleStrategyParameterChange('buyLosers', 'analysisLengthInDays', clipNumberToRange(7, 365)(Math.floor(e.target.value)))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <Divider variant="middle" />
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Trend following strategy parameters
+                  </h3>
+                  <h3 className="mb-2">Evaluation frequency:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.buyWinners.evaluationFrequencyInDays}
+                    onChange={(e) => handleStrategyParameterChange('buyWinners', 'evaluationFrequencyInDays', clipNumberToRange(1, 100)(Math.floor(e.target.value)))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <h3 className="mb-2">Analysis length:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.buyWinners.analysisLengthInDays}
+                    onChange={(e) => handleStrategyParameterChange('buyWinners', 'analysisLengthInDays', clipNumberToRange(7, 365)(Math.floor(e.target.value)))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <h3 className="mb-2">Simultaneous Evaluations:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.buyWinners.simultaneousEvaluations}
+                    onChange={(e) => handleStrategyParameterChange('buyWinners', 'simultaneousEvaluations', clipNumberToRange(1, 12)(Math.floor(e.target.value)))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <h3 className="mb-2">Wait time before buying:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.buyWinners.buyWaitTimeInDays}
+                    onChange={(e) => handleStrategyParameterChange('buyWinners', 'buyWaitTimeInDays', clipNumberToRange(0, 30)(Math.floor(e.target.value)))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <Divider variant="middle" />
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    PCA strategy parameters
+                  </h3>
+                  <h3 className="mb-2">Analysis length:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.pca.analysisLengthInDays}
+                    onChange={(e) => handleStrategyParameterChange('pca', 'analysisLengthInDays', clipNumberToRange(7, 365)(Math.floor(e.target.value)))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <h3 className="mb-2">Decomposition expiration:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.pca.decompositionExpirationInDays}
+                    onChange={(e) => handleStrategyParameterChange('pca', 'decompositionExpirationInDays', clipNumberToRange(0, 365)(Math.floor(e.target.value)))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <h3 className="mb-2">Variance fraction covered by decomposition:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.pca.varianceFraction}
+                    onChange={(e) => handleStrategyParameterChange('pca', 'varianceFraction', clipNumberToRange(0.01, 1)(e.target.value))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <h3 className="mb-2">Undervaluation threshold:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.pca.undervaluedThreshold}
+                    onChange={(e) => handleStrategyParameterChange('pca', 'undervaluedThreshold', clipNumberToRange(0, 10)(e.target.value))}
                     className="border border-gray-300 p-0.5 mb-2 mr-1.5"
                     style={{ width: "150px", height: "35px" }}
                   />
@@ -683,17 +870,69 @@ const Home = () => {
                   <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" onClick={handleEditStrategyParametersClick}>
                     Edit Strategy Options
                   </button>
-                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
-                    Max Stocks Buy Count: {strategyParameters.maxStocksBuyCount}
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Selected strategy: {strategySelection}
                   </h3>
                   <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
-                    Min Days Decreasing: {strategyParameters.minDaysDecreasing}
+                    Prediction damping for limit orders: {strategyParameters.limitPriceDamping}
+                  </h3>
+                  <Divider variant="middle" />
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Basic strategy parameters
                   </h3>
                   <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
-                    Min Days Increasing: {strategyParameters.minDaysIncreasing}
+                    Max Stocks Buy Count: {strategyParameters.basic.maxStocksBuyCount}
                   </h3>
                   <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
-                    Top Growing Symbols Buy Ratio: {strategyParameters.topGrowingSymbolsBuyRatio}
+                    Min Days Decreasing: {strategyParameters.basic.minDaysDecreasing}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Min Days Increasing: {strategyParameters.basic.minDaysIncreasing}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Top Growing Symbols Buy Ratio: {strategyParameters.basic.topGrowingSymbolsBuyRatio}
+                  </h3>
+                  <Divider variant="middle" />
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Overreaction strategy parameters
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Evaluation frequency: {strategyParameters.buyLosers.evaluationFrequencyInDays}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Analysis length: {strategyParameters.buyLosers.analysisLengthInDays}
+                  </h3>
+                  <Divider variant="middle" />
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Trend following strategy parameters
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Evaluation frequency: {strategyParameters.buyWinners.evaluationFrequencyInDays}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Analysis length: {strategyParameters.buyWinners.analysisLengthInDays}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Simultaneous evaluations: {strategyParameters.buyWinners.simultaneousEvaluations}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Wait time before buying: {strategyParameters.buyWinners.buyWaitTimeInDays}
+                  </h3>
+                  <Divider variant="middle" />
+                  <h3 className="text-1xl font-bold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    PCA strategy parameters
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Analysis length: {strategyParameters.pca.analysisLengthInDays}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Decomposition expiration: {strategyParameters.pca.decompositionExpirationInDays}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Variance freaction covered by decomposition: {strategyParameters.pca.varianceFraction}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Undervaluation threshold: {strategyParameters.pca.undervaluedThreshold}
                   </h3>
                 </div>
               )}

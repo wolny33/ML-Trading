@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TradingBot.Database;
 
@@ -10,9 +11,11 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240229112017_StrategySelection")]
+    partial class StrategySelection
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.13");
@@ -93,75 +96,6 @@ namespace TradingBot.Migrations
                     b.ToTable("Backtests");
                 });
 
-            modelBuilder.Entity("TradingBot.Database.Entities.BuyLosersStrategyStateEntity", b =>
-                {
-                    b.Property<Guid>("BacktestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateOnly?>("NextEvaluationDay")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("BacktestId");
-
-                    b.ToTable("BuyLosersStrategyStates");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.BuyWinnersBuyActionEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ActionId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("EvaluationId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EvaluationId");
-
-                    b.ToTable("WinnerBuyActions");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.BuyWinnersEvaluationEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("Bought")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateOnly>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("StrategyStateBacktestId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StrategyStateBacktestId");
-
-                    b.ToTable("BuyWinnersEvaluations");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.BuyWinnersStrategyStateEntity", b =>
-                {
-                    b.Property<Guid>("BacktestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateOnly?>("NextEvaluationDay")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("BacktestId");
-
-                    b.ToTable("BuyWinnersStrategyStates");
-                });
-
             modelBuilder.Entity("TradingBot.Database.Entities.InvestmentConfigEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -174,67 +108,6 @@ namespace TradingBot.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("InvestmentConfiguration");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.LoserSymbolToBuyEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("StrategyStateBacktestId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StrategyStateBacktestId");
-
-                    b.ToTable("LoserSymbolsToBuy");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.PcaDecompositionEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("BacktestId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateOnly>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("CreationTimestamp")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateOnly>("ExpiresAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Means")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PrincipalVectors")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("StandardDeviations")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Symbols")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreationTimestamp");
-
-                    b.ToTable("PcaDecompositions");
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.PositionEntity", b =>
@@ -278,27 +151,6 @@ namespace TradingBot.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("BuyLosersAnalysisLengthInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyLosersEvaluationFrequencyInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyWinnersAnalysisLengthInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyWinnersBuyWaitTimeInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyWinnersEvaluationFrequencyInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyWinnersSimultaneousEvaluations")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("LimitPriceDamping")
-                        .HasColumnType("REAL");
-
                     b.Property<int>("MaxStocksBuyCount")
                         .HasColumnType("INTEGER");
 
@@ -307,18 +159,6 @@ namespace TradingBot.Migrations
 
                     b.Property<int>("MinDaysIncreasing")
                         .HasColumnType("INTEGER");
-
-                    b.Property<int>("PcaAnalysisLengthInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PcaDecompositionExpirationInDays")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("PcaUndervaluedThreshold")
-                        .HasColumnType("REAL");
-
-                    b.Property<double>("PcaVarianceFraction")
-                        .HasColumnType("REAL");
 
                     b.Property<double>("TopGrowingSymbolsBuyRatio")
                         .HasColumnType("REAL");
@@ -461,26 +301,6 @@ namespace TradingBot.Migrations
                     b.ToTable("Credentials");
                 });
 
-            modelBuilder.Entity("TradingBot.Database.Entities.WinnerSymbolToBuyEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("EvaluationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EvaluationId");
-
-                    b.ToTable("WinnerSymbolsToBuy");
-                });
-
             modelBuilder.Entity("TradingBot.Database.Entities.AssetsStateEntity", b =>
                 {
                     b.HasOne("TradingBot.Database.Entities.BacktestEntity", "Backtest")
@@ -488,39 +308,6 @@ namespace TradingBot.Migrations
                         .HasForeignKey("BacktestId");
 
                     b.Navigation("Backtest");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.BuyWinnersBuyActionEntity", b =>
-                {
-                    b.HasOne("TradingBot.Database.Entities.BuyWinnersEvaluationEntity", "Evaluation")
-                        .WithMany("Actions")
-                        .HasForeignKey("EvaluationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Evaluation");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.BuyWinnersEvaluationEntity", b =>
-                {
-                    b.HasOne("TradingBot.Database.Entities.BuyWinnersStrategyStateEntity", "StrategyState")
-                        .WithMany("Evaluations")
-                        .HasForeignKey("StrategyStateBacktestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("StrategyState");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.LoserSymbolToBuyEntity", b =>
-                {
-                    b.HasOne("TradingBot.Database.Entities.BuyLosersStrategyStateEntity", "StrategyState")
-                        .WithMany("SymbolsToBuy")
-                        .HasForeignKey("StrategyStateBacktestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("StrategyState");
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.PositionEntity", b =>
@@ -552,17 +339,6 @@ namespace TradingBot.Migrations
                     b.Navigation("Backtest");
                 });
 
-            modelBuilder.Entity("TradingBot.Database.Entities.WinnerSymbolToBuyEntity", b =>
-                {
-                    b.HasOne("TradingBot.Database.Entities.BuyWinnersEvaluationEntity", "Evaluation")
-                        .WithMany("SymbolsToBuy")
-                        .HasForeignKey("EvaluationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Evaluation");
-                });
-
             modelBuilder.Entity("TradingBot.Database.Entities.AssetsStateEntity", b =>
                 {
                     b.Navigation("HeldPositions");
@@ -573,23 +349,6 @@ namespace TradingBot.Migrations
                     b.Navigation("AssetsStates");
 
                     b.Navigation("TradingTasks");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.BuyLosersStrategyStateEntity", b =>
-                {
-                    b.Navigation("SymbolsToBuy");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.BuyWinnersEvaluationEntity", b =>
-                {
-                    b.Navigation("Actions");
-
-                    b.Navigation("SymbolsToBuy");
-                });
-
-            modelBuilder.Entity("TradingBot.Database.Entities.BuyWinnersStrategyStateEntity", b =>
-                {
-                    b.Navigation("Evaluations");
                 });
 
             modelBuilder.Entity("TradingBot.Database.Entities.TradingTaskEntity", b =>

@@ -9,11 +9,15 @@ namespace TradingBot.Services;
 
 public interface IPricePredictor
 {
-    public Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default);
+    Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default);
+    Task<Prediction?> GetPredictionForSingleSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
 }
 
 public sealed class PricePredictor : IPricePredictor
 {
+    private const int PredictorInputLength = 10;
+    private const int PredictorOutputLength = 5;
+
     private readonly IFlurlClientFactory _flurlFactory;
     private readonly ILogger _logger;
     private readonly IMarketDataSource _marketData;
@@ -30,13 +34,13 @@ public sealed class PricePredictor : IPricePredictor
 
     public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default)
     {
-        const int requiredDays = 11;
         var today = _tradingTask.GetTaskDay();
 
         if (_tradingTask.ShouldReturnFutureDataFromPredictor) return await GetFutureDataAsync(today, token);
 
         _logger.Debug("Getting predictions for {Today}", today);
-        var marketData = await _marketData.GetPricesAsync(SubtractWorkDays(today, 2 * requiredDays), today, token);
+        var marketData =
+            await _marketData.GetPricesAsync(SubtractWorkDays(today, 2 * (PredictorInputLength + 1)), today, token);
 
         var result = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in marketData)
@@ -47,6 +51,22 @@ public sealed class PricePredictor : IPricePredictor
         }
 
         return result;
+    }
+
+    public async Task<Prediction?> GetPredictionForSingleSymbolAsync(TradingSymbol symbol,
+        CancellationToken token = default)
+    {
+        var today = _tradingTask.GetTaskDay();
+
+        if (_tradingTask.ShouldReturnFutureDataFromPredictor)
+            return await GetFutureDataForSingleSymbolAsync(symbol, today, token);
+
+        var marketData = await _marketData.GetDataForSingleSymbolAsync(symbol,
+            SubtractWorkDays(today, 2 * (PredictorInputLength + 1)), today, token);
+        if (marketData is null) return null;
+
+        _logger.Verbose("Getting predictions for {Today} for single token: {Token}", today, symbol.Value);
+        return await PredictForSymbolAsync(marketData, token);
     }
 
     private async Task<Prediction> PredictForSymbolAsync(IReadOnlyList<DailyTradingData> data,
@@ -60,18 +80,16 @@ public sealed class PricePredictor : IPricePredictor
     private async Task<IDictionary<TradingSymbol, Prediction>> GetFutureDataAsync(DateOnly today,
         CancellationToken token)
     {
-        const int mockPredictorOutputLength = 5;
-
         _logger.Debug("Returning future data instead of predictions for {Today}", today);
         var futureData =
-            await _marketData.GetPricesAsync(today.AddDays(1), today.AddDays(2 * mockPredictorOutputLength), token);
+            await _marketData.GetPricesAsync(today.AddDays(1), today.AddDays(2 * PredictorOutputLength), token);
 
         var futureDataResult = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in futureData)
         {
             futureDataResult[symbol] = new Prediction
             {
-                Prices = data.Take(mockPredictorOutputLength).Select(d => new DailyPricePrediction
+                Prices = data.Take(PredictorOutputLength).Select(d => new DailyPricePrediction
                 {
                     Date = d.Date,
                     ClosingPrice = d.Close,
@@ -82,6 +100,27 @@ public sealed class PricePredictor : IPricePredictor
         }
 
         return futureDataResult;
+    }
+
+    private async Task<Prediction?> GetFutureDataForSingleSymbolAsync(TradingSymbol symbol,
+        DateOnly today, CancellationToken token)
+    {
+        _logger.Debug("Returning future data instead of predictions for {Today}", today);
+        var futureData = await _marketData.GetDataForSingleSymbolAsync(symbol, today.AddDays(1),
+            today.AddDays(2 * PredictorOutputLength), token);
+
+        if (futureData is null) return null;
+
+        return new Prediction
+        {
+            Prices = futureData.Take(PredictorOutputLength).Select(d => new DailyPricePrediction
+            {
+                Date = d.Date,
+                ClosingPrice = d.Close,
+                HighPrice = d.High,
+                LowPrice = d.Low
+            }).ToList()
+        };
     }
 
     private static PredictorRequest CreatePredictorRequest(IReadOnlyList<DailyTradingData> data)
@@ -100,7 +139,7 @@ public sealed class PricePredictor : IPricePredictor
                     Low = RelativeChange(previous.Low, current.Low),
                     Volume = current.Volume
                 };
-            }).Take(10).ToList()
+            }).Take(PredictorInputLength).ToList()
         };
     }
 

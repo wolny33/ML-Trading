@@ -1,11 +1,18 @@
 using TradingBot.Configuration;
 using TradingBot.Models;
 
-namespace TradingBot.Services;
+namespace TradingBot.Services.Strategy;
 
 public interface IStrategy
 {
-    public Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default);
+    string Name { get; }
+    Task<int> GetRequiredPastDaysAsync(CancellationToken token = default);
+    Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default);
+
+    Task HandleDeselectionAsync(string newStrategyName, CancellationToken token = default)
+    {
+        return Task.CompletedTask;
+    }
 }
 
 public sealed class Strategy : IStrategy
@@ -24,6 +31,14 @@ public sealed class Strategy : IStrategy
         _marketDataSource = marketDataSource;
         _strategyParameters = strategyParameters;
         _tradingTask = tradingTask;
+    }
+
+    public static string StrategyName => "Basic strategy";
+    public string Name => StrategyName;
+
+    public Task<int> GetRequiredPastDaysAsync(CancellationToken token = default)
+    {
+        return Task.FromResult(1);
     }
 
     public async Task<IReadOnlyList<TradingAction>> GetTradingActionsAsync(CancellationToken token = default)
@@ -55,20 +70,23 @@ public sealed class Strategy : IStrategy
 
             closingPrices.AddRange(prediction.Value.Prices.Select(dailyPrice => dailyPrice.ClosingPrice).ToList());
 
-            if (IsPriceDecreasing(closingPrices, strategyParameters.MinDaysDecreasing) && assets.Positions.TryGetValue(symbol, out var position) && position.AvailableQuantity > 0)
+            if (IsPriceDecreasing(closingPrices, strategyParameters.Basic.MinDaysDecreasing) &&
+                assets.Positions.TryGetValue(symbol, out var position) && position.AvailableQuantity > 0)
             {
-                sellActions.Add(TradingAction.MarketSell(symbol, position.AvailableQuantity, _tradingTask.GetTaskTime()));
+                sellActions.Add(
+                    TradingAction.MarketSell(symbol, position.AvailableQuantity, _tradingTask.GetTaskTime()));
             }
-            else if (IsPriceIncreasing(closingPrices, strategyParameters.MinDaysIncreasing))
+            else if (IsPriceIncreasing(closingPrices, strategyParameters.Basic.MinDaysIncreasing))
             {
-                growthRates.Add(new AverageGrowthRate(symbol, CalculateAverageGrowthRate(closingPrices, strategyParameters.MinDaysIncreasing),
-                    CalculateBuyLimitPrice(prediction, currentPrice)));
+                growthRates.Add(new AverageGrowthRate(symbol,
+                    CalculateAverageGrowthRate(closingPrices, strategyParameters.Basic.MinDaysIncreasing),
+                    CalculateBuyLimitPrice(prediction, currentPrice, strategyParameters.LimitPriceDamping)));
             }
         }
 
         tradingActions.AddRange(sellActions);
-        tradingActions.AddRange(GetBuyActions(growthRates, cashAvailable, strategyParameters.MaxStocksBuyCount,
-            strategyParameters.TopGrowingSymbolsBuyRatio));
+        tradingActions.AddRange(GetBuyActions(growthRates, cashAvailable, strategyParameters.Basic.MaxStocksBuyCount,
+            strategyParameters.Basic.TopGrowingSymbolsBuyRatio));
 
         return tradingActions;
     }
@@ -112,12 +130,12 @@ public sealed class Strategy : IStrategy
     }
 
     private static decimal CalculateBuyLimitPrice(KeyValuePair<TradingSymbol, Prediction> prediction,
-        decimal currentPrice)
+        decimal currentPrice, decimal damping)
     {
         var nextDayLowPrice = prediction.Value.Prices.Select(dailyPrice => dailyPrice.LowPrice).ToList()[0];
-        var buyLimitPrice = (currentPrice + nextDayLowPrice) / 2;
-
-        return buyLimitPrice;
+        return currentPrice > nextDayLowPrice
+            ? currentPrice * damping + nextDayLowPrice * (1 - damping)
+            : nextDayLowPrice;
     }
 
     private List<TradingAction> GetBuyActions(IReadOnlyList<AverageGrowthRate> growthRates, decimal cashAvailable,

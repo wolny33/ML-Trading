@@ -364,7 +364,7 @@ public sealed class BacktestAssetsTests
         await _backtestAssets.ExecuteQueuedActionsForBacktestAsync(_backtestId, new DateOnly(2024, 1, 2));
         _backtestAssets.GetForBacktestWithId(_backtestId).Should().BeEquivalentTo(new Assets
         {
-            EquityValue = 100m,
+            EquityValue = 101m,
             Cash = new Cash
             {
                 MainCurrency = "USD",
@@ -380,7 +380,7 @@ public sealed class BacktestAssetsTests
                     Quantity = 1m,
                     AvailableQuantity = 1m,
                     AverageEntryPrice = 2m,
-                    MarketValue = 2m
+                    MarketValue = 3m
                 }
             }
         }, options => options.For(a => a.Positions).Exclude(p => p.Value.SymbolId));
@@ -528,7 +528,7 @@ public sealed class BacktestAssetsTests
         await _backtestAssets.ExecuteQueuedActionsForBacktestAsync(_backtestId, new DateOnly(2024, 1, 2));
         _backtestAssets.GetForBacktestWithId(_backtestId).Should().BeEquivalentTo(new Assets
         {
-            EquityValue = 121m,
+            EquityValue = 122.5m,
             Cash = new Cash
             {
                 MainCurrency = "USD",
@@ -544,7 +544,7 @@ public sealed class BacktestAssetsTests
                     Quantity = 1m,
                     AvailableQuantity = 1m,
                     AverageEntryPrice = 2m,
-                    MarketValue = 3.5m
+                    MarketValue = 3m
                 },
                 [new TradingSymbol("TKN2")] = new()
                 {
@@ -553,7 +553,7 @@ public sealed class BacktestAssetsTests
                     Quantity = 2m,
                     AvailableQuantity = 2m,
                     AverageEntryPrice = 11.5m,
-                    MarketValue = 24m
+                    MarketValue = 26m
                 }
             }
         }, options => options.For(a => a.Positions).Exclude(p => p.Value.SymbolId));

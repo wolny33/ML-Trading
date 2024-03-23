@@ -3,6 +3,7 @@ using Alpaca.Markets;
 using TradingBot.Exceptions;
 using TradingBot.Exceptions.Alpaca;
 using TradingBot.Models;
+using TradingBot.Services.Strategy;
 using ILogger = Serilog.ILogger;
 using OrderType = TradingBot.Models.OrderType;
 
@@ -18,14 +19,14 @@ public sealed class ActionExecutor : IActionExecutor, IAsyncDisposable
     private readonly IBacktestAssets _backtestAssets;
     private readonly IAlpacaCallQueue _callQueue;
     private readonly ILogger _logger;
-    private readonly IStrategy _strategy;
+    private readonly IStrategyFactory _strategyFactory;
     private readonly Lazy<Task<IAlpacaTradingClient>> _tradingClient;
     private readonly ICurrentTradingTask _tradingTask;
 
-    public ActionExecutor(IStrategy strategy, IAlpacaClientFactory clientFactory, ILogger logger,
+    public ActionExecutor(IStrategyFactory strategyFactory, IAlpacaClientFactory clientFactory, ILogger logger,
         ICurrentTradingTask tradingTask, IAlpacaCallQueue callQueue, IBacktestAssets backtestAssets)
     {
-        _strategy = strategy;
+        _strategyFactory = strategyFactory;
         _tradingTask = tradingTask;
         _callQueue = callQueue;
         _backtestAssets = backtestAssets;
@@ -35,7 +36,8 @@ public sealed class ActionExecutor : IActionExecutor, IAsyncDisposable
 
     public async Task ExecuteTradingActionsAsync(CancellationToken token = default)
     {
-        var actions = await _strategy.GetTradingActionsAsync(token);
+        var strategy = await _strategyFactory.CreateAsync(token);
+        var actions = await strategy.GetTradingActionsAsync(token);
         foreach (var action in actions) await ExecuteActionAndHandleErrorsAsync(action, token);
     }
 

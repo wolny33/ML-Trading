@@ -11,6 +11,7 @@ using TradingBot.Configuration;
 using TradingBot.Database;
 using TradingBot.Exceptions;
 using TradingBot.Services;
+using TradingBot.Services.Strategy;
 
 namespace TradingBot;
 
@@ -159,11 +160,20 @@ public sealed class Program
         services.AddScoped<IMarketDataSource, MarketDataSource>();
         services.AddScoped<IPricePredictor, PricePredictor>();
         services.AddScoped<IAssetsDataSource, AssetsDataSource>();
-        services.AddScoped<IStrategy, Strategy>();
+        services.AddScoped<IStrategyFactory, StrategyFactory>();
         services.AddScoped<IActionExecutor, ActionExecutor>();
         services.AddScoped<IExchangeCalendar, ExchangeCalendar>();
         services.AddScoped<ICurrentTradingTask, CurrentTradingTask>();
         services.AddScoped<TradingTaskExecutor>();
+
+        services.AddScoped<IStrategy, Strategy>();
+        services.AddScoped<IStrategy, GreedyStrategy>();
+        services.AddScoped<IStrategy, BuyLosersStrategy>();
+        services.AddScoped<IStrategy, BuyLosersWithPredictionsStrategy>();
+        services.AddScoped<IStrategy, BuyWinnersStrategy>();
+        services.AddScoped<IStrategy, BuyWinnersWithPredictionsStrategy>();
+        services.AddScoped<IStrategy, PcaStrategy>();
+        services.AddScoped<IStrategy, PcaWithPredictionsStrategy>();
 
         services.AddTransient<CredentialsCommand>();
         services.AddTransient<ITestModeConfigService, TestModeConfigService>();
@@ -177,11 +187,16 @@ public sealed class Program
         services.AddTransient<IAssetsStateQuery, AssetsStateQuery>();
         services.AddTransient<IBacktestCommand, BacktestCommand>();
         services.AddTransient<IBacktestQuery, BacktestQuery>();
+        services.AddTransient<IBuyLosersStrategyStateService, BuyLosersStrategyStateService>();
+        services.AddTransient<IBuyWinnersStrategyStateService, BuyWinnersStrategyStateService>();
+        services.AddTransient<IPcaDecompositionService, PcaDecompositionService>();
 
         services.AddSingleton<IMarketDataCache, MarketDataCache>();
         services.AddSingleton<IAlpacaCallQueue, AlpacaCallQueue>();
 
         services.AddSingleton<IBacktestExecutor, BacktestExecutor>();
         services.AddSingleton<IBacktestAssets, BacktestAssets>();
+        services.AddSingleton<IStrategySelectionService, StrategySelectionService>();
+        services.AddSingleton<IPcaDecompositionCreator, PcaDecompositionCreator>();
     }
 }

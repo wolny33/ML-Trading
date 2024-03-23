@@ -9,12 +9,12 @@ public interface IMarketDataCache
 
     ISet<TradingSymbol>? TryGetValidSymbols();
 
+    IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForLastValidDay(DateOnly day);
     IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForDay(DateOnly day);
 
     decimal? GetLastCachedPrice(TradingSymbol symbol, DateOnly day);
 
-    void CacheDailySymbolData(TradingSymbol symbol, IReadOnlyList<DailyTradingData> data, DateOnly start,
-        DateOnly end);
+    void CacheDailySymbolData(TradingSymbol symbol, IReadOnlyList<DailyTradingData> data, DateOnly start, DateOnly end);
 
     void CacheValidSymbols(IReadOnlyList<TradingSymbol> symbols);
 
@@ -49,6 +49,23 @@ public sealed class MarketDataCache : IMarketDataCache
         return _validSymbols;
     }
 
+    public IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForLastValidDay(DateOnly day)
+    {
+        var currentDay = day;
+        do
+        {
+            var symbols = GetMostActiveCachedSymbolsForDay(currentDay).ToList();
+            if (symbols.Any())
+            {
+                return symbols;
+            }
+
+            currentDay = currentDay.AddDays(-1);
+        } while (currentDay > day.AddDays(-5));
+
+        throw new InvalidOperationException("Data is missing from cache");
+    }
+
     public IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForDay(DateOnly day)
     {
         return _validSymbols?
@@ -69,7 +86,7 @@ public sealed class MarketDataCache : IMarketDataCache
             if (!_cache.TryGetValue<DailyTradingData?>(new CacheKey(symbol, day), out data)) return null;
 
             day = day.AddDays(-1);
-        } while (data is null);
+        } while (data is null || data.Close <= 0 || data.Volume <= 0);
 
         return data.Close;
     }

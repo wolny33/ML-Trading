@@ -121,11 +121,42 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
 
             await ExecuteActionAndUpdateStateAsync(backtestId, action, symbolData);
         }
+
+        await UpdateMarketValueOfHeldAssetsAsync(backtestId, day);
     }
 
     public void Dispose()
     {
         if (_scope.IsValueCreated) _scope.Value.Dispose();
+    }
+
+    private async Task UpdateMarketValueOfHeldAssetsAsync(Guid backtestId, DateOnly day)
+    {
+        var assets = _assets[backtestId];
+        var prices = (await Task.WhenAll(
+            assets.Positions.Values
+                .Select(p => p.Symbol)
+                .Select(async s => (Symbol: s, Price: (await GetTodayDataForSymbolAsync(s, day))?.Close))
+        )).ToDictionary(pair => pair.Symbol, pair => pair.Price);
+
+        var newPositions = assets.Positions.Values.Select(p => new Position
+        {
+            Symbol = p.Symbol,
+            SymbolId = p.SymbolId,
+            Quantity = p.Quantity,
+            AvailableQuantity = p.AvailableQuantity,
+            AverageEntryPrice = p.AverageEntryPrice,
+            MarketValue = prices[p.Symbol] is { } price ? price * p.Quantity : p.MarketValue
+        }).ToDictionary(p => p.Symbol);
+
+        var newAssets = new Assets
+        {
+            EquityValue = newPositions.Values.Aggregate(0m, (sum, position) => sum + position.MarketValue) +
+                          assets.Cash.AvailableAmount,
+            Cash = assets.Cash,
+            Positions = newPositions
+        };
+        _assets[backtestId] = newAssets;
     }
 
     private async Task ExpireActionAsync(TradingAction action, Guid backtestId)
@@ -381,7 +412,7 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
     private void FreeReservedCash(decimal amount, Guid backtestId)
     {
         var assets = _assets[backtestId];
-        if (assets.Cash.BuyingPower + amount > assets.Cash.AvailableAmount)
+        if (assets.Cash.BuyingPower + amount > assets.Cash.AvailableAmount + 1e-5m)
             throw new UnreachableException("Money cannot be freed");
 
         var newAssets = new Assets

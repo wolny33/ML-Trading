@@ -36,11 +36,30 @@ const setupAxiosMocks = () => {
     );
 
     axios.get.mockImplementationOnce(() =>
-      Promise.resolve({ data: { 
-        "maxStocksBuyCount": 4,
-        "minDaysDecreasing": 2,
-        "minDaysIncreasing": 4,
-        "topGrowingSymbolsBuyRatio": 0.4 
+      Promise.resolve({ data: {
+        "limitPriceDamping": 0.7,
+        "basic": {
+          "maxStocksBuyCount": 4,
+          "minDaysDecreasing": 2,
+          "minDaysIncreasing": 4,
+          "topGrowingSymbolsBuyRatio": 0.4
+        },
+        "buyLosers": {
+          "evaluationFrequencyInDays": 7,
+          "analysisLengthInDays": 30
+        },
+        "buyWinners": {
+          "evaluationFrequencyInDays": 30,
+          "analysisLengthInDays": 90,
+          "simultaneousEvaluations": 2,
+          "buyWaitTimeInDays": 7
+        },
+        "pca": {
+          "analysisLengthInDays": 30,
+          "decompositionExpirationInDays": 30,
+          "varianceFraction": 0.999,
+          "undervaluedThreshold": 1.5
+        }
       }})
     );
 
@@ -85,6 +104,21 @@ const setupAxiosMocks = () => {
             }]
         })
     );
+
+    axios.get.mockImplementationOnce(() =>
+      Promise.resolve({ data: {
+        "names": [
+          "Basic strategy",
+          "Greedy optimal strategy"
+        ]
+      }
+    }));
+
+    axios.get.mockImplementationOnce(() =>
+      Promise.resolve({ data: {
+        "name": "Basic strategy"
+      }
+    }));
 };
 
   test('renders correctly', async () => {
@@ -95,7 +129,7 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await waitFor(() => {
-        expect(axios.get).toHaveBeenCalledTimes(7);
+        expect(axios.get).toHaveBeenCalledTimes(9);
     });
     expect(axios.get).toHaveBeenCalledWith('/assets', expect.anything());
     expect(axios.get).toHaveBeenCalledWith('/test-mode', expect.anything());
@@ -122,7 +156,7 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await act(async () => {
-        expect(axios.get).toHaveBeenCalledTimes(6);
+        expect(axios.get).toHaveBeenCalledTimes(8);
     });
     const switchTestModeButton = screen.getByTestId('test-mode-on-button');
     
@@ -160,7 +194,7 @@ const setupAxiosMocks = () => {
       </MemoryRouter>
     );
     await act(async () => {
-        expect(axios.get).toHaveBeenCalledTimes(6);
+        expect(axios.get).toHaveBeenCalledTimes(8);
     });
     const switchTestModeButton = screen.getByTestId("investment-on-button");
     

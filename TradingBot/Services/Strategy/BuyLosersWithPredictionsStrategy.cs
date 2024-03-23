@@ -1,0 +1,50 @@
+using TradingBot.Models;
+
+namespace TradingBot.Services.Strategy;
+
+public sealed class BuyLosersWithPredictionsStrategy : BuyLosersStrategyBase
+{
+    private readonly IMarketDataSource _marketDataSource;
+    private readonly IPricePredictor _predictor;
+    private readonly ICurrentTradingTask _tradingTask;
+
+    public BuyLosersWithPredictionsStrategy(ICurrentTradingTask tradingTask,
+        IBuyLosersStrategyStateService stateService, IMarketDataSource marketDataSource,
+        IAssetsDataSource assetsDataSource, IStrategyParametersService strategyParameters, IPricePredictor predictor)
+        : base(tradingTask, stateService, marketDataSource, assetsDataSource, strategyParameters)
+    {
+        _marketDataSource = marketDataSource;
+        _predictor = predictor;
+        _tradingTask = tradingTask;
+    }
+
+    public static string StrategyName => "Overreaction strategy with predictions";
+    public override string Name => StrategyName;
+
+    protected override async Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(
+        IReadOnlyList<TradingSymbol> unownedSymbols, Assets assets, decimal damping, CancellationToken token)
+    {
+        var actions = new List<TradingAction>();
+        foreach (var symbol in unownedSymbols)
+        {
+            var investmentValue = assets.Cash.AvailableAmount / unownedSymbols.Count;
+            var lastPrice = await _marketDataSource.GetLastAvailablePriceForSymbolAsync(symbol, token);
+            var prediction = await _predictor.GetPredictionForSingleSymbolAsync(symbol, token);
+            var buyPrice = prediction is null
+                ? lastPrice
+                : GetBuyPrice(lastPrice, prediction.Prices[0].LowPrice, damping);
+
+            if (investmentValue < buyPrice) continue;
+
+            actions.Add(TradingAction.LimitBuy(symbol, (int)(investmentValue / buyPrice), buyPrice,
+                _tradingTask.GetTaskTime()));
+        }
+
+        return actions;
+    }
+
+    private static decimal GetBuyPrice(decimal last, decimal predictedLow, decimal damping)
+    {
+        return last > predictedLow ? last * damping + predictedLow * (1 - damping) : predictedLow;
+    }
+}

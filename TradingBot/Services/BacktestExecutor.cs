@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using TradingBot.Exceptions;
 using TradingBot.Models;
+using TradingBot.Services.Strategy;
 using ILogger = Serilog.ILogger;
 
 namespace TradingBot.Services;
@@ -17,6 +18,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
     private readonly IAssetsStateCommand _assetsStateCommand;
     private readonly IBacktestAssets _backtestAssets;
     private readonly IBacktestCommand _backtestCommand;
+    private readonly IPcaDecompositionCreator _decompositionCreator;
 
     private readonly ConcurrentDictionary<Guid, RunningBacktest> _backtests = new();
     private readonly ISystemClock _clock;
@@ -24,13 +26,15 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
     private readonly IServiceScopeFactory _scopeFactory;
 
     public BacktestExecutor(IServiceScopeFactory scopeFactory, ILogger logger, IBacktestCommand backtestCommand,
-        ISystemClock clock, IBacktestAssets backtestAssets, IAssetsStateCommand assetsStateCommand)
+        ISystemClock clock, IBacktestAssets backtestAssets, IAssetsStateCommand assetsStateCommand,
+        IPcaDecompositionCreator decompositionCreator)
     {
         _scopeFactory = scopeFactory;
         _backtestCommand = backtestCommand;
         _clock = clock;
         _backtestAssets = backtestAssets;
         _assetsStateCommand = assetsStateCommand;
+        _decompositionCreator = decompositionCreator;
         _logger = logger.ForContext<BacktestExecutor>();
     }
 
@@ -73,8 +77,14 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
             await Task.Yield();
             await using var initializationScope = _scopeFactory.CreateAsyncScope();
             var marketDataSource = initializationScope.ServiceProvider.GetRequiredService<IMarketDataSource>();
-            // We need 10 valid days (excluding weekends and holidays) before start, so 20 days should be enough
-            await marketDataSource.InitializeBacktestDataAsync(details.Start.AddDays(-20), details.End, token);
+            var strategy = await initializationScope.ServiceProvider.GetRequiredService<IStrategyFactory>()
+                .CreateAsync(token);
+
+            // Predictor needs 10 valid days (excluding weekends and holidays) before start, so 20 days should be enough
+            // If strategy needs more data, we get more data
+            await marketDataSource.InitializeBacktestDataAsync(
+                details.Start.AddDays(-int.Max(20, await strategy.GetRequiredPastDaysAsync(token) + 1)), details.End,
+                token);
 
             for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {
@@ -82,7 +92,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 
                 _logger.Debug("Executing day {Day} for backtest {Id}", day, backtestId);
 
-                using var scope = _scopeFactory.CreateScope();
+                await using var scope = _scopeFactory.CreateAsyncScope();
                 var task = scope.ServiceProvider.GetRequiredService<ICurrentTradingTask>();
                 task.SetBacktestDetails(backtestId, day, details.ShouldUsePredictor);
 
@@ -93,6 +103,8 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
                 await _assetsStateCommand.SaveAssetsForBacktestWithIdAsync(backtestId,
                     task.GetTaskTime().AddDays(1).AddHours(-1),
                     token);
+
+                await DoEndOfDayActionsAsync(backtestId, token);
             }
 
             _logger.Information("Backtest {Id} finished successfully", backtestId);
@@ -128,6 +140,14 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
             CancellationToken.None);
     }
 
+    /// <summary>
+    ///     Performs actions that would normally happen in between days - i.e. waits for long operations to finish
+    /// </summary>
+    private async Task DoEndOfDayActionsAsync(Guid id, CancellationToken token)
+    {
+        await _decompositionCreator.WaitForTaskAsync(id, token);
+    }
+
     private sealed record RunningBacktest(Task BacktestTask, CancellationTokenSource TokenSource) : IAsyncDisposable
     {
         public async ValueTask DisposeAsync()
@@ -143,5 +163,9 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
     }
 }
 
-public sealed record BacktestDetails(DateOnly Start, DateOnly End, decimal InitialCash, bool ShouldUsePredictor,
+public sealed record BacktestDetails(
+    DateOnly Start,
+    DateOnly End,
+    decimal InitialCash,
+    bool ShouldUsePredictor,
     string Description);
