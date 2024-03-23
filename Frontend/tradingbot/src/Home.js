@@ -33,9 +33,14 @@ export const displayErrorAlert = (errorBody, customMessage = '') => {
     Trace ID: ${errorBody.traceId}
     
     Errors:
-    ${Object.entries(errorBody.errors)
-      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
-      .join('\n')}
+    ${errorBody.errors ? 
+      `${Object.entries(errorBody.errors)
+        .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+        .join('\n')}`
+      : 'Unknown error occurred'}
+    ${errorBody.Message ? 
+      `Message:
+      ${errorBody.Message}` : ''}
   ` : '';
   window.alert(customMessage + '\n' + errorMessage);
 };
