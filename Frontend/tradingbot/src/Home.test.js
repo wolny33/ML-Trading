@@ -58,7 +58,9 @@ const setupAxiosMocks = () => {
           "analysisLengthInDays": 30,
           "decompositionExpirationInDays": 30,
           "varianceFraction": 0.999,
-          "undervaluedThreshold": 1.5
+          "undervaluedThreshold": 1.5,
+          "diverseThreshold": 0.5,
+          "ignoredThreshold": 0.25
         }
       }})
     );
