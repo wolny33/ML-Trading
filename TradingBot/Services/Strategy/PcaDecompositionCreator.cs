@@ -161,6 +161,13 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
         _logger.Verbose("({BacktestId}: {Day}) Determining most important components", _backtestId, _date);
         var selectedEigenVectors = ReduceComponents(evd.EigenVectors, evd.EigenValues.Real().ToList());
 
+        _logger.Verbose("({BacktestId}: {Day}) Creating transformation matrix", _backtestId, _date);
+        var projectionMatrix = selectedEigenVectors * selectedEigenVectors.Transpose();
+
+        _logger.Verbose("({BacktestId}: {Day}) Calculating norms", _backtestId, _date);
+        var l1Norms = DenseVector.OfEnumerable(projectionMatrix.EnumerateColumns().Select(col => col.L1Norm()));
+        var l2Norms = DenseVector.OfEnumerable(projectionMatrix.EnumerateColumns().Select(col => col.L2Norm()));
+
         return new PcaDecomposition
         {
             CreatedAt = _date,
@@ -168,6 +175,8 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
             Symbols = symbols,
             Means = means,
             StandardDeviations = stdDevs,
+            L1Norms = l1Norms,
+            L2Norms = l2Norms,
             PrincipalVectors = selectedEigenVectors
         };
     }
@@ -235,6 +244,8 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
             Symbols = symbols,
             Means = DenseVector.OfEnumerable(Enumerable.Repeat(0.0, symbols.Count)),
             StandardDeviations = DenseVector.OfEnumerable(Enumerable.Repeat(1.0, symbols.Count)),
+            L1Norms = DenseVector.OfEnumerable(Enumerable.Repeat(1.0, symbols.Count)),
+            L2Norms = DenseVector.OfEnumerable(Enumerable.Repeat(1.0, symbols.Count)),
             PrincipalVectors = DenseMatrix.OfDiagonalArray(Enumerable.Repeat(1.0, symbols.Count).ToArray())
         };
     }
