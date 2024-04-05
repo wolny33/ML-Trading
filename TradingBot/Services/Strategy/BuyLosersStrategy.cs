@@ -68,7 +68,7 @@ public abstract class BuyLosersStrategyBase : IStrategy
     {
         var today = _tradingTask.GetTaskDay();
         var allSymbolsData =
-            await _marketDataSource.GetPricesForAllSymbolsAsync(today.AddDays(-analysisLength), today, token);
+            await _marketDataSource.GetPricesForAllSymbolsAsync(today.AddDays(-analysisLength), today, token: token);
 
         var lastMonthReturns = new Dictionary<TradingSymbol, decimal>();
         foreach (var (symbol, symbolData) in allSymbolsData)

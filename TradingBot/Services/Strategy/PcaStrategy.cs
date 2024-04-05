@@ -51,11 +51,11 @@ public abstract class PcaStrategyBase : IStrategy
             else
             {
                 _logger.Debug("No actions were taken - latest decomposition expired at {Expiration}",
-                    latestDecomposition.ExpiresAt);
+                    latestDecomposition.ExpiresAt.AddDays(3));
             }
 
             await _decompositionCreator.StartNewDecompositionCreationAsync(_tradingTask.CurrentBacktestId,
-                _tradingTask.GetTaskDay(), config.Pca, token);
+                _tradingTask.GetTaskDay(), config.Pca, _tradingTask.SymbolSlice, token);
             return Array.Empty<TradingAction>();
         }
 
@@ -63,9 +63,9 @@ public abstract class PcaStrategyBase : IStrategy
         if (latestDecomposition.ExpiresAt < _tradingTask.GetTaskDay())
         {
             _logger.Debug("Latest decomposition will expire in less than 3 days (on {Expiration})",
-                latestDecomposition.ExpiresAt);
+                latestDecomposition.ExpiresAt.AddDays(3));
             await _decompositionCreator.StartNewDecompositionCreationAsync(_tradingTask.CurrentBacktestId,
-                _tradingTask.GetTaskDay(), config.Pca, token);
+                _tradingTask.GetTaskDay(), config.Pca, _tradingTask.SymbolSlice, token);
         }
 
         var lastPrices = await GetLastPricesForSymbolsAsync(latestDecomposition.Symbols, token);
@@ -112,7 +112,7 @@ public abstract class PcaStrategyBase : IStrategy
     {
         var lastDayData =
             await _marketDataSource.GetPricesForAllSymbolsAsync(_tradingTask.GetTaskDay(), _tradingTask.GetTaskDay(),
-                token);
+                token: token);
 
         var lastPrices = new Dictionary<TradingSymbol, decimal>();
         foreach (var symbol in symbols)

@@ -14,6 +14,7 @@ public interface ICurrentTradingTask
 {
     Guid? CurrentBacktestId { get; }
     bool ShouldReturnFutureDataFromPredictor { get; }
+    BacktestSymbolSlice SymbolSlice { get; }
     Task StartAsync(CancellationToken token = default);
     Task SaveAndLinkSuccessfulActionAsync(TradingAction action, Guid alpacaId, CancellationToken token = default);
     Task SaveAndLinkBacktestActionAsync(TradingAction action, CancellationToken token = default);
@@ -24,7 +25,7 @@ public interface ICurrentTradingTask
     Task MarkAsErroredAsync(Error error, CancellationToken token = default);
     DateOnly GetTaskDay();
     DateTimeOffset GetTaskTime();
-    void SetBacktestDetails(Guid backtestId, DateOnly day, bool usePredictor);
+    void SetBacktestDetails(Guid backtestId, DateOnly day, BacktestSymbolSlice symbols, bool usePredictor);
 }
 
 public sealed class CurrentTradingTask : ICurrentTradingTask
@@ -48,6 +49,7 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
     public Guid? CurrentBacktestId => _backtestDetails?.Id;
 
     public bool ShouldReturnFutureDataFromPredictor => _backtestDetails?.UsePredictor is false;
+    public BacktestSymbolSlice SymbolSlice => _backtestDetails?.Symbols ?? new BacktestSymbolSlice(0, -1);
 
     public async Task StartAsync(CancellationToken token = default)
     {
@@ -111,9 +113,9 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
             : _clock.UtcNow;
     }
 
-    public void SetBacktestDetails(Guid backtestId, DateOnly day, bool usePredictor)
+    public void SetBacktestDetails(Guid backtestId, DateOnly day, BacktestSymbolSlice symbols, bool usePredictor)
     {
-        _backtestDetails = new BacktestDetails(backtestId, day, usePredictor);
+        _backtestDetails = new BacktestDetails(backtestId, day, symbols, usePredictor);
     }
 
     private Task EndWithStateAsync(TradingTaskState state, string description, CancellationToken token)
@@ -125,5 +127,5 @@ public sealed class CurrentTradingTask : ICurrentTradingTask
             new TradingTaskCompletionDetails(GetTaskTime(), state, description), token);
     }
 
-    private sealed record BacktestDetails(Guid Id, DateOnly Day, bool UsePredictor);
+    private sealed record BacktestDetails(Guid Id, DateOnly Day, BacktestSymbolSlice Symbols, bool UsePredictor);
 }

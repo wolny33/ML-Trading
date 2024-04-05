@@ -11,15 +11,13 @@ namespace TradingBot.Services.Strategy;
 public interface IPcaDecompositionCreator
 {
     Task StartNewDecompositionCreationAsync(Guid? backtestId, DateOnly currentDay, PcaOptions options,
-        CancellationToken token = default);
+        BacktestSymbolSlice slice, CancellationToken token = default);
 
     Task WaitForTaskAsync(Guid? backtestId, CancellationToken token = default);
 }
 
 public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDisposable
 {
-    private const int AnalysisLength = 3 * 30;
-
     private readonly ILogger _logger;
     private readonly IServiceScopeFactory _scopeFactory;
 
@@ -37,7 +35,7 @@ public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDi
     }
 
     public async Task StartNewDecompositionCreationAsync(Guid? backtestId, DateOnly currentDay, PcaOptions options,
-        CancellationToken token = default)
+        BacktestSymbolSlice slice, CancellationToken token = default)
     {
         if (_tasks.TryGetValue(new BacktestId(backtestId), out var task) && !task.IsCompleted)
         {
@@ -50,7 +48,7 @@ public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDi
 
         await using var scope = _scopeFactory.CreateAsyncScope();
         var marketData = await scope.ServiceProvider.GetRequiredService<IMarketDataSource>()
-            .GetPricesForAllSymbolsAsync(currentDay.AddDays(-AnalysisLength), currentDay, token);
+            .GetPricesForAllSymbolsAsync(currentDay.AddDays(-options.AnalysisLengthInDays), currentDay, slice, token);
 
         if (task is not null) await task.DisposeAsync();
 

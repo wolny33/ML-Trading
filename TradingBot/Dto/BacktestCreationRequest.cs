@@ -22,6 +22,12 @@ public sealed class BacktestCreationRequest : IValidatableObject
 
     public string Description { get; init; } = string.Empty;
 
+    public BacktestSymbolSliceRequest SymbolSlice { get; init; } = new()
+    {
+        Skip = 0,
+        Take = -1
+    };
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (End <= Start)
@@ -41,5 +47,20 @@ public sealed class BacktestCreationRequest : IValidatableObject
             yield return new ValidationResult(
                 $"'{nameof(End)}' must represent a day at least 10 days ago if predictor is not used",
                 new[] { nameof(End), nameof(ShouldUsePredictor) });
+
+        var errors = new List<ValidationResult>();
+        Validator.TryValidateObject(SymbolSlice, new ValidationContext(SymbolSlice), errors, true);
+        foreach (var error in errors) yield return error;
     }
+}
+
+public sealed class BacktestSymbolSliceRequest
+{
+    [Required]
+    [Range(0, int.MaxValue)]
+    public required int Skip { get; init; }
+
+    [Required]
+    [Range(-1, int.MaxValue)]
+    public required int Take { get; init; }
 }

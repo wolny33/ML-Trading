@@ -84,7 +84,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
             // If strategy needs more data, we get more data
             await marketDataSource.InitializeBacktestDataAsync(
                 details.Start.AddDays(-int.Max(20, await strategy.GetRequiredPastDaysAsync(token) + 1)), details.End,
-                token);
+                details.SymbolSlice, token);
 
             for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {
@@ -94,7 +94,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 
                 await using var scope = _scopeFactory.CreateAsyncScope();
                 var task = scope.ServiceProvider.GetRequiredService<ICurrentTradingTask>();
-                task.SetBacktestDetails(backtestId, day, details.ShouldUsePredictor);
+                task.SetBacktestDetails(backtestId, day, details.SymbolSlice, details.ShouldUsePredictor);
 
                 var taskExecutor = scope.ServiceProvider.GetRequiredService<TradingTaskExecutor>();
                 await taskExecutor.ExecuteAsync(token);
@@ -166,6 +166,9 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 public sealed record BacktestDetails(
     DateOnly Start,
     DateOnly End,
+    BacktestSymbolSlice SymbolSlice,
     decimal InitialCash,
     bool ShouldUsePredictor,
     string Description);
+
+public sealed record BacktestSymbolSlice(int Skip, int Take);
