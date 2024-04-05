@@ -79,14 +79,19 @@ public abstract class PcaStrategyBase : IStrategy
         _logger.Verbose("Overvalued symbols: {Symbols}",
             overvalued.Select(pair => $"{pair.Symbol.Value} ({pair.NormalizedDifference:F2})"));
 
-        var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
+        var norms = latestDecomposition.GetNorms();
+        var wanted = undervalued
+            .Where(s => norms[s.Symbol].L1 >= config.Pca.IgnoredThreshold)
+            .Where(s => norms[s.Symbol].L2 / norms[s.Symbol].L1 <= config.Pca.DiverseThreshold)
+            .ToList();
 
+        var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
         var actions = new List<TradingAction>();
 
         // If haves money, buy undervalued symbols
         if (assets.Cash.AvailableAmount > assets.EquityValue * 0.01m)
         {
-            actions.AddRange(await GetBuyActionsAsync(undervalued, assets, lastPrices, config.LimitPriceDamping,
+            actions.AddRange(await GetBuyActionsAsync(wanted, assets, lastPrices, config.LimitPriceDamping,
                 token));
         }
         else
