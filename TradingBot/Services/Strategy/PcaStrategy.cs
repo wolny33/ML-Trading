@@ -80,9 +80,22 @@ public abstract class PcaStrategyBase : IStrategy
             overvalued.Select(pair => $"{pair.Symbol.Value} ({pair.NormalizedDifference:F2})"));
 
         var norms = latestDecomposition.GetNorms();
-        var wanted = undervalued
-            .Where(s => norms[s.Symbol].L1 >= config.Pca.IgnoredThreshold)
-            .Where(s => norms[s.Symbol].L2 / norms[s.Symbol].L1 <= config.Pca.DiverseThreshold)
+
+        _logger.Debug("{Ignored} out of {All} undervalued symbols are ignored by the decomposition",
+            undervalued.Count(s => norms[s.Symbol].L1 < config.Pca.IgnoredThreshold), undervalued.Count);
+        _logger.Verbose("Ignored symbols: {Symbols}",
+            undervalued.Where(s => norms[s.Symbol].L1 < config.Pca.IgnoredThreshold).Select(s => s.Symbol.Value));
+
+        var notIgnored = undervalued.Where(s => norms[s.Symbol].L1 >= config.Pca.IgnoredThreshold).ToList();
+
+        _logger.Debug("{Unwanted} out of {All} not ignored symbols are not diverse enough",
+            notIgnored.Count(s => norms[s.Symbol].L2 / norms[s.Symbol].L1 > config.Pca.DiverseThreshold),
+            notIgnored.Count);
+        _logger.Verbose("Non-diverse symbols: {Symbols}",
+            notIgnored.Where(s => norms[s.Symbol].L2 / norms[s.Symbol].L1 > config.Pca.DiverseThreshold)
+                .Select(s => s.Symbol.Value));
+
+        var wanted = notIgnored.Where(s => norms[s.Symbol].L2 / norms[s.Symbol].L1 <= config.Pca.DiverseThreshold)
             .ToList();
 
         var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
