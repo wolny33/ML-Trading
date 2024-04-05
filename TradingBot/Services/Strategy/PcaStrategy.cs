@@ -68,10 +68,7 @@ public abstract class PcaStrategyBase : IStrategy
                 _tradingTask.GetTaskDay(), config.Pca, token);
         }
 
-        var lastDayData =
-            await _marketDataSource.GetPricesForAllSymbolsAsync(_tradingTask.GetTaskDay(), _tradingTask.GetTaskDay(),
-                token);
-        var lastPrices = lastDayData.Keys.ToDictionary(symbol => symbol, symbol => lastDayData[symbol][0].Close);
+        var lastPrices = await GetLastPricesForSymbolsAsync(latestDecomposition.Symbols, token);
         var differences = latestDecomposition.CalculatePriceDifferences(lastPrices);
 
         var undervalued = differences.Where(d => d.NormalizedDifference < -config.Pca.UndervaluedThreshold).ToList();
@@ -103,6 +100,24 @@ public abstract class PcaStrategyBase : IStrategy
             token));
 
         return actions;
+    }
+
+    private async Task<IReadOnlyDictionary<TradingSymbol, decimal>> GetLastPricesForSymbolsAsync(
+        IEnumerable<TradingSymbol> symbols, CancellationToken token)
+    {
+        var lastDayData =
+            await _marketDataSource.GetPricesForAllSymbolsAsync(_tradingTask.GetTaskDay(), _tradingTask.GetTaskDay(),
+                token);
+
+        var lastPrices = new Dictionary<TradingSymbol, decimal>();
+        foreach (var symbol in symbols)
+        {
+            if (lastDayData.TryGetValue(symbol, out var data)) lastPrices[symbol] = data[0].Close;
+
+            lastPrices[symbol] = await _marketDataSource.GetLastAvailablePriceForSymbolAsync(symbol, token);
+        }
+
+        return lastPrices;
     }
 
     protected abstract Task<IReadOnlyList<TradingAction>> GetBuyActionsAsync(

@@ -18,29 +18,22 @@ public sealed class PcaDecomposition
     public IReadOnlyList<SymbolWithNormalizedDifference> CalculatePriceDifferences(
         IReadOnlyDictionary<TradingSymbol, decimal> lastPrices)
     {
-        var filteredIndices = Symbols
-            .Select((symbol, index) => new { Symbol = symbol, Index = index })
-            .Where(pair => lastPrices.ContainsKey(pair.Symbol))
-            .ToList();
+        var missingSymbols = Symbols.Where(symbol => !lastPrices.ContainsKey(symbol)).ToList();
+        if (missingSymbols.Count > 0)
+            throw new ArgumentException(
+                $"Last prices dictionary did not contain some symbols: {string.Join(", ", missingSymbols.Select(s => s.Value))}",
+                nameof(lastPrices));
 
-        if (filteredIndices.Count == 0) return Array.Empty<SymbolWithNormalizedDifference>();
+        var newData = DenseVector.OfEnumerable(Symbols.Select(symbol => (double)lastPrices[symbol]));
+        var normalizedData = (newData - Means).PointwiseDivide(StandardDeviations);
 
-        var newData = DenseVector.OfEnumerable(filteredIndices.Select(pair => (double)lastPrices[pair.Symbol]));
-        var means = DenseVector.OfEnumerable(filteredIndices.Select(pair => Means[pair.Index]));
-        var stdDeviations =
-            DenseVector.OfEnumerable(filteredIndices.Select(pair => StandardDeviations[pair.Index]));
+        var reduced = PrincipalVectors * (PrincipalVectors.Transpose() * normalizedData);
 
-        var filteredVectors =
-            DenseMatrix.OfRowVectors(filteredIndices.Select(pair => PrincipalVectors.Row(pair.Index)));
+        var predictedPrices = reduced.PointwiseMultiply(StandardDeviations) + Means;
+        var normalizedDifferences = (newData - predictedPrices).PointwiseDivide(StandardDeviations);
 
-        var normalizedData = (newData - means).PointwiseDivide(stdDeviations);
-        var reduced = filteredVectors * (filteredVectors.Transpose() * normalizedData);
-
-        var predictedPrices = reduced.PointwiseMultiply(stdDeviations) + means;
-        var normalizedDifferences = (newData - predictedPrices).PointwiseDivide(stdDeviations);
-
-        return filteredIndices.Select((pair, index) =>
-            new SymbolWithNormalizedDifference(pair.Symbol, normalizedDifferences[index])).ToList();
+        return Symbols.Zip(normalizedDifferences)
+            .Select(pair => new SymbolWithNormalizedDifference(pair.First, pair.Second)).ToList();
     }
 
     public PcaDecompositionEntity ToEntity(Guid? backtestId)
