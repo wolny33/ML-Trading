@@ -4,29 +4,29 @@ from pydantic import BaseModel
 
 
 class CashResponse(BaseModel):
-    MainCurrency: str
-    AvailableAmount: float  # `decimal` in C# is best represented by `float` in this context
-    BuyingPower: float
+    mainCurrency: str
+    availableAmount: float  # `decimal` in C# is best represented by `float` in this context
+    buyingPower: float
 
 
 class PositionResponse(BaseModel):
-    Symbol: str
-    Quantity: float
-    AvailableQuantity: float
-    MarketValue: float
-    AverageEntryPrice: float
+    symbol: str
+    quantity: float
+    availableQuantity: float
+    marketValue: float
+    averageEntryPrice: float
 
 
 class AssetsResponse(BaseModel):
-    EquityValue: float
-    Cash: CashResponse
-    Positions: List[PositionResponse]
+    equityValue: float
+    cash: CashResponse
+    positions: List[PositionResponse]
 
 
 class AssetsStateResponse(BaseModel):
-    Assets: AssetsResponse
-    CreatedAt: datetime
+    assets: AssetsResponse
+    createdAt: datetime
 
 
 class PortfolioStatesResponse(BaseModel):
-    Results: list[AssetsStateResponse]
+    results: list[AssetsStateResponse]
