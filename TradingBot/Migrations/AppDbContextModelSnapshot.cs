@@ -70,6 +70,9 @@ namespace TradingBot.Migrations
                     b.Property<long>("ExecutionStartTimestamp")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double>("MeanPredictorError")
+                        .HasColumnType("REAL");
+
                     b.Property<DateOnly>("SimulationEnd")
                         .HasColumnType("TEXT");
 

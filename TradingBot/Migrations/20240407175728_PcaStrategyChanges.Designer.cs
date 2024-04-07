@@ -11,7 +11,7 @@ using TradingBot.Database;
 namespace TradingBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20240405152823_PcaStrategyChanges")]
+    [Migration("20240407175728_PcaStrategyChanges")]
     partial class PcaStrategyChanges
     {
         /// <inheritdoc />
@@ -72,6 +72,9 @@ namespace TradingBot.Migrations
 
                     b.Property<long>("ExecutionStartTimestamp")
                         .HasColumnType("INTEGER");
+
+                    b.Property<double>("MeanPredictorError")
+                        .HasColumnType("REAL");
 
                     b.Property<DateOnly>("SimulationEnd")
                         .HasColumnType("TEXT");

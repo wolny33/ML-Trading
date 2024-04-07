@@ -69,7 +69,8 @@ public sealed class BacktestController : ControllerBase
     {
         var id = _backtestExecutor.StartNew(new BacktestDetails(request.Start, request.End,
             new BacktestSymbolSlice(request.SymbolSlice.Skip, request.SymbolSlice.Take), request.InitialCash,
-            request.ShouldUsePredictor, request.Description));
+            new BacktestPredictorConfiguration(request.ShouldUsePredictor, request.MeanPredictorError),
+            request.Description));
         return Accepted(new Uri(id.ToString(), UriKind.Relative));
     }
 

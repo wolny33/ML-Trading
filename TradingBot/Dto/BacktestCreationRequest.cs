@@ -20,6 +20,9 @@ public sealed class BacktestCreationRequest : IValidatableObject
     /// </summary>
     public bool ShouldUsePredictor { get; init; } = true;
 
+    [Range(0, 1)]
+    public double MeanPredictorError { get; init; } = 0;
+
     public string Description { get; init; } = string.Empty;
 
     public BacktestSymbolSliceRequest SymbolSlice { get; init; } = new()

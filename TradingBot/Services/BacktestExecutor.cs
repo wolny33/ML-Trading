@@ -62,7 +62,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
     private async Task ExecuteAsync(BacktestDetails details, Guid id, CancellationToken token = default)
     {
         var backtestId = await _backtestCommand.CreateNewAsync(
-            new BacktestCreationDetails(id, details.Start, details.End, _clock.UtcNow, details.ShouldUsePredictor,
+            new BacktestCreationDetails(id, details.Start, details.End, _clock.UtcNow, details.Predictor,
                 details.Description),
             token);
         _logger.Information("Started new backtest with ID {Id}, from {Start} to {End}", backtestId, details.Start,
@@ -94,7 +94,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 
                 await using var scope = _scopeFactory.CreateAsyncScope();
                 var task = scope.ServiceProvider.GetRequiredService<ICurrentTradingTask>();
-                task.SetBacktestDetails(backtestId, day, details.SymbolSlice, details.ShouldUsePredictor);
+                task.SetBacktestDetails(backtestId, day, details.SymbolSlice, details.Predictor);
 
                 var taskExecutor = scope.ServiceProvider.GetRequiredService<TradingTaskExecutor>();
                 await taskExecutor.ExecuteAsync(token);
@@ -168,7 +168,9 @@ public sealed record BacktestDetails(
     DateOnly End,
     BacktestSymbolSlice SymbolSlice,
     decimal InitialCash,
-    bool ShouldUsePredictor,
+    BacktestPredictorConfiguration Predictor,
     string Description);
 
 public sealed record BacktestSymbolSlice(int Skip, int Take);
+
+public sealed record BacktestPredictorConfiguration(bool UsePredictor, double MeanError);

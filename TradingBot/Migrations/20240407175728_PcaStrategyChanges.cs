@@ -37,6 +37,13 @@ namespace TradingBot.Migrations
                 type: "TEXT",
                 nullable: false,
                 defaultValue: "");
+
+            migrationBuilder.AddColumn<double>(
+                name: "MeanPredictorError",
+                table: "Backtests",
+                type: "REAL",
+                nullable: false,
+                defaultValue: 0.0);
         }
 
         /// <inheritdoc />
@@ -57,6 +64,10 @@ namespace TradingBot.Migrations
             migrationBuilder.DropColumn(
                 name: "L2Norms",
                 table: "PcaDecompositions");
+
+            migrationBuilder.DropColumn(
+                name: "MeanPredictorError",
+                table: "Backtests");
         }
     }
 }
