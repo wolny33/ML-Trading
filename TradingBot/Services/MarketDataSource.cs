@@ -63,7 +63,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
             .ToAsyncEnumerable()
             .SelectManyAwait(async chunk =>
                 (await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)))).ToAsyncEnumerable())
-            .Where(pair => IsDataValid(pair.TradingData))
+            .Where(pair => IsDataValid(pair.TradingData)).Take(100)
             .ToDictionaryAsync(pair => pair.Symbol, pair => pair.TradingData, token);
     }
 

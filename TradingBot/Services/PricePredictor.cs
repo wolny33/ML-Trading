@@ -17,7 +17,7 @@ public interface IPricePredictor
 public sealed class PricePredictor : IPricePredictor
 {
     private const int PredictorInputLength = 10;
-    private const int PredictorOutputLength = 5;
+    public const int PredictorOutputLength = 5;
 
     private readonly IFlurlClientFactory _flurlFactory;
     private readonly ILogger _logger;
@@ -105,13 +105,15 @@ public sealed class PricePredictor : IPricePredictor
 
     private DailyPricePrediction MakeFakePredictionFromDailyData(DailyTradingData today, DailyTradingData previous)
     {
-        var distribution = new Normal(0, _tradingTask.MeanPredictionError * double.Sqrt(double.Pi / 2));
+        var distribution =
+            new Normal(0, _tradingTask.MeanPredictionError * double.Sqrt(double.Pi / 2.0), Random.Shared);
+        var errors = distribution.Samples().Take(3).ToList();
         return new DailyPricePrediction
         {
             Date = today.Date,
-            ClosingPrice = today.Close + (decimal)distribution.Sample() * previous.Close,
-            HighPrice = today.High + (decimal)distribution.Sample() * previous.High,
-            LowPrice = today.Low + (decimal)distribution.Sample() * previous.Low
+            ClosingPrice = today.Close + (decimal)errors[0] * previous.Close,
+            HighPrice = today.High + (decimal)errors[1] * previous.High,
+            LowPrice = today.Low + (decimal)errors[2] * previous.Low
         };
     }
 
