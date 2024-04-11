@@ -17,7 +17,7 @@ public interface IMarketDataSource
 
     Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
 
-    Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, BacktestSymbolSlice slice,
+    Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, BacktestSymbolSlice slice, Guid backtestId,
         CancellationToken token = default);
 }
 
@@ -30,14 +30,17 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     private readonly ILogger _logger;
     private readonly Lazy<Task<IAlpacaTradingClient>> _tradingClient;
     private readonly ICurrentTradingTask _tradingTask;
+    private readonly IExcludedBacktestSymbols _excludedSymbols;
 
     public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger,
-        IMarketDataCache cache, IAlpacaCallQueue callQueue, ICurrentTradingTask tradingTask)
+        IMarketDataCache cache, IAlpacaCallQueue callQueue, ICurrentTradingTask tradingTask,
+        IExcludedBacktestSymbols excludedSymbols)
     {
         _assetsDataSource = assetsDataSource;
         _cache = cache;
         _callQueue = callQueue;
         _tradingTask = tradingTask;
+        _excludedSymbols = excludedSymbols;
         _logger = logger.ForContext<MarketDataSource>();
 
         _dataClient = new Lazy<Task<IAlpacaDataClient>>(() => clientFactory.CreateMarketDataClientAsync());
@@ -56,14 +59,15 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     {
         _logger.Debug("Getting prices for interesting and held symbols from {Start} to {End}", start, end);
 
-        var valid = await GetValidSymbolsAsync(_tradingTask.SymbolSlice, token);
+        var valid = GetNotExcluded(await GetValidSymbolsAsync(_tradingTask.SymbolSlice, token));
         var interestingValidSymbols = (await GetInterestingSymbolsAsync(token)).Where(s => valid.Contains(s));
 
         return await interestingValidSymbols.Chunk(15)
             .ToAsyncEnumerable()
             .SelectManyAwait(async chunk =>
                 (await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)))).ToAsyncEnumerable())
-            .Where(pair => IsDataValid(pair.TradingData)).Take(100)
+            .Where(pair => IsDataValid(pair.Symbol, pair.TradingData))
+            .Take(100)
             .ToDictionaryAsync(pair => pair.Symbol, pair => pair.TradingData, token);
     }
 
@@ -72,7 +76,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     {
         _logger.Debug("Getting prices for all symbols from {Start} to {End}", start, end);
 
-        var valid = await GetValidSymbolsAsync(slice ?? _tradingTask.SymbolSlice, token);
+        var valid = GetNotExcluded(await GetValidSymbolsAsync(slice ?? _tradingTask.SymbolSlice, token));
         return await valid.Chunk(50)
             .ToAsyncEnumerable()
             .SelectManyAwait(async chunk =>
@@ -81,7 +85,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
                 var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)));
                 return dataForChunk.ToAsyncEnumerable();
             })
-            .Where(pair => IsDataValid(pair.TradingData))
+            .Where(pair => IsDataValid(pair.Symbol, pair.TradingData))
             .ToDictionaryAsync(pair => pair.Symbol, pair => pair.TradingData, token);
     }
 
@@ -89,7 +93,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         DateOnly start, DateOnly end, CancellationToken token = default)
     {
         var data = await GetSymbolDataAsync(symbol, start, end, token);
-        return IsDataValid(data.TradingData) ? data.TradingData : null;
+        return IsDataValid(symbol, data.TradingData) ? data.TradingData : null;
     }
 
     public async Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol,
@@ -108,12 +112,12 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     }
 
     public async Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, BacktestSymbolSlice slice,
-        CancellationToken token = default)
+        Guid backtestId, CancellationToken token = default)
     {
         _logger.Debug("Initializing cache for backtest (from {Start} to {End})", start, end);
 
         var valid = await GetValidSymbolsAsync(slice, token);
-        await valid.Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
+        var symbolData = await valid.Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
             {
                 _logger.Verbose("Getting data for chunk: {Symbols}", chunk.Select(t => t.Value).ToList());
                 var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)));
@@ -121,6 +125,12 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
             })
             .ToListAsync(token);
 
+        var excludedSymbols = symbolData.Where(data => HasSuddenPriceJumps(data.TradingData))
+            .Select(data => data.Symbol).ToList();
+        _logger.Debug("Symbols with sudden price jumps will be excluded from backtest: {Symbols}",
+            excludedSymbols.Select(s => s.Value).ToList());
+        _excludedSymbols.Set(backtestId, excludedSymbols);
+        
         _logger.Debug("Cache was successfully initialized");
     }
 
@@ -151,6 +161,17 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
             ? validSymbols.Skip(slice.Skip)
             : validSymbols.Skip(slice.Skip).Take(slice.Take);
         return validSymbolsSlice.ToHashSet();
+    }
+
+    private IEnumerable<TradingSymbol> GetNotExcluded(IEnumerable<TradingSymbol> symbols)
+    {
+        if (_tradingTask.CurrentBacktestId is null)
+        {
+            return symbols;
+        }
+
+        var excluded = _excludedSymbols.Get(_tradingTask.CurrentBacktestId.Value);
+        return symbols.Where(s => !excluded.Contains(s));
     }
 
     private async Task<IReadOnlyList<TradingSymbol>> SendValidSymbolsRequestAsync(CancellationToken token = default)
@@ -248,7 +269,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         }
     }
 
-    private bool IsDataValid(IReadOnlyList<DailyTradingData> dailyData)
+    private bool IsDataValid(TradingSymbol symbol, IReadOnlyList<DailyTradingData> dailyData)
     {
         bool HasNonPositiveValues(DailyTradingData data)
         {
@@ -262,7 +283,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 
         if (!dailyData.Any())
         {
-            _logger.Verbose("Market data is empty");
+            _logger.Verbose("Market data for {Symbol} is empty", symbol.Value);
             return false;
         }
 
@@ -270,18 +291,27 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         {
             if (HasNonPositiveValues(d))
             {
-                _logger.Warning("Market data entry is invalid - entry contains non-positive values: {Entry}", d);
+                _logger.Warning("Market data entry for {Symbol} is invalid - entry contains non-positive values",
+                    symbol.Value);
                 return false;
             }
 
             if (HasInvalidHighAndLowPrices(d))
             {
-                _logger.Warning("Market data entry is invalid - high/low prices are not correct: {Entry}", d);
+                _logger.Warning("Market data entry for {Symbol} is invalid - high/low prices are not correct",
+                    symbol.Value);
                 return false;
             }
         }
 
         return true;
+    }
+    
+    private static bool HasSuddenPriceJumps(IReadOnlyList<DailyTradingData> data)
+    {
+        var prices = data.Select(d => d.Close).ToList();
+        var changes = prices.SkipLast(1).Zip(prices.Skip(1)).Select(pair => pair.Second / pair.First);
+        return changes.Any(change => change > 1.5m);
     }
 
     private sealed record TradingSymbolData(TradingSymbol Symbol, IReadOnlyList<DailyTradingData> TradingData);

@@ -35,7 +35,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _tradingTask.SymbolSlice.Returns(new BacktestSymbolSlice(0, -1));
 
         _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
-            _tradingTask);
+            _tradingTask, new ExcludedBacktestSymbols());
     }
 
     public ValueTask DisposeAsync()
@@ -238,7 +238,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         SetUpResponses();
 
         await _marketDataSource.InitializeBacktestDataAsync(DateOnly.MinValue, DateOnly.MaxValue,
-            new BacktestSymbolSlice(0, -1));
+            new BacktestSymbolSlice(0, -1), Guid.NewGuid());
 
         _marketDataCache.Received(1).CacheValidSymbols(Arg.Is<IReadOnlyList<TradingSymbol>>(symbols =>
             symbols.Contains(new TradingSymbol("TKN1")) && symbols.Contains(new TradingSymbol("TKN2")) &&

@@ -87,7 +87,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
                 details.Predictor.UsePredictor
                     ? details.End
                     : details.End.AddDays(2 * PricePredictor.PredictorOutputLength),
-                details.SymbolSlice, token);
+                details.SymbolSlice, backtestId, token);
 
             for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {
