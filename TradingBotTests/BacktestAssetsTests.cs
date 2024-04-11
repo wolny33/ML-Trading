@@ -49,7 +49,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -129,7 +130,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -173,7 +175,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -196,7 +199,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -219,7 +223,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -242,7 +247,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -265,7 +271,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -316,7 +323,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -354,7 +362,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -427,7 +436,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
 
@@ -498,7 +508,8 @@ public sealed class BacktestAssetsTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             }
         });
         _marketDataSource.GetDataForSingleSymbolAsync(new TradingSymbol("TKN2"), new DateOnly(2024, 1, 2),
@@ -511,7 +522,8 @@ public sealed class BacktestAssetsTests
                 Close = 13m,
                 High = 14m,
                 Low = 11m,
-                Volume = 100m
+                Volume = 100m,
+                FearGreedIndex = 60m
             }
         });
 

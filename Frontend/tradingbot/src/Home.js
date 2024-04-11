@@ -864,7 +864,7 @@ const Home = () => {
                 </div>
               ) : (
                 <div>
-                  <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" onClick={handleStrategyOptionstClick}>
+                  <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded mr-3" onClick={handleStrategyOptionstClick}>
                     Hide Strategy Options
                   </button>
                   <button className="bg-gray-300 hover:bg-gray-400 text-black py-1 px-3 rounded" onClick={handleEditStrategyParametersClick}>

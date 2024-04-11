@@ -8,6 +8,7 @@ class DailyData(BaseModel):
     low: float
     volume: float
     date: str
+    fearGreedIndex: float
 
 
 class PredictRequest(BaseModel):

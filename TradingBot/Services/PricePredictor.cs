@@ -137,7 +137,8 @@ public sealed class PricePredictor : IPricePredictor
                     Close = RelativeChange(previous.Close, current.Close),
                     High = RelativeChange(previous.High, current.High),
                     Low = RelativeChange(previous.Low, current.Low),
-                    Volume = current.Volume
+                    Volume = current.Volume,
+                    FearGreedIndex = current.FearGreedIndex
                 };
             }).Take(PredictorInputLength).ToList()
         };
@@ -242,6 +243,9 @@ public sealed class PricePredictor : IPricePredictor
 
         [JsonProperty("volume")]
         public required decimal Volume { get; init; }
+
+        [JsonProperty("fearGreedIndex")]
+        public required decimal FearGreedIndex { get; init; }
     }
 
     private sealed class PredictorResponse
