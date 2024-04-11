@@ -63,11 +63,11 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 
         var valid = await GetValidSymbolsAsync(token);
         var interestingValidSymbols = (await GetInterestingSymbolsAsync(token)).Where(s => valid.Contains(s));
-
+        var fearGreedIndexes = await GetFearGreedIndexData(start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
         return await interestingValidSymbols.Chunk(15)
             .ToAsyncEnumerable()
             .SelectManyAwait(async chunk =>
-                (await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)))).ToAsyncEnumerable())
+                (await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, fearGreedIndexes, token)))).ToAsyncEnumerable())
             .Where(pair => IsDataValid(pair.TradingData)).Take(15)
             .ToDictionaryAsync(pair => pair.Symbol, pair => pair.TradingData, token);
     }
@@ -78,12 +78,13 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         _logger.Debug("Getting prices for all symbols from {Start} to {End}", start, end);
 
         var valid = await GetValidSymbolsAsync(token);
+        var fearGreedIndexes = await GetFearGreedIndexData(start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
         return await valid.Chunk(50)
             .ToAsyncEnumerable()
             .SelectManyAwait(async chunk =>
             {
                 _logger.Verbose("Getting data for chunk: {Symbols}", chunk.Select(t => t.Value).ToList());
-                var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)));
+                var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, fearGreedIndexes, token)));
                 return dataForChunk.ToAsyncEnumerable();
             })
             .Where(pair => IsDataValid(pair.TradingData))
@@ -93,7 +94,8 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     public async Task<IReadOnlyList<DailyTradingData>?> GetDataForSingleSymbolAsync(TradingSymbol symbol,
         DateOnly start, DateOnly end, CancellationToken token = default)
     {
-        var data = await GetSymbolDataAsync(symbol, start, end, token);
+        var fearGreedIndexes = await GetFearGreedIndexData(start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
+        var data = await GetSymbolDataAsync(symbol, start, end, fearGreedIndexes, token);
         return IsDataValid(data.TradingData) ? data.TradingData : null;
     }
 
@@ -117,10 +119,11 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         _logger.Debug("Initializing cache for backtest (from {Start} to {End})", start, end);
 
         var valid = await GetValidSymbolsAsync(token);
+        var fearGreedIndexes = await GetFearGreedIndexData(start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
         await valid.Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
             {
                 _logger.Verbose("Getting data for chunk: {Symbols}", chunk.Select(t => t.Value).ToList());
-                var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, token)));
+                var dataForChunk = await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, fearGreedIndexes, token)));
                 return dataForChunk.ToAsyncEnumerable();
             })
             .ToListAsync(token);
@@ -188,15 +191,15 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         return held.Concat(active).Distinct();
     }
 
-    private async Task<TradingSymbolData> GetSymbolDataAsync(TradingSymbol symbol, DateOnly start, DateOnly end,
-        CancellationToken token = default)
+    private async Task<TradingSymbolData> GetSymbolDataAsync(TradingSymbol symbol, DateOnly start, DateOnly end, 
+        List<double> fearGreedIndexes, CancellationToken token = default)
     {
         if (_cache.TryGetCachedData(symbol, start, end) is { } cached)
         {
             _logger.Verbose("Retrieved {Token} data between {Start} and {End} from cache", symbol.Value, start, end);
             return new TradingSymbolData(symbol, cached);
         }
-        var fearGreedIndexes = await GetFearGreedIndexData(start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
+
         var bars = await SendBarsRequestAsync(symbol, start, end, fearGreedIndexes, token);
         _cache.CacheDailySymbolData(symbol, bars, start, end);
         _logger.Verbose("Retrieved {Token} data between {Start} and {End} from Alpaca", symbol.Value, start, end);
