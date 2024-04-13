@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class CashResponse(BaseModel):
     mainCurrency: str
-    availableAmount: float  # `decimal` in C# is best represented by `float` in this context
+    availableAmount: float
     buyingPower: float
 
 

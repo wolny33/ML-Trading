@@ -1,7 +1,8 @@
 import time
 import requests
 from requests.auth import HTTPBasicAuth
-from models import PortfolioStatesResponse, AssetsStateResponse
+from backtest_models import PortfolioStatesResponse, AssetsStateResponse
+from strategy import set_strategy
 
 
 def fetch_portfolio_states(backtest_id: str) -> list[AssetsStateResponse]:
@@ -28,10 +29,7 @@ def start_backtest(request: BacktestRequest) -> str:
         return f"{req.strategy} ({req.skip}/{req.symbols}): " + \
         ("with predictor" if req.use_predictor else f"{(req.avg_prediction_error * 100):.3f}% mean error")
 
-    strategy_response = requests.put("http://localhost:5000/api/strategy/selection", json={
-        "name": request.strategy
-    }, auth=HTTPBasicAuth("admin", "password"))
-    strategy_response.raise_for_status()
+    set_strategy(request.strategy)
 
     backtest_response = requests.post("http://localhost:5000/api/backtests", json={
         "start": "2022-03-01",
@@ -61,5 +59,6 @@ def wait_for_backtest(backtest_id: str):
         response.raise_for_status()
         return response.json()["state"] == "Running"
 
+    print(f"Waiting for backtest {backtest_id}")
     while is_running():
         time.sleep(1)
