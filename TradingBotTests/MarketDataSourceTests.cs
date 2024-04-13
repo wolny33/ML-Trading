@@ -32,6 +32,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
 
         _tradingTask = Substitute.For<ICurrentTradingTask>();
         _tradingTask.CurrentBacktestId.Returns((Guid?)null);
+        _tradingTask.SymbolSlice.Returns(new BacktestSymbolSlice(0, -1));
 
         _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
             _tradingTask);
@@ -90,7 +91,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
     {
         SetUpResponses();
 
-        _marketDataCache.TryGetValidSymbols().Returns(new HashSet<TradingSymbol> { new("TKN2"), new("TKN3") });
+        _marketDataCache.TryGetValidSymbols().Returns(new TradingSymbol[] { new("TKN2"), new("TKN3") });
         _marketDataCache.TryGetCachedData(new TradingSymbol("TKN2"), DateOnly.MinValue, DateOnly.MaxValue).Returns(new[]
         {
             new DailyTradingData
@@ -135,7 +136,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _tradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
         _tradingTask.GetTaskDay().Returns(new DateOnly(2023, 12, 19));
 
-        _marketDataCache.TryGetValidSymbols().Returns(new HashSet<TradingSymbol> { new("TKN2"), new("TKN4") });
+        _marketDataCache.TryGetValidSymbols().Returns(new TradingSymbol[] { new("TKN2"), new("TKN4") });
         _marketDataCache.TryGetCachedData(new TradingSymbol("TKN4"), DateOnly.MinValue, DateOnly.MaxValue).Returns(new[]
         {
             new DailyTradingData
@@ -236,7 +237,8 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
     {
         SetUpResponses();
 
-        await _marketDataSource.InitializeBacktestDataAsync(DateOnly.MinValue, DateOnly.MaxValue);
+        await _marketDataSource.InitializeBacktestDataAsync(DateOnly.MinValue, DateOnly.MaxValue,
+            new BacktestSymbolSlice(0, -1));
 
         _marketDataCache.Received(1).CacheValidSymbols(Arg.Is<IReadOnlyList<TradingSymbol>>(symbols =>
             symbols.Contains(new TradingSymbol("TKN1")) && symbols.Contains(new TradingSymbol("TKN2")) &&
@@ -392,7 +394,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _dataClient.ListHistoricalBarsAsync(Arg.Is<HistoricalBarsRequest>(r => r.Symbols.Single() == "TKN5"))
             .Returns(tkn5Page);
 
-        _marketDataCache.TryGetValidSymbols().Returns((ISet<TradingSymbol>?)null);
+        _marketDataCache.TryGetValidSymbols().Returns((IReadOnlyList<TradingSymbol>?)null);
         _marketDataCache.TryGetCachedData(Arg.Any<TradingSymbol>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>())
             .Returns((IReadOnlyList<DailyTradingData>?)null);
     }

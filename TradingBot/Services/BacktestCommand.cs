@@ -31,7 +31,8 @@ public sealed class BacktestCommand : IBacktestCommand
             SimulationEnd = details.End,
             ExecutionStartTimestamp = details.ExecutionStart.ToUnixTimeMilliseconds(),
             ExecutionEndTimestamp = null,
-            UsePredictor = details.ShouldUsePredictor,
+            UsePredictor = details.Predictor.UsePredictor,
+            MeanPredictorError = details.Predictor.MeanError,
             State = BacktestState.Running,
             StateDetails = "Backtest is running",
             Description = details.Description
@@ -62,8 +63,13 @@ public sealed class BacktestCommand : IBacktestCommand
     }
 }
 
-public sealed record BacktestCreationDetails(Guid Id, DateOnly Start, DateOnly End, DateTimeOffset ExecutionStart,
-    bool ShouldUsePredictor, string Description);
+public sealed record BacktestCreationDetails(
+    Guid Id,
+    DateOnly Start,
+    DateOnly End,
+    DateTimeOffset ExecutionStart,
+    BacktestPredictorConfiguration Predictor,
+    string Description);
 
 public sealed record BacktestCompletionDetails(DateTimeOffset ExecutionEnd, BacktestState State,
     string StateDescription);

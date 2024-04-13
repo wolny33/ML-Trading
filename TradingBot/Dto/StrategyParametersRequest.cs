@@ -99,4 +99,12 @@ public sealed class PcaOptionsRequest
     [Required]
     [Range(0, double.PositiveInfinity)]
     public required double UndervaluedThreshold { get; init; }
+
+    [Required]
+    [Range(0, 1)]
+    public required double IgnoredThreshold { get; init; }
+
+    [Required]
+    [Range(0, 1)]
+    public required double DiverseThreshold { get; init; }
 }

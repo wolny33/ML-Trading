@@ -16,5 +16,7 @@ public sealed class PcaDecompositionEntity
     public required string Symbols { get; init; }
     public required string Means { get; init; }
     public required string StandardDeviations { get; init; }
+    public required string L1Norms { get; init; }
+    public required string L2Norms { get; init; }
     public required string PrincipalVectors { get; init; }
 }

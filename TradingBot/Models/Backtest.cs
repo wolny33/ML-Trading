@@ -11,6 +11,7 @@ public sealed class Backtest
     public required DateTimeOffset ExecutionStart { get; init; }
     public DateTimeOffset? ExecutionEnd { get; init; }
     public required bool UsePredictor { get; init; }
+    public required double MeanPredictorError { get; init; }
     public required BacktestState State { get; init; }
     public required string StateDetails { get; init; }
     public required string Description { get; init; }
@@ -28,6 +29,7 @@ public sealed class Backtest
                 ? DateTimeOffset.FromUnixTimeMilliseconds(entity.ExecutionEndTimestamp.Value)
                 : null,
             UsePredictor = entity.UsePredictor,
+            MeanPredictorError = entity.MeanPredictorError,
             State = entity.State,
             StateDetails = entity.StateDetails,
             Description = entity.Description,
@@ -56,6 +58,7 @@ public sealed class Backtest
             ExecutionStart = ExecutionStart,
             ExecutionEnd = ExecutionEnd,
             UsePredictor = UsePredictor,
+            MeanPredictorError = MeanPredictorError,
             State = State.ToString(),
             StateDetails = StateDetails,
             Description = Description,

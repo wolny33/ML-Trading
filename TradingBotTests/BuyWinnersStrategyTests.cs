@@ -311,7 +311,7 @@ public sealed class BuyWinnersStrategyTests
         });
 
         _marketData.GetPricesForAllSymbolsAsync(new DateOnly(2024, 3, 10).AddDays(-12 * 30), new DateOnly(2024, 3, 10),
-            Arg.Any<CancellationToken>()).Returns(
+            Arg.Any<BacktestSymbolSlice>(), Arg.Any<CancellationToken>()).Returns(
             Enumerable.Range(0, 20).Select(n =>
                     Enumerable.Range(0, 12 * 30 + 1).Select(k => new DailyTradingData
                     {
@@ -414,7 +414,7 @@ public sealed class BuyWinnersStrategyTests
         });
 
         _marketData.GetPricesForAllSymbolsAsync(new DateOnly(2024, 3, 10).AddDays(-12 * 30), new DateOnly(2024, 3, 10),
-            Arg.Any<CancellationToken>()).Returns(
+            Arg.Any<BacktestSymbolSlice>(), Arg.Any<CancellationToken>()).Returns(
             Enumerable.Range(0, 20).Select(n =>
                     Enumerable.Range(0, 12 * 30 + 1).Select(k => new DailyTradingData
                     {

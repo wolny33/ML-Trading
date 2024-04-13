@@ -7,7 +7,7 @@ public interface IMarketDataCache
 {
     IReadOnlyList<DailyTradingData>? TryGetCachedData(TradingSymbol symbol, DateOnly start, DateOnly end);
 
-    ISet<TradingSymbol>? TryGetValidSymbols();
+    IReadOnlyList<TradingSymbol>? TryGetValidSymbols();
 
     IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForLastValidDay(DateOnly day);
     IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForDay(DateOnly day);
@@ -24,7 +24,7 @@ public interface IMarketDataCache
 public sealed class MarketDataCache : IMarketDataCache
 {
     private readonly IMemoryCache _cache;
-    private ISet<TradingSymbol>? _validSymbols;
+    private IReadOnlyList<TradingSymbol>? _validSymbols;
 
     public MarketDataCache(IMemoryCache cache)
     {
@@ -44,7 +44,7 @@ public sealed class MarketDataCache : IMarketDataCache
         return result;
     }
 
-    public ISet<TradingSymbol>? TryGetValidSymbols()
+    public IReadOnlyList<TradingSymbol>? TryGetValidSymbols()
     {
         return _validSymbols;
     }
@@ -101,7 +101,7 @@ public sealed class MarketDataCache : IMarketDataCache
 
     public void CacheValidSymbols(IReadOnlyList<TradingSymbol> symbols)
     {
-        _validSymbols = symbols.ToHashSet();
+        _validSymbols = symbols;
     }
 
     public MemoryCacheStatistics GetCacheStats()

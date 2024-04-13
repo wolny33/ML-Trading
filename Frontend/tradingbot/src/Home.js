@@ -853,6 +853,22 @@ const Home = () => {
                     className="border border-gray-300 p-0.5 mb-2 mr-1.5"
                     style={{ width: "150px", height: "35px" }}
                   />
+                  <h3 className="mb-2">Diversification threshold:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.pca.diverseThreshold}
+                    onChange={(e) => handleStrategyParameterChange('pca', 'diverseThreshold', clipNumberToRange(0, 1)(e.target.value))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
+                  <h3 className="mb-2">Ignored symbol threshold:</h3>
+                  <input
+                    type="text"
+                    value={newStrategyParameters.pca.ignoredThreshold}
+                    onChange={(e) => handleStrategyParameterChange('pca', 'ignoredThreshold', clipNumberToRange(0, 1)(e.target.value))}
+                    className="border border-gray-300 p-0.5 mb-2 mr-1.5"
+                    style={{ width: "150px", height: "35px" }}
+                  />
                   <div>
                     <button className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded mr-2" onClick={handleConfirmEditStrategyParametersClick}>
                       Confirm
@@ -933,6 +949,12 @@ const Home = () => {
                   </h3>
                   <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
                     Undervaluation threshold: {strategyParameters.pca.undervaluedThreshold}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Diversification threshold: {strategyParameters.pca.diverseThreshold}
+                  </h3>
+                  <h3 className="text-1xl font-semibold text-gray-700 mb-4" style={{ marginTop: "30px" }}>
+                    Ignored symbol threshold: {strategyParameters.pca.ignoredThreshold}
                   </h3>
                 </div>
               )}

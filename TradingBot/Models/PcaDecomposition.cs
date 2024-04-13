@@ -13,34 +13,34 @@ public sealed class PcaDecomposition
     public required IReadOnlyList<TradingSymbol> Symbols { get; init; }
     public required Vector<double> Means { get; init; }
     public required Vector<double> StandardDeviations { get; init; }
+    public required Vector<double> L1Norms { get; init; }
+    public required Vector<double> L2Norms { get; init; }
     public required Matrix<double> PrincipalVectors { get; init; }
 
     public IReadOnlyList<SymbolWithNormalizedDifference> CalculatePriceDifferences(
         IReadOnlyDictionary<TradingSymbol, decimal> lastPrices)
     {
-        var filteredIndices = Symbols
-            .Select((symbol, index) => new { Symbol = symbol, Index = index })
-            .Where(pair => lastPrices.ContainsKey(pair.Symbol))
-            .ToList();
+        var missingSymbols = Symbols.Where(symbol => !lastPrices.ContainsKey(symbol)).ToList();
+        if (missingSymbols.Count > 0)
+            throw new ArgumentException(
+                $"Last prices dictionary did not contain some symbols: {string.Join(", ", missingSymbols.Select(s => s.Value))}",
+                nameof(lastPrices));
 
-        if (filteredIndices.Count == 0) return Array.Empty<SymbolWithNormalizedDifference>();
+        var newData = DenseVector.OfEnumerable(Symbols.Select(symbol => (double)lastPrices[symbol]));
+        var normalizedData = (newData - Means).PointwiseDivide(StandardDeviations);
 
-        var newData = DenseVector.OfEnumerable(filteredIndices.Select(pair => (double)lastPrices[pair.Symbol]));
-        var means = DenseVector.OfEnumerable(filteredIndices.Select(pair => Means[pair.Index]));
-        var stdDeviations =
-            DenseVector.OfEnumerable(filteredIndices.Select(pair => StandardDeviations[pair.Index]));
+        var reduced = PrincipalVectors * (PrincipalVectors.Transpose() * normalizedData);
 
-        var filteredVectors =
-            DenseMatrix.OfRowVectors(filteredIndices.Select(pair => PrincipalVectors.Row(pair.Index)));
+        var predictedPrices = reduced.PointwiseMultiply(StandardDeviations) + Means;
+        var normalizedDifferences = (newData - predictedPrices).PointwiseDivide(StandardDeviations);
 
-        var normalizedData = (newData - means).PointwiseDivide(stdDeviations);
-        var reduced = filteredVectors * (filteredVectors.Transpose() * normalizedData);
+        return Symbols.Zip(normalizedDifferences)
+            .Select(pair => new SymbolWithNormalizedDifference(pair.First, pair.Second)).ToList();
+    }
 
-        var predictedPrices = reduced.PointwiseMultiply(stdDeviations) + means;
-        var normalizedDifferences = (newData - predictedPrices).PointwiseDivide(stdDeviations);
-
-        return filteredIndices.Select((pair, index) =>
-            new SymbolWithNormalizedDifference(pair.Symbol, normalizedDifferences[index])).ToList();
+    public IReadOnlyDictionary<TradingSymbol, Norms> GetNorms()
+    {
+        return Symbols.Zip(L1Norms, L2Norms).ToDictionary(set => set.First, set => new Norms(set.Second, set.Third));
     }
 
     public PcaDecompositionEntity ToEntity(Guid? backtestId)
@@ -57,6 +57,8 @@ public sealed class PcaDecomposition
             Symbols = string.Join(';', Symbols.Select(s => s.Value)),
             Means = JsonSerializer.Serialize(Means.ToArray()),
             StandardDeviations = JsonSerializer.Serialize(StandardDeviations.ToArray()),
+            L1Norms = JsonSerializer.Serialize(L1Norms.ToArray()),
+            L2Norms = JsonSerializer.Serialize(L2Norms.ToArray()),
             PrincipalVectors = JsonSerializer.Serialize(ConvertToJaggedArray(PrincipalVectors.ToArray()))
         };
     }
@@ -70,6 +72,8 @@ public sealed class PcaDecomposition
             Symbols = entity.Symbols.Split(';').Select(v => new TradingSymbol(v)).ToList(),
             Means = DenseVector.OfArray(JsonSerializer.Deserialize<double[]>(entity.Means)),
             StandardDeviations = DenseVector.OfArray(JsonSerializer.Deserialize<double[]>(entity.StandardDeviations)),
+            L1Norms = DenseVector.OfArray(JsonSerializer.Deserialize<double[]>(entity.L1Norms)),
+            L2Norms = DenseVector.OfArray(JsonSerializer.Deserialize<double[]>(entity.L2Norms)),
             PrincipalVectors = DenseMatrix.OfArray(ConvertTo2DArray(
                 JsonSerializer.Deserialize<double[][]>(entity.PrincipalVectors) ??
                 throw new UnreachableException(
@@ -109,3 +113,5 @@ public sealed class PcaDecomposition
 }
 
 public sealed record SymbolWithNormalizedDifference(TradingSymbol Symbol, double NormalizedDifference);
+
+public sealed record Norms(double L1, double L2);
