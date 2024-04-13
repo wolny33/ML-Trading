@@ -34,8 +34,10 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _tradingTask.CurrentBacktestId.Returns((Guid?)null);
         _tradingTask.SymbolSlice.Returns(new BacktestSymbolSlice(0, -1));
 
+        var backtestAssets = Substitute.For<IBacktestAssets>();
+
         _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
-            _tradingTask, new ExcludedBacktestSymbols());
+            _tradingTask, new ExcludedBacktestSymbols(), backtestAssets);
     }
 
     public ValueTask DisposeAsync()

@@ -12,7 +12,7 @@ public interface IExcludedBacktestSymbols
 public sealed class ExcludedBacktestSymbols : IExcludedBacktestSymbols
 {
     private readonly ConcurrentDictionary<Guid, IReadOnlyList<TradingSymbol>> _excludedSymbols = new();
-    
+
     public void Set(Guid backtestId, IReadOnlyList<TradingSymbol> symbols)
     {
         _excludedSymbols[backtestId] = symbols;

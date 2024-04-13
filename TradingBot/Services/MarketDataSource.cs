@@ -24,23 +24,25 @@ public interface IMarketDataSource
 public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 {
     private readonly IAssetsDataSource _assetsDataSource;
+    private readonly IBacktestAssets _backtestAssets;
     private readonly IMarketDataCache _cache;
     private readonly IAlpacaCallQueue _callQueue;
     private readonly Lazy<Task<IAlpacaDataClient>> _dataClient;
+    private readonly IExcludedBacktestSymbols _excludedSymbols;
     private readonly ILogger _logger;
     private readonly Lazy<Task<IAlpacaTradingClient>> _tradingClient;
     private readonly ICurrentTradingTask _tradingTask;
-    private readonly IExcludedBacktestSymbols _excludedSymbols;
 
     public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger,
         IMarketDataCache cache, IAlpacaCallQueue callQueue, ICurrentTradingTask tradingTask,
-        IExcludedBacktestSymbols excludedSymbols)
+        IExcludedBacktestSymbols excludedSymbols, IBacktestAssets backtestAssets)
     {
         _assetsDataSource = assetsDataSource;
         _cache = cache;
         _callQueue = callQueue;
         _tradingTask = tradingTask;
         _excludedSymbols = excludedSymbols;
+        _backtestAssets = backtestAssets;
         _logger = logger.ForContext<MarketDataSource>();
 
         _dataClient = new Lazy<Task<IAlpacaDataClient>>(() => clientFactory.CreateMarketDataClientAsync());
@@ -130,7 +132,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         _logger.Debug("Symbols with sudden price jumps will be excluded from backtest: {Symbols}",
             excludedSymbols.Select(s => s.Value).ToList());
         _excludedSymbols.Set(backtestId, excludedSymbols);
-        
+
         _logger.Debug("Cache was successfully initialized");
     }
 
@@ -191,7 +193,9 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     private Task<IEnumerable<TradingSymbol>> GetInterestingSymbolsAsync(CancellationToken token = default)
     {
         return _tradingTask.CurrentBacktestId is not null
-            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForLastValidDay(_tradingTask.GetTaskDay()))
+            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForLastValidDay(_tradingTask.GetTaskDay())
+                .Concat(_backtestAssets.GetForBacktestWithId(_tradingTask.CurrentBacktestId.Value).Positions.Keys)
+                .Distinct())
             : SendInterestingSymbolsRequestsAsync(token);
     }
 
@@ -306,7 +310,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 
         return true;
     }
-    
+
     private static bool HasSuddenPriceJumps(IReadOnlyList<DailyTradingData> data)
     {
         var prices = data.Select(d => d.Close).ToList();
