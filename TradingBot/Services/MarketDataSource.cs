@@ -31,6 +31,7 @@ public interface IMarketDataSource
 public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 {
     private readonly IAssetsDataSource _assetsDataSource;
+    private readonly IBacktestAssets _backtestAssets;
     private readonly IMarketDataCache _cache;
     private readonly IAlpacaCallQueue _callQueue;
     private readonly Lazy<Task<IAlpacaDataClient>> _dataClient;
@@ -39,12 +40,14 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     private readonly ICurrentTradingTask _tradingTask;
 
     public MarketDataSource(IAlpacaClientFactory clientFactory, IAssetsDataSource assetsDataSource, ILogger logger,
-        IMarketDataCache cache, IAlpacaCallQueue callQueue, ICurrentTradingTask tradingTask)
+        IMarketDataCache cache, IAlpacaCallQueue callQueue, ICurrentTradingTask tradingTask,
+        IBacktestAssets backtestAssets)
     {
         _assetsDataSource = assetsDataSource;
         _cache = cache;
         _callQueue = callQueue;
         _tradingTask = tradingTask;
+        _backtestAssets = backtestAssets;
         _logger = logger.ForContext<MarketDataSource>();
 
         _dataClient = new Lazy<Task<IAlpacaDataClient>>(() => clientFactory.CreateMarketDataClientAsync());
@@ -180,7 +183,9 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     private Task<IEnumerable<TradingSymbol>> GetInterestingSymbolsAsync(CancellationToken token = default)
     {
         return _tradingTask.CurrentBacktestId is not null
-            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForLastValidDay(_tradingTask.GetTaskDay()))
+            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForLastValidDay(_tradingTask.GetTaskDay())
+                .Concat(_backtestAssets.GetForBacktestWithId(_tradingTask.CurrentBacktestId.Value).Positions.Keys)
+                .Distinct())
             : SendInterestingSymbolsRequestsAsync(token);
     }
 

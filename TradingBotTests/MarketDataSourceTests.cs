@@ -16,6 +16,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
     private readonly MarketDataSource _marketDataSource;
     private readonly IAlpacaTradingClient _tradingClient;
     private readonly ICurrentTradingTask _tradingTask;
+    private readonly IBacktestAssets _backtestAssets;
 
     public MarketDataSourceTests()
     {
@@ -34,8 +35,10 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _tradingTask.CurrentBacktestId.Returns((Guid?)null);
         _tradingTask.SymbolSlice.Returns(new BacktestSymbolSlice(0, -1));
 
+        _backtestAssets = Substitute.For<IBacktestAssets>();
+
         _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
-            _tradingTask);
+            _tradingTask, _backtestAssets);
     }
 
     public ValueTask DisposeAsync()
@@ -177,8 +180,31 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
     [Fact]
     public async Task ShouldGetMostActiveSymbolsFromCacheInBacktest()
     {
-        _tradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
+        var testGuid = Guid.NewGuid();
+        _tradingTask.CurrentBacktestId.Returns(testGuid);
         _tradingTask.GetTaskDay().Returns(new DateOnly(2023, 12, 19));
+        _backtestAssets.GetForBacktestWithId(testGuid).Returns(new Assets
+        {
+            Cash = new Cash
+            {
+                AvailableAmount = 100m,
+                BuyingPower = 100m,
+                MainCurrency = "USD"
+            },
+            EquityValue = 100m,
+            Positions = new Dictionary<TradingSymbol, Position>
+            {
+                [new TradingSymbol("TKN2")] = new()
+                {
+                    Symbol = new TradingSymbol("TKN2"),
+                    Quantity = 1m,
+                    AvailableQuantity = 1m,
+                    AverageEntryPrice = 1m,
+                    MarketValue = 1m,
+                    SymbolId = Guid.NewGuid()
+                }
+            }
+        });
 
         _marketDataCache.TryGetValidSymbols().Returns(new TradingSymbol[] { new("TKN2"), new("TKN4") });
         _marketDataCache.TryGetCachedData(new TradingSymbol("TKN4"), DateOnly.MinValue, new DateOnly(2023, 12, 19)).Returns(new[]
