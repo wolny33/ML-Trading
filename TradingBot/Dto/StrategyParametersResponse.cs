@@ -89,4 +89,10 @@ public sealed class PcaOptionsResponse
 
     [Required]
     public required double UndervaluedThreshold { get; init; }
+
+    [Required]
+    public required double IgnoredThreshold { get; init; }
+
+    [Required]
+    public required double DiverseThreshold { get; init; }
 }

@@ -69,7 +69,9 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
                 AnalysisLengthInDays = 90,
                 DecompositionExpirationInDays = 7,
                 UndervaluedThreshold = 1,
-                VarianceFraction = 0.9
+                VarianceFraction = 0.9,
+                IgnoredThreshold = 0.25,
+                DiverseThreshold = 0.5
             }
         }, options => options.Excluding(r => r.Pca.VarianceFraction));
 
@@ -107,7 +109,9 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
                 AnalysisLengthInDays = 90,
                 DecompositionExpirationInDays = 7,
                 UndervaluedThreshold = 1,
-                VarianceFraction = 0.9
+                VarianceFraction = 0.9,
+                IgnoredThreshold = 0.25,
+                DiverseThreshold = 0.5
             }
         });
         var strategySettings = await response.GetJsonAsync<StrategyParametersResponse>();
@@ -139,7 +143,9 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
                 AnalysisLengthInDays = 90,
                 DecompositionExpirationInDays = 7,
                 UndervaluedThreshold = 1,
-                VarianceFraction = 0.9
+                VarianceFraction = 0.9,
+                IgnoredThreshold = 0.25,
+                DiverseThreshold = 0.5
             }
         });
 
@@ -170,7 +176,9 @@ public sealed class StrategyEndpointTests : IClassFixture<IntegrationTestSuite>
                 AnalysisLengthInDays = 90,
                 DecompositionExpirationInDays = 7,
                 UndervaluedThreshold = 1,
-                VarianceFraction = 0.9
+                VarianceFraction = 0.9,
+                IgnoredThreshold = 0.25,
+                DiverseThreshold = 0.5
             }
         }, options => options.Excluding(r => r.Pca.VarianceFraction));
 

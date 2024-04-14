@@ -15,6 +15,7 @@ public sealed class BacktestEntity
     public required long ExecutionStartTimestamp { get; init; }
     public long? ExecutionEndTimestamp { get; set; }
     public required bool UsePredictor { get; init; }
+    public required double MeanPredictorError { get; init; }
     public required BacktestState State { get; set; }
     public required string StateDetails { get; set; }
     public required string Description { get; init; }

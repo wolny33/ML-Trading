@@ -1,5 +1,6 @@
 ﻿using Flurl.Http;
 using Flurl.Http.Configuration;
+using MathNet.Numerics.Distributions;
 using Newtonsoft.Json;
 using TradingBot.Exceptions;
 using TradingBot.Models;
@@ -17,7 +18,7 @@ public interface IPricePredictor
 public sealed class PricePredictor : IPricePredictor
 {
     private const int PredictorInputLength = 10;
-    private const int PredictorOutputLength = 5;
+    public const int PredictorOutputLength = 5;
 
     private readonly IFlurlClientFactory _flurlFactory;
     private readonly ILogger _logger;
@@ -84,25 +85,39 @@ public sealed class PricePredictor : IPricePredictor
         CancellationToken token)
     {
         _logger.Debug("Returning future data instead of predictions for {Today}", today);
+
         var futureData =
             await _marketData.GetPricesAsync(today.AddDays(1), today.AddDays(2 * PredictorOutputLength), token);
+
+        var pastData = await _marketData.GetPricesAsync(today.AddDays(-5), today, token);
+        var latestData = pastData.ToDictionary(pair => pair.Key, pair => pair.Value[^1]);
 
         var futureDataResult = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in futureData)
         {
             futureDataResult[symbol] = new Prediction
             {
-                Prices = data.Take(PredictorOutputLength).Select(d => new DailyPricePrediction
-                {
-                    Date = d.Date,
-                    ClosingPrice = d.Close,
-                    HighPrice = d.High,
-                    LowPrice = d.Low
-                }).ToList()
+                Prices = data.Take(PredictorOutputLength)
+                    .Select((d, i) => MakeFakePredictionFromDailyData(d, i > 0 ? data[i - 1] : latestData[symbol]))
+                    .ToList()
             };
         }
 
         return futureDataResult;
+    }
+
+    private DailyPricePrediction MakeFakePredictionFromDailyData(DailyTradingData today, DailyTradingData previous)
+    {
+        var distribution =
+            new Normal(0, _tradingTask.MeanPredictionError * double.Sqrt(double.Pi / 2.0), Random.Shared);
+        var errors = distribution.Samples().Take(3).ToList();
+        return new DailyPricePrediction
+        {
+            Date = today.Date,
+            ClosingPrice = today.Close + (decimal)errors[0] * previous.Close,
+            HighPrice = today.High + (decimal)errors[1] * previous.High,
+            LowPrice = today.Low + (decimal)errors[2] * previous.Low
+        };
     }
 
     public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsForListOfSymbolsAsync(List<TradingSymbol> symbols, CancellationToken token = default)
@@ -123,18 +138,16 @@ public sealed class PricePredictor : IPricePredictor
         _logger.Debug("Returning future data instead of predictions for {Today}", today);
         var futureData = await _marketData.GetDataForSingleSymbolAsync(symbol, today.AddDays(1),
             today.AddDays(2 * PredictorOutputLength), token);
+        var latestData = (await _marketData.GetDataForSingleSymbolAsync(symbol, today.AddDays(-5),
+            today, token))?[^1];
 
-        if (futureData is null) return null;
+        if (futureData is null || latestData is null) return null;
 
         return new Prediction
         {
-            Prices = futureData.Take(PredictorOutputLength).Select(d => new DailyPricePrediction
-            {
-                Date = d.Date,
-                ClosingPrice = d.Close,
-                HighPrice = d.High,
-                LowPrice = d.Low
-            }).ToList()
+            Prices = futureData.Take(PredictorOutputLength)
+                .Select((d, i) => MakeFakePredictionFromDailyData(d, i > 0 ? futureData[i - 1] : latestData))
+                .ToList()
         };
     }
 

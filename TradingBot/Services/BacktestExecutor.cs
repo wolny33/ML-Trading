@@ -62,7 +62,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
     private async Task ExecuteAsync(BacktestDetails details, Guid id, CancellationToken token = default)
     {
         var backtestId = await _backtestCommand.CreateNewAsync(
-            new BacktestCreationDetails(id, details.Start, details.End, _clock.UtcNow, details.ShouldUsePredictor,
+            new BacktestCreationDetails(id, details.Start, details.End, _clock.UtcNow, details.Predictor,
                 details.Description),
             token);
         _logger.Information("Started new backtest with ID {Id}, from {Start} to {End}", backtestId, details.Start,
@@ -83,8 +83,11 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
             // Predictor needs 10 valid days (excluding weekends and holidays) before start, so 20 days should be enough
             // If strategy needs more data, we get more data
             await marketDataSource.InitializeBacktestDataAsync(
-                details.Start.AddDays(-int.Max(20, await strategy.GetRequiredPastDaysAsync(token) + 1)), details.End,
-                token);
+                details.Start.AddDays(-int.Max(20, await strategy.GetRequiredPastDaysAsync(token) + 1)),
+                details.Predictor.UsePredictor
+                    ? details.End
+                    : details.End.AddDays(2 * PricePredictor.PredictorOutputLength),
+                details.SymbolSlice, token);
 
             for (var day = details.Start; day < details.End; day = day.AddDays(1))
             {
@@ -94,7 +97,7 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 
                 await using var scope = _scopeFactory.CreateAsyncScope();
                 var task = scope.ServiceProvider.GetRequiredService<ICurrentTradingTask>();
-                task.SetBacktestDetails(backtestId, day, details.ShouldUsePredictor);
+                task.SetBacktestDetails(backtestId, day, details.SymbolSlice, details.Predictor);
 
                 var taskExecutor = scope.ServiceProvider.GetRequiredService<TradingTaskExecutor>();
                 await taskExecutor.ExecuteAsync(token);
@@ -166,6 +169,11 @@ public sealed class BacktestExecutor : IBacktestExecutor, IAsyncDisposable
 public sealed record BacktestDetails(
     DateOnly Start,
     DateOnly End,
+    BacktestSymbolSlice SymbolSlice,
     decimal InitialCash,
-    bool ShouldUsePredictor,
+    BacktestPredictorConfiguration Predictor,
     string Description);
+
+public sealed record BacktestSymbolSlice(int Skip, int Take);
+
+public sealed record BacktestPredictorConfiguration(bool UsePredictor, double MeanError);
