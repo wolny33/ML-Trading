@@ -50,6 +50,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -131,6 +132,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -176,6 +178,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -200,6 +203,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -224,6 +228,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -248,6 +253,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -272,6 +278,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -324,6 +331,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -363,6 +371,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -437,6 +446,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -509,6 +519,7 @@ public sealed class BacktestAssetsTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });
@@ -523,6 +534,7 @@ public sealed class BacktestAssetsTests
                 High = 14m,
                 Low = 11m,
                 Volume = 100m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             }
         });

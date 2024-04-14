@@ -36,6 +36,7 @@ public sealed class MarketDataCacheTests
                 High = 4m,
                 Low = 1m,
                 Volume = 10m,
+                TradedValue = 1000m,
                 FearGreedIndex = 60m
             });
 
@@ -53,6 +54,7 @@ public sealed class MarketDataCacheTests
             High = 4m,
             Low = 1m,
             Volume = 10m,
+            TradedValue = 1000m,
             FearGreedIndex = 60m
         };
         var today = new DailyTradingData
@@ -63,6 +65,7 @@ public sealed class MarketDataCacheTests
             High = 5m,
             Low = 2m,
             Volume = 11m,
+            TradedValue = 1000m,
             FearGreedIndex = 70m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), yesterday.Date), yesterday);
@@ -83,6 +86,7 @@ public sealed class MarketDataCacheTests
             High = 4m,
             Low = 1m,
             Volume = 10m,
+            TradedValue = 1000m,
             FearGreedIndex = 60m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), yesterday.Date), yesterday);
@@ -103,6 +107,7 @@ public sealed class MarketDataCacheTests
             High = 4m,
             Low = 1m,
             Volume = 10m,
+            TradedValue = 1000m,
             FearGreedIndex = 60m
         };
         var today = new DailyTradingData
@@ -113,6 +118,7 @@ public sealed class MarketDataCacheTests
             High = 5m,
             Low = 2m,
             Volume = 11m,
+            TradedValue = 1000m,
             FearGreedIndex = 70m
         };
 
@@ -140,6 +146,7 @@ public sealed class MarketDataCacheTests
             High = 4m,
             Low = 1m,
             Volume = 10m,
+            TradedValue = 1000m,
             FearGreedIndex = 60m
         };
         var yesterday = new DailyTradingData
@@ -150,6 +157,7 @@ public sealed class MarketDataCacheTests
             High = 5m,
             Low = 2m,
             Volume = 11m,
+            TradedValue = 1000m,
             FearGreedIndex = 70m
         };
 
@@ -189,6 +197,7 @@ public sealed class MarketDataCacheTests
             High = 4m,
             Low = 1m,
             Volume = 10m,
+            TradedValue = 1000m,
             FearGreedIndex = 60m
         };
         var today = new DailyTradingData
@@ -199,6 +208,7 @@ public sealed class MarketDataCacheTests
             High = 5m,
             Low = 2m,
             Volume = 11m,
+            TradedValue = 1000m,
             FearGreedIndex = 70m
         };
 
@@ -220,6 +230,7 @@ public sealed class MarketDataCacheTests
             High = 4m,
             Low = 1m,
             Volume = 10m,
+            TradedValue = 1000m,
             FearGreedIndex = 60m
         };
         var secondTokenData = new DailyTradingData
@@ -230,6 +241,7 @@ public sealed class MarketDataCacheTests
             High = 5m,
             Low = 2m,
             Volume = 11m,
+            TradedValue = 1000m,
             FearGreedIndex = 70m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), _today), firstTokenData);
@@ -255,6 +267,7 @@ public sealed class MarketDataCacheTests
             High = 5m,
             Low = 2m,
             Volume = 11m,
+            TradedValue = 1000m,
             FearGreedIndex = 70m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), today.Date), today);
@@ -273,6 +286,7 @@ public sealed class MarketDataCacheTests
             High = 5m,
             Low = 2m,
             Volume = 11m,
+            TradedValue = 1000m,
             FearGreedIndex = 70m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), yesterday.Date), yesterday);

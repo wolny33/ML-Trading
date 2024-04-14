@@ -44,7 +44,7 @@ def get_features_vector(data: DailyData) -> np.ndarray:
         date.weekday() / 6,
         np.sin(2 * np.pi * date.timetuple().tm_yday / 366),
         np.cos(2 * np.pi * date.timetuple().tm_yday / 366),
-        0.5, # traded value
+        data.tradedValue,
         data.fearGreedIndex
     ])
 

@@ -11,6 +11,7 @@ public interface IPricePredictor
 {
     Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default);
     Task<Prediction?> GetPredictionForSingleSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
+    Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsForListOfSymbolsAsync(List<TradingSymbol> symbols, CancellationToken token = default);
 }
 
 public sealed class PricePredictor : IPricePredictor
@@ -45,6 +46,8 @@ public sealed class PricePredictor : IPricePredictor
         var result = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in marketData)
         {
+            if (data.Count < PredictorInputLength + 1)
+                continue;
             _logger.Verbose("Getting predictions for {Token}", symbol.Value);
             var prediction = await PredictForSymbolAsync(data, token);
             result[symbol] = prediction;
@@ -63,7 +66,7 @@ public sealed class PricePredictor : IPricePredictor
 
         var marketData = await _marketData.GetDataForSingleSymbolAsync(symbol,
             SubtractWorkDays(today, 2 * (PredictorInputLength + 1)), today, token);
-        if (marketData is null) return null;
+        if (marketData is null || marketData.Count < PredictorInputLength + 1) return null;
 
         _logger.Verbose("Getting predictions for {Today} for single token: {Token}", today, symbol.Value);
         return await PredictForSymbolAsync(marketData, token);
@@ -102,6 +105,18 @@ public sealed class PricePredictor : IPricePredictor
         return futureDataResult;
     }
 
+    public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsForListOfSymbolsAsync(List<TradingSymbol> symbols, CancellationToken token = default)
+    {
+        var result = new Dictionary<TradingSymbol, Prediction>();
+        foreach (var tradingSymbol in symbols)
+        {
+            var tradingSymbolPrediction = await GetPredictionForSingleSymbolAsync(tradingSymbol, token);
+            if (tradingSymbolPrediction != null)
+                result.TryAdd(tradingSymbol, tradingSymbolPrediction);
+        }
+        return result;
+    }
+
     private async Task<Prediction?> GetFutureDataForSingleSymbolAsync(TradingSymbol symbol,
         DateOnly today, CancellationToken token)
     {
@@ -138,6 +153,7 @@ public sealed class PricePredictor : IPricePredictor
                     High = RelativeChange(previous.High, current.High),
                     Low = RelativeChange(previous.Low, current.Low),
                     Volume = current.Volume,
+                    TradedValue = current.TradedValue,
                     FearGreedIndex = current.FearGreedIndex
                 };
             }).Take(PredictorInputLength).ToList()
@@ -243,6 +259,9 @@ public sealed class PricePredictor : IPricePredictor
 
         [JsonProperty("volume")]
         public required decimal Volume { get; init; }
+
+        [JsonProperty("tradedValue")]
+        public required decimal TradedValue { get; init; }
 
         [JsonProperty("fearGreedIndex")]
         public required decimal FearGreedIndex { get; init; }

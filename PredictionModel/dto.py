@@ -8,6 +8,7 @@ class DailyData(BaseModel):
     low: float
     volume: float
     date: str
+    tradedValue: float
     fearGreedIndex: float
 
 

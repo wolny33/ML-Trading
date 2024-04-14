@@ -321,6 +321,7 @@ public sealed class BuyWinnersStrategyTests
                         High = 102m + 0.01m * (10m - n) * k,
                         Low = 98m + 0.01m * (10m - n) * k,
                         Volume = 10_000m,
+                        TradedValue = 100000m,
                         FearGreedIndex = 60m
                     }).ToList()
                 ).Select((data, index) => (Data: data, Index: index))
@@ -425,6 +426,7 @@ public sealed class BuyWinnersStrategyTests
                         High = 102m + 0.01m * (10m - n) * k,
                         Low = 98m + 0.01m * (10m - n) * k,
                         Volume = 10_000m,
+                        TradedValue = 100000m,
                         FearGreedIndex = 60m
                     }).ToList()
                 ).Select((data, index) => (Data: data, Index: index))

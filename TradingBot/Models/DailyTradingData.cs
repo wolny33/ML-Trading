@@ -8,5 +8,6 @@ public sealed class DailyTradingData
     public required decimal High { get; init; }
     public required decimal Low { get; init; }
     public required decimal Volume { get; init; }
+    public required decimal TradedValue { get; init; }
     public required decimal FearGreedIndex { get; init;}
 }
