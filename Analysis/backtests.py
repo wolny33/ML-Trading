@@ -53,12 +53,29 @@ def start_backtest(request: BacktestRequest) -> str:
 
 
 def wait_for_backtest(backtest_id: str):
-    def is_running():
+    def get_state():
         response = requests.get(f"http://localhost:5000/api/backtests/{backtest_id}",
                                 auth=HTTPBasicAuth("admin", "password"))
         response.raise_for_status()
-        return response.json()["state"] == "Running"
+        return response.json()["state"]
 
     print(f"Waiting for backtest {backtest_id}")
-    while is_running():
+    while (state := get_state()) == "Running":
         time.sleep(1)
+
+    match state:
+        case "Finished":
+            return True
+        case "Failed":
+            return False
+        case "Cancelled":
+            raise Exception("Backtest was manually cancelled")
+
+
+def get_backtest_return(backtest_id) -> float | None:
+    asset_states = fetch_portfolio_states(backtest_id)
+
+    if len(asset_states) == 0:
+        return None
+
+    return asset_states[-1].assets.equityValue / asset_states[0].assets.equityValue - 1
