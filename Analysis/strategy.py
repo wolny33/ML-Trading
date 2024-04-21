@@ -65,8 +65,8 @@ def set_strategy_parameters(strategy_name: str, parameters: dict[str, Any]) -> N
         "pca": parameters_dict["pca"]
     }
 
-    if section_name := _get_parameters_field_name(strategy_name) is not None:
-        parameters_dict[strategy_name] = {k: v for k, v in parameters.items() if not k == "limitPriceDamping"}
+    if (section_name := _get_parameters_field_name(strategy_name)) is not None:
+        parameters_request[section_name] = {k: v for k, v in parameters.items() if not k == "limitPriceDamping"}
 
     response = requests.put("http://localhost:5000/api/strategy", json=parameters_request,
                             auth=HTTPBasicAuth("admin", "password"))

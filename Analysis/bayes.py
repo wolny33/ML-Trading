@@ -4,15 +4,38 @@ from strategy import *
 from backtests import *
 
 
+def run_backtests_with_cv(strategy, avg_error, folds, symbols_per_fold):
+    def make_request(fold):
+        return BacktestRequest(
+            strategy=strategy,
+            use_predictor=False,
+            avg_prediction_error=avg_error,
+            symbols=symbols_per_fold,
+            skip=fold*symbols_per_fold
+        )
+
+    backtest_returns = []
+    for fold in range(folds):
+        backtest_id = start_backtest(make_request(fold))
+
+        if not wait_for_backtest(backtest_id):
+            backtest_returns.append(-1)
+            continue
+
+        backtest_returns.append(get_backtest_return(backtest_id))
+
+    return sum(backtest_returns) / len(backtest_returns)
+
+
 class SearchWrapper:
-    _skip = 0
-    _symbols = 1000
+    _folds = 5
+    _symbols = 200
     _strategy_name = None
     _predictor_error = 0
 
     @classmethod
-    def set_backtest_config(cls, *, symbols, skip, strategy_name, predictor_error):
-        cls._skip = skip
+    def set_backtest_config(cls, *, symbols, folds, strategy_name, predictor_error):
+        cls._folds = folds
         cls._symbols = symbols
         cls._strategy_name = strategy_name
         cls._predictor_error = predictor_error
@@ -28,18 +51,8 @@ class SearchWrapper:
         print(f"Running a backtest with params: {self.strategy_params}")
 
         set_strategy_parameters(SearchWrapper._strategy_name, self.strategy_params)
-        backtest_id = start_backtest(BacktestRequest(
-            strategy=SearchWrapper._strategy_name,
-            use_predictor=False,
-            avg_prediction_error=SearchWrapper._predictor_error,
-            skip=SearchWrapper._skip,
-            symbols=SearchWrapper._symbols
-        ))
-
-        if not wait_for_backtest(backtest_id):
-            self.backtest_return = -1
-        else:
-            self.backtest_return = get_backtest_return(backtest_id)
+        self.backtest_return = run_backtests_with_cv(SearchWrapper._strategy_name, SearchWrapper._predictor_error,
+                                                     SearchWrapper._folds, SearchWrapper._symbols)
 
         return self
 
@@ -64,13 +77,13 @@ class NullFoldGenerator:
         return self.n_splits
 
 
-def perform_bayes_search(strategy_name, spaces_dict, iterations, *, prediction_error=0, symbols=1000, skip=0):
+def perform_bayes_search(strategy_name, spaces_dict, iterations, *, prediction_error=0, symbols=1000, folds=0):
 
     SearchWrapper.set_backtest_config(
         strategy_name=strategy_name,
         predictor_error=prediction_error,
         symbols=symbols,
-        skip=skip
+        folds=folds
     )
 
     bayes_search = BayesSearchCV(
