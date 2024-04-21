@@ -17,7 +17,7 @@ def predict(request: PredictRequest) -> PredictResponse:
     try:
         input_data = np.vstack([get_features_vector(v) for v in request.data])
         scaled = scale_input(input_data, scalers)
-        reshaped = np.reshape(scaled, (1, 10, 10))
+        reshaped = np.reshape(scaled, (1, 10, 9))
 
         output = np.reshape(model.predict(reshaped), (-1, 3))
 
@@ -44,7 +44,6 @@ def get_features_vector(data: DailyData) -> np.ndarray:
         date.weekday() / 6,
         np.sin(2 * np.pi * date.timetuple().tm_yday / 366),
         np.cos(2 * np.pi * date.timetuple().tm_yday / 366),
-        0.5, # traded value
         data.fearGreedIndex
     ])
 
@@ -56,8 +55,7 @@ def scale_input(input_data: np.ndarray, scaler_collection: ScalerCollection) -> 
     result[:, 2] = scaler_collection.high_scaler.scale(result[:, 2])
     result[:, 3] = scaler_collection.low_scaler.scale(result[:, 3])
     result[:, 4] = scaler_collection.volume_scaler.scale(result[:, 4])
-    result[:, 8] = scaler_collection.traded_value_scaler.scale(result[:, 8])
-    result[:, 9] = scaler_collection.fear_greed_index_scaler.scale(result[:, 9])
+    result[:, 8] = scaler_collection.fear_greed_index_scaler.scale(result[:, 8])
     return result
 
 

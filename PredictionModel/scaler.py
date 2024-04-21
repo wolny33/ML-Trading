@@ -53,7 +53,6 @@ class ScalerCollection:
         self.high_scaler = Scaler.from_json(data["high"])
         self.low_scaler = Scaler.from_json(data["low"])
         self.volume_scaler = Scaler.from_json(data["volume"])
-        self.traded_value_scaler = Scaler.from_json(data["traded_value"])
         self.fear_greed_index_scaler = Scaler.from_json(data["fear_greed_index"])
 
     @staticmethod
