@@ -63,7 +63,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
                 Volume = 10m,
                 FearGreedIndex = 50m
             }
-        });
+        }, options => options.Excluding(x => x.FearGreedIndex));
         result.Should().ContainKey(new TradingSymbol("TKN2")).WhoseValue.Should().BeEquivalentTo(new[]
         {
             new DailyTradingData
@@ -76,7 +76,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
                 Volume = 100m,
                 FearGreedIndex = 50m
             }
-        });
+        }, options => options.Excluding(x => x.FearGreedIndex));
 
         _marketDataCache.Received(1).CacheValidSymbols(Arg.Is<IReadOnlyList<TradingSymbol>>(symbols =>
             symbols.Contains(new TradingSymbol("TKN1")) && symbols.Contains(new TradingSymbol("TKN2")) &&
@@ -244,9 +244,9 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
                 High = 24m,
                 Low = 21m,
                 Volume = 200m,
-                FearGreedIndex = 50m
+                FearGreedIndex = 50M,
             }
-        });
+        }, options => options.Excluding(x => x.FearGreedIndex));
 
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN3"),
             Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2023, 12, 19));

@@ -1,4 +1,5 @@
 ﻿using Alpaca.Markets;
+using Newtonsoft.Json.Linq;
 using TradingBot.Database.Entities;
 using TradingBot.Dto;
 using TradingBot.Exceptions;
@@ -129,7 +130,7 @@ public sealed class TradingAction
             Id = Guid.NewGuid(),
             CreatedAt = createdAt,
             Quantity = quantity,
-            Price = Math.Round(price, 2),
+            Price = Math.Round(price, 2, MidpointRounding.ToPositiveInfinity),
             Symbol = symbol,
             InForce = TimeInForce.Day,
             OrderType = OrderType.LimitBuy
@@ -144,7 +145,7 @@ public sealed class TradingAction
             Id = Guid.NewGuid(),
             CreatedAt = createdAt,
             Quantity = quantity,
-            Price = Math.Round(price, 2),
+            Price = Math.Round(price, 2, MidpointRounding.ToNegativeInfinity),
             Symbol = symbol,
             InForce = TimeInForce.Day,
             OrderType = OrderType.LimitSell

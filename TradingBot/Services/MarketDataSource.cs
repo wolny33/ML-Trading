@@ -7,6 +7,7 @@ using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 using CsvHelper;
 using CsvHelper.Configuration;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TradingBot.Services;
 
@@ -200,7 +201,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     }
 
     private async Task<TradingSymbolData> GetSymbolDataAsync(TradingSymbol symbol, DateOnly start, DateOnly end,
-        IReadOnlyList<double> fearGreedIndexes, CancellationToken token = default)
+        IReadOnlyDictionary<DateTime, double> fearGreedIndexes, CancellationToken token = default)
     {
         if (_cache.TryGetCachedData(symbol, start, end) is { } cached)
         {
@@ -215,7 +216,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     }
 
     private async Task<IReadOnlyList<DailyTradingData>> SendBarsRequestAsync(TradingSymbol symbol, DateOnly start,
-        DateOnly end, IReadOnlyList<double> fearGreedIndexes, CancellationToken token = default)
+        DateOnly end, IReadOnlyDictionary<DateTime, double> fearGreedIndexes, CancellationToken token = default)
     {
         var startTime = start.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero));
         var endTime = end.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero));
@@ -232,7 +233,6 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
             var client = await _dataClient.Value;
 
             string? nextPageToken = null;
-            int index = 0;
             do
             {
                 var request =
@@ -253,54 +253,60 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
                     High = b.High,
                     Low = b.Low,
                     Volume = b.Volume,
-                    FearGreedIndex = (decimal)fearGreedIndexes[index++]
+                    FearGreedIndex = (decimal)fearGreedIndexes[b.TimeUtc.Date]
                 }).ToList();
             } while (nextPageToken is not null);
         }
     }
 
-    private async Task<List<double>> GetFearGreedIndexData(string startDate, string endDate, CancellationToken token = default)
+    private async Task<Dictionary<DateTime, double>> GetFearGreedIndexData(string startDate, string endDate, CancellationToken token = default)
     {
         _logger.Debug("Getting Fear Greed Index for all symbols from {Start} to {End}", startDate, endDate);
         var startDateTime = DateTime.Parse(startDate);
         var endDateTime = DateTime.Parse(endDate);
         var splitDateTime = new DateTime(2020, 7, 15);
         var firstDateTime = new DateTime(2011, 1, 3);
-        var fearGreedIndexes = new List<double>();
+        var fearGreedIndexes = new Dictionary<DateTime, double>();
 
         if(startDateTime < firstDateTime)
         {
             for (var date = startDateTime; date < firstDateTime; date = date.AddDays(1))
             {
-                fearGreedIndexes.Add(50.0);
+                fearGreedIndexes.Add(date, 50.0);
             }
         }
         if (startDateTime < splitDateTime)
         {
-            var csvData = new List<double>();
+            var csvData = new Dictionary<DateTime, double>();
             if (endDateTime < splitDateTime)
                 csvData = await GetFearGreedIndexDataFromCsv(startDate, endDate, token);
             else
                 csvData = await GetFearGreedIndexDataFromCsv(startDate, "2020-07-14", token);
-            fearGreedIndexes.AddRange(csvData);
+            foreach (var fearGreedIndexForDate in csvData)
+            {
+                fearGreedIndexes.Add(fearGreedIndexForDate.Key, fearGreedIndexForDate.Value);
+            }
         }
 
         if (endDateTime >= splitDateTime)
         {
-            var apiData = new List<double>();
+            var apiData = new Dictionary<DateTime, double>();
             if (startDateTime >= splitDateTime)
                 apiData = await GetFearGreedIndexDataFromApi(startDate, endDate, token);
             else
                 apiData = await GetFearGreedIndexDataFromApi("2020-07-15", endDate, token);
-            fearGreedIndexes.AddRange(apiData);
+            foreach (var fearGreedIndexForDate in apiData)
+            {
+                fearGreedIndexes.Add(fearGreedIndexForDate.Key, fearGreedIndexForDate.Value);
+            }
         }
         return fearGreedIndexes;
     }
 
-    private async Task<List<double>> GetFearGreedIndexDataFromApi(string startDate, string endDate, CancellationToken token = default)
+    private async Task<Dictionary<DateTime, double>> GetFearGreedIndexDataFromApi(string startDate, string endDate, CancellationToken token = default)
     {
         var url = $"https://production.dataviz.cnn.io/index/fearandgreed/graphdata/{startDate}";
-        var fearGreedIndexes = new List<double>();
+        var fearGreedIndexes = new Dictionary<DateTime, double>();
         try
         {
             using (var handler = new HttpClientHandler())
@@ -331,7 +337,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 
                                 if (date <= end)
                                 {
-                                    fearGreedIndexes.Add((double)data.y);
+                                    fearGreedIndexes.Add(date, (double)data.y);
                                 }
                                 else
                                 {
@@ -351,15 +357,15 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
             var endDateTime = DateTime.Parse(endDate);
             for (var date = startDateTime; date <= endDateTime; date = date.AddDays(1))
             {
-                fearGreedIndexes.Add(50.0);
+                fearGreedIndexes.Add(date, 50.0);
             }
         }
         return fearGreedIndexes;
     }
 
-    private async Task<List<double>> GetFearGreedIndexDataFromCsv(string startDate, string endDate, CancellationToken token = default)
+    private async Task<Dictionary<DateTime, double>> GetFearGreedIndexDataFromCsv(string startDate, string endDate, CancellationToken token = default)
     {
-        var fearGreedIndexes = new List<double>();
+        var fearGreedIndexes = new Dictionary<DateTime, double>();
 
         try
         {
@@ -388,7 +394,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
                                     var date = DateTime.Parse(csv.GetField("Date"));
                                     if (date >= DateTime.Parse(startDate) && date <= DateTime.Parse(endDate))
                                     {
-                                        fearGreedIndexes.Add(double.Parse(csv.GetField("Fear Greed")));
+                                        fearGreedIndexes.Add(date, double.Parse(csv.GetField("Fear Greed")));
                                     }
                                 }
                             }
@@ -405,7 +411,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
             var endDateTime = DateTime.Parse(endDate);
             for (var date = startDateTime; date <= endDateTime; date = date.AddDays(1))
             {
-                fearGreedIndexes.Add(50.0);
+                fearGreedIndexes.Add(date, 50.0);
             }
         }
         return fearGreedIndexes;
