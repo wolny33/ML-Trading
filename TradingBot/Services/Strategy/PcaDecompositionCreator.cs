@@ -11,15 +11,13 @@ namespace TradingBot.Services.Strategy;
 public interface IPcaDecompositionCreator
 {
     Task StartNewDecompositionCreationAsync(Guid? backtestId, DateOnly currentDay, PcaOptions options,
-        CancellationToken token = default);
+        BacktestSymbolSlice slice, CancellationToken token = default);
 
     Task WaitForTaskAsync(Guid? backtestId, CancellationToken token = default);
 }
 
 public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDisposable
 {
-    private const int AnalysisLength = 3 * 30;
-
     private readonly ILogger _logger;
     private readonly IServiceScopeFactory _scopeFactory;
 
@@ -37,7 +35,7 @@ public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDi
     }
 
     public async Task StartNewDecompositionCreationAsync(Guid? backtestId, DateOnly currentDay, PcaOptions options,
-        CancellationToken token = default)
+        BacktestSymbolSlice slice, CancellationToken token = default)
     {
         if (_tasks.TryGetValue(new BacktestId(backtestId), out var task) && !task.IsCompleted)
         {
@@ -50,7 +48,7 @@ public sealed class PcaDecompositionCreator : IPcaDecompositionCreator, IAsyncDi
 
         await using var scope = _scopeFactory.CreateAsyncScope();
         var marketData = await scope.ServiceProvider.GetRequiredService<IMarketDataSource>()
-            .GetPricesForAllSymbolsAsync(currentDay.AddDays(-AnalysisLength), currentDay, token);
+            .GetPricesForAllSymbolsAsync(currentDay.AddDays(-options.AnalysisLengthInDays), currentDay, slice, token);
 
         if (task is not null) await task.DisposeAsync();
 
@@ -161,6 +159,13 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
         _logger.Verbose("({BacktestId}: {Day}) Determining most important components", _backtestId, _date);
         var selectedEigenVectors = ReduceComponents(evd.EigenVectors, evd.EigenValues.Real().ToList());
 
+        _logger.Verbose("({BacktestId}: {Day}) Creating transformation matrix", _backtestId, _date);
+        var projectionMatrix = selectedEigenVectors * selectedEigenVectors.Transpose();
+
+        _logger.Verbose("({BacktestId}: {Day}) Calculating norms", _backtestId, _date);
+        var l1Norms = DenseVector.OfEnumerable(projectionMatrix.EnumerateColumns().Select(col => col.L1Norm()));
+        var l2Norms = DenseVector.OfEnumerable(projectionMatrix.EnumerateColumns().Select(col => col.L2Norm()));
+
         return new PcaDecomposition
         {
             CreatedAt = _date,
@@ -168,6 +173,8 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
             Symbols = symbols,
             Means = means,
             StandardDeviations = stdDevs,
+            L1Norms = l1Norms,
+            L2Norms = l2Norms,
             PrincipalVectors = selectedEigenVectors
         };
     }
@@ -235,6 +242,8 @@ public sealed class PcaDecompositionTask : IAsyncDisposable
             Symbols = symbols,
             Means = DenseVector.OfEnumerable(Enumerable.Repeat(0.0, symbols.Count)),
             StandardDeviations = DenseVector.OfEnumerable(Enumerable.Repeat(1.0, symbols.Count)),
+            L1Norms = DenseVector.OfEnumerable(Enumerable.Repeat(1.0, symbols.Count)),
+            L2Norms = DenseVector.OfEnumerable(Enumerable.Repeat(1.0, symbols.Count)),
             PrincipalVectors = DenseMatrix.OfDiagonalArray(Enumerable.Repeat(1.0, symbols.Count).ToArray())
         };
     }

@@ -40,6 +40,9 @@ public sealed class BacktestResponse
     public required bool UsePredictor { get; init; }
 
     [Required]
+    public required double MeanPredictorError { get; init; }
+
+    [Required]
     public required string State { get; init; }
 
     [Required]

@@ -108,14 +108,16 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
             if (await GetTodayDataForSymbolAsync(action.Symbol, day) is not { } symbolData)
             {
                 _logger.Warning("{Symbol} market data was missing for {Day}", action.Symbol, day);
-                await ExpireActionAsync(action, backtestId);
+                FreeReservedAssetsForAction(action, null, backtestId);
+                await ExpireActionAsync(action);
                 continue;
             }
 
             if (!WillActionExecute(action, symbolData))
             {
                 _logger.Verbose("Action '{Details}' ({Id}) was not executed", action.GetReadableString(), action.Id);
-                await ExpireActionAsync(action, backtestId);
+                FreeReservedAssetsForAction(action, symbolData, backtestId);
+                await ExpireActionAsync(action);
                 continue;
             }
 
@@ -159,7 +161,13 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
         _assets[backtestId] = newAssets;
     }
 
-    private async Task ExpireActionAsync(TradingAction action, Guid backtestId)
+    private async Task ExpireActionAsync(TradingAction action)
+    {
+        await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
+            new BacktestActionState(OrderStatus.Expired, action.CreatedAt.AddDays(1)));
+    }
+
+    private void FreeReservedAssetsForAction(TradingAction action, DailyTradingData? todayData, Guid backtestId)
     {
         switch (action.OrderType)
         {
@@ -170,16 +178,12 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
                 FreeReservedCash(action.Quantity * action.Price!.Value, backtestId);
                 break;
             case OrderType.MarketBuy:
-                // Cash is not reserved for market buy orders that won't execute
-                // (because they can only be skipped if there is no market data for requested symbol for that
-                // day, so we don't know how much money to reserve)
+                // Cash is not reserved for market buy orders that won't execute due to missing market data
+                if (todayData is not null) FreeReservedCash(action.Quantity * todayData.Open, backtestId);
                 break;
             default:
                 throw new UnreachableException();
         }
-
-        await _actionCommand.UpdateBacktestActionStateAsync(action.Id,
-            new BacktestActionState(OrderStatus.Expired, action.CreatedAt.AddDays(1)));
     }
 
     private async Task<DailyTradingData?> GetTodayDataForSymbolAsync(TradingSymbol symbol, DateOnly day)
@@ -231,6 +235,8 @@ public sealed class BacktestAssets : IBacktestAssets, IDisposable
 
     private static bool WillActionExecute(TradingAction action, DailyTradingData symbolData)
     {
+        if (symbolData.Volume < 2 * action.Quantity) return false;
+
         return action.OrderType switch
         {
             OrderType.MarketBuy or OrderType.MarketSell => true,

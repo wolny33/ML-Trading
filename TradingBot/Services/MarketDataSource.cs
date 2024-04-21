@@ -16,14 +16,15 @@ public interface IMarketDataSource
         CancellationToken token = default);
 
     Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesForAllSymbolsAsync(DateOnly start,
-        DateOnly end, CancellationToken token = default);
+        DateOnly end, BacktestSymbolSlice? slice = null, CancellationToken token = default);
 
     Task<IReadOnlyList<DailyTradingData>?> GetDataForSingleSymbolAsync(TradingSymbol symbol, DateOnly start,
         DateOnly end, CancellationToken token = default);
 
     Task<decimal> GetLastAvailablePriceForSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
 
-    Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, CancellationToken token = default);
+    Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, BacktestSymbolSlice slice,
+        CancellationToken token = default);
 }
 
 public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
@@ -61,24 +62,24 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     {
         _logger.Debug("Getting prices for interesting and held symbols from {Start} to {End}", start, end);
 
-        var valid = await GetValidSymbolsAsync(token);
+        var valid = await GetValidSymbolsAsync(_tradingTask.SymbolSlice, token);
         var interestingValidSymbols = (await GetInterestingSymbolsAsync(token)).Where(s => valid.Contains(s));
         var fearGreedIndexes = await GetFearGreedIndexData(start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
         return await interestingValidSymbols.Chunk(15)
             .ToAsyncEnumerable()
             .SelectManyAwait(async chunk =>
                 (await Task.WhenAll(chunk.Select(s => GetSymbolDataAsync(s, start, end, fearGreedIndexes, token)))).ToAsyncEnumerable())
-            .Where(pair => IsDataValid(pair.TradingData)).Take(15)
+            .Where(pair => IsDataValid(pair.TradingData)).Take(100)
             .ToDictionaryAsync(pair => pair.Symbol, pair => pair.TradingData, token);
     }
 
     public async Task<IDictionary<TradingSymbol, IReadOnlyList<DailyTradingData>>> GetPricesForAllSymbolsAsync(
-        DateOnly start, DateOnly end, CancellationToken token = default)
+        DateOnly start, DateOnly end, BacktestSymbolSlice? slice = null, CancellationToken token = default)
     {
         _logger.Debug("Getting prices for all symbols from {Start} to {End}", start, end);
 
-        var valid = await GetValidSymbolsAsync(token);
-        var fearGreedIndexes = await GetFearGreedIndexData(start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
+        var valid = await GetValidSymbolsAsync(slice ?? _tradingTask.SymbolSlice, token);
+        var fearGreedIndexes = await GetFearGreedIndexData(start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"), token);
         return await valid.Chunk(50)
             .ToAsyncEnumerable()
             .SelectManyAwait(async chunk =>
@@ -114,11 +115,12 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         return await SendLastTradeRequestAsync(symbol, token);
     }
 
-    public async Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, CancellationToken token = default)
+    public async Task InitializeBacktestDataAsync(DateOnly start, DateOnly end, BacktestSymbolSlice slice,
+        CancellationToken token = default)
     {
         _logger.Debug("Initializing cache for backtest (from {Start} to {End})", start, end);
 
-        var valid = await GetValidSymbolsAsync(token);
+        var valid = await GetValidSymbolsAsync(slice, token);
         var fearGreedIndexes = await GetFearGreedIndexData(start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
         await valid.Chunk(50).ToAsyncEnumerable().SelectManyAwait(async chunk =>
             {
@@ -139,22 +141,28 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         return latestTradeData.Price;
     }
 
-    private async Task<ISet<TradingSymbol>> GetValidSymbolsAsync(CancellationToken token = default)
+    private async Task<ISet<TradingSymbol>> GetValidSymbolsAsync(BacktestSymbolSlice slice,
+        CancellationToken token = default)
     {
         if (_cache.TryGetValidSymbols() is { } cached)
         {
             _logger.Debug("Retrieved {Count} valid trading symbols from cache", cached.Count);
-            return cached;
+            var sliceFromCache = slice.Take == -1 ? cached.Skip(slice.Skip) : cached.Skip(slice.Skip).Take(slice.Take);
+            return sliceFromCache.ToHashSet();
         }
 
         var validSymbols = await SendValidSymbolsRequestAsync(token);
-        _cache.CacheValidSymbols(validSymbols.ToList());
+        _cache.CacheValidSymbols(validSymbols);
 
         _logger.Debug("Retrieved {Count} valid trading symbols from Alpaca", validSymbols.Count);
-        return validSymbols;
+
+        var validSymbolsSlice = slice.Take == -1
+            ? validSymbols.Skip(slice.Skip)
+            : validSymbols.Skip(slice.Skip).Take(slice.Take);
+        return validSymbolsSlice.ToHashSet();
     }
 
-    private async Task<ISet<TradingSymbol>> SendValidSymbolsRequestAsync(CancellationToken token = default)
+    private async Task<IReadOnlyList<TradingSymbol>> SendValidSymbolsRequestAsync(CancellationToken token = default)
     {
         var tradingClient = await _tradingClient.Value;
         var assetsRequest = new AssetsRequest
@@ -165,7 +173,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         var availableAssets = await _callQueue.SendRequestWithRetriesAsync(() =>
             tradingClient.ListAssetsAsync(assetsRequest, token), _logger).ExecuteWithErrorHandling(_logger);
         return availableAssets.Where(a => a is { Fractionable: true, IsTradable: true })
-            .Select(a => new TradingSymbol(a.Symbol)).OrderBy(s => s.Value).ToHashSet();
+            .Select(a => new TradingSymbol(a.Symbol)).OrderBy(s => s.Value).ToList();
     }
 
     private Task<IEnumerable<TradingSymbol>> GetInterestingSymbolsAsync(CancellationToken token = default)
@@ -191,8 +199,8 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         return held.Concat(active).Distinct();
     }
 
-    private async Task<TradingSymbolData> GetSymbolDataAsync(TradingSymbol symbol, DateOnly start, DateOnly end, 
-        List<double> fearGreedIndexes, CancellationToken token = default)
+    private async Task<TradingSymbolData> GetSymbolDataAsync(TradingSymbol symbol, DateOnly start, DateOnly end,
+        IReadOnlyList<double> fearGreedIndexes, CancellationToken token = default)
     {
         if (_cache.TryGetCachedData(symbol, start, end) is { } cached)
         {
@@ -207,7 +215,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     }
 
     private async Task<IReadOnlyList<DailyTradingData>> SendBarsRequestAsync(TradingSymbol symbol, DateOnly start,
-        DateOnly end, List<double> fearGreedIndexes, CancellationToken token = default)
+        DateOnly end, IReadOnlyList<double> fearGreedIndexes, CancellationToken token = default)
     {
         var startTime = start.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero));
         var endTime = end.ToDateTime(TimeOnly.FromTimeSpan(TimeSpan.Zero));
@@ -245,15 +253,15 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
                     High = b.High,
                     Low = b.Low,
                     Volume = b.Volume,
-                    //dodac traded value
                     FearGreedIndex = (decimal)fearGreedIndexes[index++]
                 }).ToList();
             } while (nextPageToken is not null);
         }
     }
 
-    private async Task<List<double>> GetFearGreedIndexData(string startDate, string endDate)
+    private async Task<List<double>> GetFearGreedIndexData(string startDate, string endDate, CancellationToken token = default)
     {
+        _logger.Debug("Getting Fear Greed Index for all symbols from {Start} to {End}", startDate, endDate);
         var startDateTime = DateTime.Parse(startDate);
         var endDateTime = DateTime.Parse(endDate);
         var splitDateTime = new DateTime(2020, 7, 15);
@@ -271,9 +279,9 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         {
             var csvData = new List<double>();
             if (endDateTime < splitDateTime)
-                csvData = await GetFearGreedIndexDataFromCsv(startDate, endDate);
+                csvData = await GetFearGreedIndexDataFromCsv(startDate, endDate, token);
             else
-                csvData = await GetFearGreedIndexDataFromCsv(startDate, "2020-07-14");
+                csvData = await GetFearGreedIndexDataFromCsv(startDate, "2020-07-14", token);
             fearGreedIndexes.AddRange(csvData);
         }
 
@@ -281,15 +289,15 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         {
             var apiData = new List<double>();
             if (startDateTime >= splitDateTime)
-                apiData = await GetFearGreedIndexDataFromApi(startDate, endDate);
+                apiData = await GetFearGreedIndexDataFromApi(startDate, endDate, token);
             else
-                apiData = await GetFearGreedIndexDataFromApi("2020-07-15", endDate);
+                apiData = await GetFearGreedIndexDataFromApi("2020-07-15", endDate, token);
             fearGreedIndexes.AddRange(apiData);
         }
         return fearGreedIndexes;
     }
 
-    private async Task<List<double>> GetFearGreedIndexDataFromApi(string startDate, string endDate)
+    private async Task<List<double>> GetFearGreedIndexDataFromApi(string startDate, string endDate, CancellationToken token = default)
     {
         var url = $"https://production.dataviz.cnn.io/index/fearandgreed/graphdata/{startDate}";
         var fearGreedIndexes = new List<double>();
@@ -349,7 +357,7 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
         return fearGreedIndexes;
     }
 
-    private async Task<List<double>> GetFearGreedIndexDataFromCsv(string startDate, string endDate)
+    private async Task<List<double>> GetFearGreedIndexDataFromCsv(string startDate, string endDate, CancellationToken token = default)
     {
         var fearGreedIndexes = new List<double>();
 
@@ -372,8 +380,8 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 
                             using (var csv = new CsvReader(reader, csvConfig))
                             {
-                                csv.Read(); // Przesunięcie odczytu na pierwszy rekord (nagłówek)
-                                csv.ReadHeader(); // Odczytanie nagłówka pliku CSV
+                                csv.Read();
+                                csv.ReadHeader();
 
                                 while (csv.Read())
                                 {
@@ -407,13 +415,17 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     {
         bool HasNonPositiveValues(DailyTradingData data)
         {
-            return data.Open <= 0 || data.Close <= 0 || data.High <= 0 || data.Low <= 0 || data.Volume <= 0 || 
-                data.FearGreedIndex < 0 || data.FearGreedIndex > 100;
+            return data.Open <= 0 || data.Close <= 0 || data.High <= 0 || data.Low <= 0 || data.Volume <= 0;
         }
 
         bool HasInvalidHighAndLowPrices(DailyTradingData data)
         {
             return data.Low > data.Open || data.Low > data.Close || data.High < data.Open || data.High < data.Close;
+        }
+
+        bool HasInvalidFearGreedIndexValue(DailyTradingData data)
+        {
+            return data.FearGreedIndex < 0 || data.FearGreedIndex > 100;
         }
 
         if (!dailyData.Any())
@@ -433,6 +445,12 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
             if (HasInvalidHighAndLowPrices(d))
             {
                 _logger.Warning("Market data entry is invalid - high/low prices are not correct: {Entry}", d);
+                return false;
+            }
+
+            if (HasInvalidFearGreedIndexValue(d))
+            {
+                _logger.Warning("Market data entry is invalid - fear greed index is not correct: {Entry}", d);
                 return false;
             }
         }

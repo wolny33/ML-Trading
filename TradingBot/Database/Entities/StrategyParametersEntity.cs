@@ -31,4 +31,6 @@ public class StrategyParametersEntity
     public required int PcaAnalysisLengthInDays { get; set; }
     public required int PcaDecompositionExpirationInDays { get; set; }
     public required double PcaUndervaluedThreshold { get; set; }
+    public required double PcaIgnoredThreshold { get; set; }
+    public required double PcaDiverseThreshold { get; set; }
 }

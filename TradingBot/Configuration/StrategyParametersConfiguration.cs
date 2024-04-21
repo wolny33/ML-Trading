@@ -40,7 +40,9 @@ public sealed class StrategyParametersConfiguration
                 AnalysisLengthInDays = entity.PcaAnalysisLengthInDays,
                 DecompositionExpirationInDays = entity.PcaDecompositionExpirationInDays,
                 UndervaluedThreshold = entity.PcaUndervaluedThreshold,
-                VarianceFraction = entity.PcaVarianceFraction
+                VarianceFraction = entity.PcaVarianceFraction,
+                DiverseThreshold = entity.PcaDiverseThreshold,
+                IgnoredThreshold = entity.PcaIgnoredThreshold
             }
         };
     }
@@ -90,6 +92,8 @@ public sealed class StrategyParametersConfiguration
         entity.PcaVarianceFraction = Pca.VarianceFraction;
         entity.PcaAnalysisLengthInDays = Pca.AnalysisLengthInDays;
         entity.PcaDecompositionExpirationInDays = Pca.DecompositionExpirationInDays;
+        entity.PcaIgnoredThreshold = Pca.IgnoredThreshold;
+        entity.PcaDiverseThreshold = Pca.DiverseThreshold;
     }
 
     public static StrategyParametersEntity CreateDefault()
@@ -116,7 +120,9 @@ public sealed class StrategyParametersConfiguration
             PcaVarianceFraction = 0.9,
             PcaUndervaluedThreshold = 1,
             PcaAnalysisLengthInDays = 3 * 30,
-            PcaDecompositionExpirationInDays = 7
+            PcaDecompositionExpirationInDays = 7,
+            PcaDiverseThreshold = 0.5,
+            PcaIgnoredThreshold = 0.25
         };
     }
 }
@@ -211,6 +217,8 @@ public sealed class PcaOptions
     public required int AnalysisLengthInDays { get; init; }
     public required int DecompositionExpirationInDays { get; init; }
     public required double UndervaluedThreshold { get; init; }
+    public required double IgnoredThreshold { get; init; }
+    public required double DiverseThreshold { get; init; }
 
     public static PcaOptions FromRequest(PcaOptionsRequest request)
     {
@@ -219,7 +227,9 @@ public sealed class PcaOptions
             VarianceFraction = request.VarianceFraction,
             AnalysisLengthInDays = request.AnalysisLengthInDays,
             DecompositionExpirationInDays = request.DecompositionExpirationInDays,
-            UndervaluedThreshold = request.UndervaluedThreshold
+            UndervaluedThreshold = request.UndervaluedThreshold,
+            IgnoredThreshold = request.IgnoredThreshold,
+            DiverseThreshold = request.DiverseThreshold
         };
     }
 
@@ -230,7 +240,9 @@ public sealed class PcaOptions
             VarianceFraction = VarianceFraction,
             AnalysisLengthInDays = AnalysisLengthInDays,
             DecompositionExpirationInDays = DecompositionExpirationInDays,
-            UndervaluedThreshold = UndervaluedThreshold
+            UndervaluedThreshold = UndervaluedThreshold,
+            IgnoredThreshold = IgnoredThreshold,
+            DiverseThreshold = DiverseThreshold
         };
     }
 }

@@ -32,6 +32,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
 
         _tradingTask = Substitute.For<ICurrentTradingTask>();
         _tradingTask.CurrentBacktestId.Returns((Guid?)null);
+        _tradingTask.SymbolSlice.Returns(new BacktestSymbolSlice(0, -1));
 
         _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
             _tradingTask);
@@ -47,7 +48,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
     {
         SetUpResponses();
 
-        var result = await _marketDataSource.GetPricesAsync(DateOnly.MinValue, DateOnly.MaxValue);
+        var result = await _marketDataSource.GetPricesAsync(DateOnly.MinValue, new DateOnly(2023, 12, 19));
 
         result.Should().HaveCount(2);
         result.Should().ContainKey(new TradingSymbol("TKN1")).WhoseValue.Should().BeEquivalentTo(new[]
@@ -82,9 +83,10 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
             symbols.Contains(new TradingSymbol("TKN4")) && symbols.Contains(new TradingSymbol("TKN5"))));
 
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN1"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2023, 12, 19));
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN2"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2023, 12, 19));
+
     }
 
     [Fact]
@@ -92,8 +94,8 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
     {
         SetUpResponses();
 
-        _marketDataCache.TryGetValidSymbols().Returns(new HashSet<TradingSymbol> { new("TKN2"), new("TKN3") });
-        _marketDataCache.TryGetCachedData(new TradingSymbol("TKN2"), DateOnly.MinValue, DateOnly.MaxValue).Returns(new[]
+        _marketDataCache.TryGetValidSymbols().Returns(new TradingSymbol[] { new("TKN2"), new("TKN3") });
+        _marketDataCache.TryGetCachedData(new TradingSymbol("TKN2"), DateOnly.MinValue, new DateOnly(2023, 12, 19)).Returns(new[]
         {
             new DailyTradingData
             {
@@ -103,11 +105,50 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
                 High = 114m,
                 Low = 111m,
                 Volume = 1000m,
-                FearGreedIndex = 68m
+                FearGreedIndex = 50m
+            }
+        });
+        _marketDataCache.TryGetCachedData(new TradingSymbol("TKN1"), DateOnly.MinValue, new DateOnly(2023, 12, 19)).Returns(new[]
+        {
+            new DailyTradingData
+            {
+                Date = new DateOnly(2023, 12, 19),
+                Open = 12m,
+                Close = 13m,
+                High = 14m,
+                Low = 11m,
+                Volume = 100m,
+                FearGreedIndex = 50m
+            }
+        });
+        _marketDataCache.TryGetCachedData(new TradingSymbol("TKN3"), DateOnly.MinValue, new DateOnly(2023, 12, 19)).Returns(new[]
+        {
+            new DailyTradingData
+            {
+                Date = new DateOnly(2023, 12, 19),
+                Open = 22m,
+                Close = 23m,
+                High = 24m,
+                Low = 21m,
+                Volume = 200m,
+                FearGreedIndex = 50m
+            }
+        });
+        _marketDataCache.TryGetCachedData(new TradingSymbol("TKN4"), DateOnly.MinValue, new DateOnly(2023, 12, 19)).Returns(new[]
+        {
+            new DailyTradingData
+            {
+                Date = new DateOnly(2023, 12, 19),
+                Open = 112m,
+                Close = 113m,
+                High = 114m,
+                Low = 111m,
+                Volume = 1000m,
+                FearGreedIndex = 50m
             }
         });
 
-        var result = await _marketDataSource.GetPricesAsync(DateOnly.MinValue, DateOnly.MaxValue);
+        var result = await _marketDataSource.GetPricesAsync(DateOnly.MinValue, new DateOnly(2023, 12, 19));
 
         result.Should().HaveCount(1);
         result.Should().ContainKey(new TradingSymbol("TKN2")).WhoseValue.Should().BeEquivalentTo(new[]
@@ -120,7 +161,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
                 High = 114m,
                 Low = 111m,
                 Volume = 1000m,
-                FearGreedIndex = 68m
+                FearGreedIndex = 50m
             }
         });
 
@@ -139,8 +180,8 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _tradingTask.CurrentBacktestId.Returns(Guid.NewGuid());
         _tradingTask.GetTaskDay().Returns(new DateOnly(2023, 12, 19));
 
-        _marketDataCache.TryGetValidSymbols().Returns(new HashSet<TradingSymbol> { new("TKN2"), new("TKN4") });
-        _marketDataCache.TryGetCachedData(new TradingSymbol("TKN4"), DateOnly.MinValue, DateOnly.MaxValue).Returns(new[]
+        _marketDataCache.TryGetValidSymbols().Returns(new TradingSymbol[] { new("TKN2"), new("TKN4") });
+        _marketDataCache.TryGetCachedData(new TradingSymbol("TKN4"), DateOnly.MinValue, new DateOnly(2023, 12, 19)).Returns(new[]
         {
             new DailyTradingData
             {
@@ -156,7 +197,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _marketDataCache.GetMostActiveCachedSymbolsForLastValidDay(new DateOnly(2023, 12, 19))
             .Returns(new[] { new TradingSymbol("TKN4") });
 
-        var result = await _marketDataSource.GetPricesAsync(DateOnly.MinValue, DateOnly.MaxValue);
+        var result = await _marketDataSource.GetPricesAsync(DateOnly.MinValue, new DateOnly(2023, 12, 19));
 
         result.Should().HaveCount(1);
         result.Should().ContainKey(new TradingSymbol("TKN4")).WhoseValue.Should().BeEquivalentTo(new[]
@@ -191,7 +232,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
 
         var result =
             await _marketDataSource.GetDataForSingleSymbolAsync(new TradingSymbol("TKN3"), DateOnly.MinValue,
-                DateOnly.MaxValue);
+                new DateOnly(2023, 12, 19));
 
         result.Should().BeEquivalentTo(new[]
         {
@@ -208,61 +249,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         });
 
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN3"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
-    }
-
-    [Fact]
-    public async Task ShouldCorrectlyReturnPricesForSingleSymbolWithFearGreedDataFromApi()
-    {
-        SetUpResponses();
-
-        var result =
-            await _marketDataSource.GetDataForSingleSymbolAsync(new TradingSymbol("TKN3"), new DateOnly(2023, 12, 19),
-                new DateOnly(2023, 12, 19));
-
-        result.Should().BeEquivalentTo(new[]
-        {
-            new DailyTradingData
-            {
-                Date = new DateOnly(2023, 12, 19),
-                Open = 22m,
-                Close = 23m,
-                High = 24m,
-                Low = 21m,
-                Volume = 200m,
-                FearGreedIndex = 77.2857142857143m
-            }
-        });
-
-        _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN3"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), new DateOnly(2023, 12, 19), new DateOnly(2023, 12, 19));
-    }
-
-    [Fact]
-    public async Task ShouldCorrectlyReturnPricesForSingleSymbolWithFearGreedDataFromCsv()
-    {
-        SetUpResponses();
-
-        var result =
-            await _marketDataSource.GetDataForSingleSymbolAsync(new TradingSymbol("TKN3"), new DateOnly(2016, 12, 19),
-                new DateOnly(2023, 12, 19));
-
-        result.Should().BeEquivalentTo(new[]
-        {
-            new DailyTradingData
-            {
-                Date = new DateOnly(2023, 12, 19),
-                Open = 22m,
-                Close = 23m,
-                High = 24m,
-                Low = 21m,
-                Volume = 200m,
-                FearGreedIndex = 79m
-            }
-        });
-
-        _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN3"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), new DateOnly(2016, 12, 19), new DateOnly(2023, 12, 19));
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2023, 12, 19));
     }
 
     [Fact]
@@ -297,7 +284,8 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
     {
         SetUpResponses();
 
-        await _marketDataSource.InitializeBacktestDataAsync(DateOnly.MinValue, DateOnly.MaxValue);
+        await _marketDataSource.InitializeBacktestDataAsync(DateOnly.MinValue, new DateOnly(2023, 12, 19),
+            new BacktestSymbolSlice(0, -1));
 
         _marketDataCache.Received(1).CacheValidSymbols(Arg.Is<IReadOnlyList<TradingSymbol>>(symbols =>
             symbols.Contains(new TradingSymbol("TKN1")) && symbols.Contains(new TradingSymbol("TKN2")) &&
@@ -317,13 +305,13 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
                 Arg.Any<CancellationToken>());
 
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN1"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2023, 12, 19));
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN2"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2023, 12, 19));
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN4"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2023, 12, 19));
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN5"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, DateOnly.MaxValue);
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue,  new DateOnly(2023, 12, 19));
     }
 
     private void SetUpResponses()
@@ -453,7 +441,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _dataClient.ListHistoricalBarsAsync(Arg.Is<HistoricalBarsRequest>(r => r.Symbols.Single() == "TKN5"))
             .Returns(tkn5Page);
 
-        _marketDataCache.TryGetValidSymbols().Returns((ISet<TradingSymbol>?)null);
+        _marketDataCache.TryGetValidSymbols().Returns((IReadOnlyList<TradingSymbol>?)null);
         _marketDataCache.TryGetCachedData(Arg.Any<TradingSymbol>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>())
             .Returns((IReadOnlyList<DailyTradingData>?)null);
     }

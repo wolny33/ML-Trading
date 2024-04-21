@@ -129,7 +129,7 @@ public sealed class TradingAction
             Id = Guid.NewGuid(),
             CreatedAt = createdAt,
             Quantity = quantity,
-            Price = price,
+            Price = Math.Round(price, 2),
             Symbol = symbol,
             InForce = TimeInForce.Day,
             OrderType = OrderType.LimitBuy
@@ -144,7 +144,7 @@ public sealed class TradingAction
             Id = Guid.NewGuid(),
             CreatedAt = createdAt,
             Quantity = quantity,
-            Price = price,
+            Price = Math.Round(price, 2),
             Symbol = symbol,
             InForce = TimeInForce.Day,
             OrderType = OrderType.LimitSell
