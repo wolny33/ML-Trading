@@ -18,7 +18,7 @@ def run_backtests_with_cv(strategy, avg_error, folds, symbols_per_fold):
     for fold in range(folds):
         backtest_id = start_backtest(make_request(fold))
 
-        if not wait_for_backtest(backtest_id):
+        if not wait_for_backtest(backtest_id, quiet=True):
             backtest_returns.append(-1)
             continue
 
@@ -48,7 +48,7 @@ class SearchWrapper:
         self.backtest_return = None
 
     def fit(self, train_x, train_y):
-        print(f"Running a backtest with params: {self.strategy_params}")
+        print(f"\tRunning a backtest with params: {self.strategy_params}")
 
         set_strategy_parameters(SearchWrapper._strategy_name, self.strategy_params)
         self.backtest_return = run_backtests_with_cv(SearchWrapper._strategy_name, SearchWrapper._predictor_error,

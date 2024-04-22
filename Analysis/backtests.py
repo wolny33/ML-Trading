@@ -52,14 +52,16 @@ def start_backtest(request: BacktestRequest) -> str:
     return backtest_response.headers.get("location")
 
 
-def wait_for_backtest(backtest_id: str):
+def wait_for_backtest(backtest_id: str, quiet=False):
     def get_state():
         response = requests.get(f"http://localhost:5000/api/backtests/{backtest_id}",
                                 auth=HTTPBasicAuth("admin", "password"))
         response.raise_for_status()
         return response.json()["state"]
 
-    print(f"Waiting for backtest {backtest_id}")
+    if not quiet:
+        print(f"Waiting for backtest {backtest_id}")
+
     while (state := get_state()) == "Running":
         time.sleep(1)
 
