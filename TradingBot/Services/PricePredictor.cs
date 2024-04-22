@@ -12,7 +12,6 @@ public interface IPricePredictor
 {
     Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsAsync(CancellationToken token = default);
     Task<Prediction?> GetPredictionForSingleSymbolAsync(TradingSymbol symbol, CancellationToken token = default);
-    Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsForListOfSymbolsAsync(List<TradingSymbol> symbols, CancellationToken token = default);
 }
 
 public sealed class PricePredictor : IPricePredictor
@@ -118,18 +117,6 @@ public sealed class PricePredictor : IPricePredictor
             HighPrice = today.High + (decimal)errors[1] * previous.High,
             LowPrice = today.Low + (decimal)errors[2] * previous.Low
         };
-    }
-
-    public async Task<IDictionary<TradingSymbol, Prediction>> GetPredictionsForListOfSymbolsAsync(List<TradingSymbol> symbols, CancellationToken token = default)
-    {
-        var result = new Dictionary<TradingSymbol, Prediction>();
-        foreach (var tradingSymbol in symbols)
-        {
-            var tradingSymbolPrediction = await GetPredictionForSingleSymbolAsync(tradingSymbol, token);
-            if (tradingSymbolPrediction != null)
-                result.TryAdd(tradingSymbol, tradingSymbolPrediction);
-        }
-        return result;
     }
 
     private async Task<Prediction?> GetFutureDataForSingleSymbolAsync(TradingSymbol symbol,

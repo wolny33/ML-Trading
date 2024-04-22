@@ -1,4 +1,5 @@
-﻿using TradingBot.Models;
+﻿using MathNet.Numerics;
+using TradingBot.Models;
 
 namespace TradingBot.Services.Strategy;
 
@@ -65,11 +66,6 @@ public sealed class GreedyStrategy : IStrategy
 
         var predictions = await _predictor.GetPredictionsAsync(token);
         var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
-        var predictionsForHeldTokens = await _predictor.GetPredictionsForListOfSymbolsAsync(assets.Positions.Keys.ToList(), token);
-        foreach (var predictionForHeldToken in predictionsForHeldTokens)
-        {
-            predictions.TryAdd(predictionForHeldToken.Key, predictionForHeldToken.Value);
-        }
 
         // If holds multiple stocks...
         var heldPositionsCount = assets.Positions.Values.Count(position => position.Quantity > 0);
