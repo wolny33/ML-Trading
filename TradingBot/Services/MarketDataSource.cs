@@ -183,8 +183,8 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
     private Task<IEnumerable<TradingSymbol>> GetInterestingSymbolsAsync(CancellationToken token = default)
     {
         return _tradingTask.CurrentBacktestId is not null
-            ? Task.FromResult(_cache.GetMostActiveCachedSymbolsForLastValidDay(_tradingTask.GetTaskDay())
-                .Concat(_backtestAssets.GetForBacktestWithId(_tradingTask.CurrentBacktestId.Value).Positions.Keys)
+            ? Task.FromResult(_backtestAssets.GetForBacktestWithId(_tradingTask.CurrentBacktestId.Value).Positions.Keys
+                .Concat(_cache.GetMostActiveCachedSymbolsForLastValidDay(_tradingTask.GetTaskDay()))
                 .Distinct())
             : SendInterestingSymbolsRequestsAsync(token);
     }
