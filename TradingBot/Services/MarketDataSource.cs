@@ -1,13 +1,11 @@
 ﻿using Alpaca.Markets;
 using Newtonsoft.Json;
-using System.Formats.Asn1;
 using System.Globalization;
 using System.Net;
 using TradingBot.Models;
 using ILogger = Serilog.ILogger;
 using CsvHelper;
 using CsvHelper.Configuration;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TradingBot.Services;
 
