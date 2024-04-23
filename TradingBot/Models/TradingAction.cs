@@ -130,7 +130,8 @@ public sealed class TradingAction
             Id = Guid.NewGuid(),
             CreatedAt = createdAt,
             Quantity = quantity,
-            Price = Math.Round(price, 2, MidpointRounding.ToPositiveInfinity),
+            Price = price > 1 ? Math.Round(price, 2, MidpointRounding.ToNegativeInfinity) : 
+                                Math.Round(price, 4, MidpointRounding.ToNegativeInfinity),
             Symbol = symbol,
             InForce = TimeInForce.Day,
             OrderType = OrderType.LimitBuy
@@ -145,7 +146,8 @@ public sealed class TradingAction
             Id = Guid.NewGuid(),
             CreatedAt = createdAt,
             Quantity = quantity,
-            Price = Math.Round(price, 2, MidpointRounding.ToNegativeInfinity),
+            Price = price > 1 ? Math.Round(price, 2, MidpointRounding.ToPositiveInfinity) :
+                                Math.Round(price, 4, MidpointRounding.ToPositiveInfinity),
             Symbol = symbol,
             InForce = TimeInForce.Day,
             OrderType = OrderType.LimitSell
