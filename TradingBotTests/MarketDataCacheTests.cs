@@ -35,7 +35,8 @@ public sealed class MarketDataCacheTests
                 Close = 3m,
                 High = 4m,
                 Low = 1m,
-                Volume = 10m
+                Volume = 10m,
+                FearGreedIndex = 60m
             });
 
         _marketDataCache.TryGetCachedData(new TradingSymbol("TKN1"), _today.AddDays(-1), _today).Should().BeNull();
@@ -51,7 +52,8 @@ public sealed class MarketDataCacheTests
             Close = 3m,
             High = 4m,
             Low = 1m,
-            Volume = 10m
+            Volume = 10m,
+            FearGreedIndex = 60m
         };
         var today = new DailyTradingData
         {
@@ -60,7 +62,8 @@ public sealed class MarketDataCacheTests
             Close = 4m,
             High = 5m,
             Low = 2m,
-            Volume = 11m
+            Volume = 11m,
+            FearGreedIndex = 70m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), yesterday.Date), yesterday);
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), today.Date), today);
@@ -79,7 +82,8 @@ public sealed class MarketDataCacheTests
             Close = 3m,
             High = 4m,
             Low = 1m,
-            Volume = 10m
+            Volume = 10m,
+            FearGreedIndex = 60m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), yesterday.Date), yesterday);
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), _today), (DailyTradingData?)null);
@@ -98,7 +102,8 @@ public sealed class MarketDataCacheTests
             Close = 3m,
             High = 4m,
             Low = 1m,
-            Volume = 10m
+            Volume = 10m,
+            FearGreedIndex = 60m
         };
         var today = new DailyTradingData
         {
@@ -107,7 +112,8 @@ public sealed class MarketDataCacheTests
             Close = 4m,
             High = 5m,
             Low = 2m,
-            Volume = 11m
+            Volume = 11m,
+            FearGreedIndex = 70m
         };
 
         _marketDataCache.CacheDailySymbolData(new TradingSymbol("TKN1"), new[] { yesterday, today }, yesterday.Date,
@@ -133,7 +139,8 @@ public sealed class MarketDataCacheTests
             Close = 3m,
             High = 4m,
             Low = 1m,
-            Volume = 10m
+            Volume = 10m,
+            FearGreedIndex = 60m
         };
         var yesterday = new DailyTradingData
         {
@@ -142,7 +149,8 @@ public sealed class MarketDataCacheTests
             Close = 4m,
             High = 5m,
             Low = 2m,
-            Volume = 11m
+            Volume = 11m,
+            FearGreedIndex = 70m
         };
 
         _marketDataCache.CacheDailySymbolData(new TradingSymbol("TKN1"), new[] { threeDaysAgo, yesterday },
@@ -180,7 +188,8 @@ public sealed class MarketDataCacheTests
             Close = 3m,
             High = 4m,
             Low = 1m,
-            Volume = 10m
+            Volume = 10m,
+            FearGreedIndex = 60m
         };
         var today = new DailyTradingData
         {
@@ -189,7 +198,8 @@ public sealed class MarketDataCacheTests
             Close = 4m,
             High = 5m,
             Low = 2m,
-            Volume = 11m
+            Volume = 11m,
+            FearGreedIndex = 70m
         };
 
         _marketDataCache.CacheDailySymbolData(new TradingSymbol("TKN1"), new[] { yesterday, today }, _today.AddDays(-2),
@@ -209,7 +219,8 @@ public sealed class MarketDataCacheTests
             Close = 3m,
             High = 4m,
             Low = 1m,
-            Volume = 10m
+            Volume = 10m,
+            FearGreedIndex = 60m
         };
         var secondTokenData = new DailyTradingData
         {
@@ -218,7 +229,8 @@ public sealed class MarketDataCacheTests
             Close = 4m,
             High = 5m,
             Low = 2m,
-            Volume = 11m
+            Volume = 11m,
+            FearGreedIndex = 70m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), _today), firstTokenData);
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN2"), _today), secondTokenData);
@@ -242,7 +254,8 @@ public sealed class MarketDataCacheTests
             Close = 4m,
             High = 5m,
             Low = 2m,
-            Volume = 11m
+            Volume = 11m,
+            FearGreedIndex = 70m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), today.Date), today);
 
@@ -259,7 +272,8 @@ public sealed class MarketDataCacheTests
             Close = 4m,
             High = 5m,
             Low = 2m,
-            Volume = 11m
+            Volume = 11m,
+            FearGreedIndex = 70m
         };
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), yesterday.Date), yesterday);
         _memoryCache.Set(new MarketDataCache.CacheKey(new TradingSymbol("TKN1"), _today), (DailyTradingData?)null);

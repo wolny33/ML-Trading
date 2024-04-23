@@ -1,4 +1,5 @@
-﻿using TradingBot.Models;
+﻿using MathNet.Numerics;
+using TradingBot.Models;
 
 namespace TradingBot.Services.Strategy;
 
