@@ -47,7 +47,10 @@ public sealed class PricePredictor : IPricePredictor
         foreach (var (symbol, data) in marketData)
         {
             if (data.Count < PredictorInputLength + 1)
+            {
+                _logger.Debug("Not enought data to get predictions for {Token}", symbol.Value);
                 continue;
+            }
             _logger.Verbose("Getting predictions for {Token}", symbol.Value);
             var prediction = await PredictForSymbolAsync(data, token);
             result[symbol] = prediction;
@@ -94,6 +97,11 @@ public sealed class PricePredictor : IPricePredictor
         var futureDataResult = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in futureData)
         {
+            if (!latestData.ContainsKey(symbol))
+            {
+                _logger.Debug($"Not enough data for - {symbol}");
+                continue;
+            }
             futureDataResult[symbol] = new Prediction
             {
                 Prices = data.Take(PredictorOutputLength)
