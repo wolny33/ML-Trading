@@ -46,6 +46,11 @@ public sealed class PricePredictor : IPricePredictor
         var result = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in marketData)
         {
+            if (data.Count < PredictorInputLength + 1)
+            {
+                _logger.Debug("Not enought data to get predictions for {Token}", symbol.Value);
+                continue;
+            }
             _logger.Verbose("Getting predictions for {Token}", symbol.Value);
             var prediction = await PredictForSymbolAsync(data, token);
             result[symbol] = prediction;
@@ -64,7 +69,7 @@ public sealed class PricePredictor : IPricePredictor
 
         var marketData = await _marketData.GetDataForSingleSymbolAsync(symbol,
             SubtractWorkDays(today, 2 * (PredictorInputLength + 1)), today, token);
-        if (marketData is null) return null;
+        if (marketData is null || marketData.Count < PredictorInputLength + 1) return null;
 
         _logger.Verbose("Getting predictions for {Today} for single token: {Token}", today, symbol.Value);
         return await PredictForSymbolAsync(marketData, token);
@@ -92,6 +97,11 @@ public sealed class PricePredictor : IPricePredictor
         var futureDataResult = new Dictionary<TradingSymbol, Prediction>();
         foreach (var (symbol, data) in futureData)
         {
+            if (!latestData.ContainsKey(symbol))
+            {
+                _logger.Debug($"Not enough data for - {symbol}");
+                continue;
+            }
             futureDataResult[symbol] = new Prediction
             {
                 Prices = data.Take(PredictorOutputLength)
@@ -150,7 +160,8 @@ public sealed class PricePredictor : IPricePredictor
                     Close = RelativeChange(previous.Close, current.Close),
                     High = RelativeChange(previous.High, current.High),
                     Low = RelativeChange(previous.Low, current.Low),
-                    Volume = current.Volume
+                    Volume = current.Volume,
+                    FearGreedIndex = current.FearGreedIndex
                 };
             }).Take(PredictorInputLength).ToList()
         };
@@ -255,6 +266,9 @@ public sealed class PricePredictor : IPricePredictor
 
         [JsonProperty("volume")]
         public required decimal Volume { get; init; }
+
+        [JsonProperty("fearGreedIndex")]
+        public required decimal FearGreedIndex { get; init; }
     }
 
     private sealed class PredictorResponse

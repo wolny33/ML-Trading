@@ -54,6 +54,7 @@ public sealed class Strategy : IStrategy
     {
         var predictions = await _predictor.GetPredictionsAsync(token);
         var assets = await _assetsDataSource.GetCurrentAssetsAsync(token);
+
         var tradingActions = new List<TradingAction>();
 
         var sellActions = new List<TradingAction>();
@@ -154,9 +155,9 @@ public sealed class Strategy : IStrategy
             var symbol = topGrowingSymbols[i].Symbol;
             var price = topGrowingSymbols[i].Price;
             if (price >= 1)
-                price = Math.Round(price, 2);
+                price = Math.Round(price, 2, MidpointRounding.ToNegativeInfinity);
             else
-                price = Math.Round(price, 4);
+                price = Math.Round(price, 4, MidpointRounding.ToNegativeInfinity);
 
             var quantity = (int)(cashAvailable * (decimal)topGrowingSymbolsBuyRatio / price);
 

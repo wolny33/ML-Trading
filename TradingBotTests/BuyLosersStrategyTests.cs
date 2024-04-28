@@ -135,7 +135,8 @@ public sealed class BuyLosersStrategyTests
                         Close = 100m + 0.1m * (n - 10m) * (k + 1),
                         High = 102m + 0.1m * (n - 10m) * k,
                         Low = 98m + 0.1m * (n - 10m) * k,
-                        Volume = 10_000m
+                        Volume = 10_000m,
+                        FearGreedIndex = 60m
                     }).ToList()
                 ).Select((data, index) => (Data: data, Index: index))
                 .ToDictionary(pair => new TradingSymbol($"TKN{pair.Index}"),
@@ -209,7 +210,8 @@ public sealed class BuyLosersStrategyTests
                         Close = 100m + 0.1m * (n - 10m) * (k + 1),
                         High = 102m + 0.1m * (n - 10m) * k,
                         Low = 98m + 0.1m * (n - 10m) * k,
-                        Volume = 10_000m
+                        Volume = 10_000m,
+                        FearGreedIndex = 60m
                     }).ToList()
                 ).Select((data, index) => (Data: data, Index: index))
                 .ToDictionary(pair => new TradingSymbol($"TKN{pair.Index}"),
