@@ -48,7 +48,7 @@ class SearchWrapper:
         self.backtest_return = None
 
     def fit(self, train_x, train_y):
-        print(f"\tRunning a backtest with params: {self.strategy_params}")
+        print(f"\tTesting params: {self.strategy_params}")
 
         set_strategy_parameters(SearchWrapper._strategy_name, self.strategy_params)
         self.backtest_return = run_backtests_with_cv(SearchWrapper._strategy_name, SearchWrapper._predictor_error,
