@@ -288,10 +288,17 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 
         if (_cache.TryGetFearGreedIndexes(start, end) is { } cached)
         {
-            for (var date = startDateTime; date < firstDateTime; date = date.AddDays(1))
-            {
-                fearGreedIndexes.Add(date, 50.0);
-            }
+            _logger.Verbose("Retrieved Fear Greed index for all symbols from cache");
+            return cached;
+        }
+
+        var splitDate = new DateOnly(2020, 7, 15);
+        var fearGreedIndexes = new Dictionary<DateOnly, double>();
+
+        if (start < splitDate)
+        {
+            var csvData = await GetFearGreedIndexDataFromCsvAsync(token);
+            foreach (var (day, value) in csvData ?? new Dictionary<DateOnly, double>()) fearGreedIndexes[day] = value;
         }
 
         if (end >= splitDate)
