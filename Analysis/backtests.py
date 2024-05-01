@@ -1,7 +1,9 @@
+from __future__ import annotations
 import time
+from datetime import date
 import requests
 from requests.auth import HTTPBasicAuth
-from backtest_models import PortfolioStatesResponse, AssetsStateResponse
+from backtest_models import PortfolioStatesResponse, AssetsStateResponse, PositionResponse
 from strategy import set_strategy
 
 
@@ -52,7 +54,7 @@ def start_backtest(request: BacktestRequest) -> str:
     return backtest_response.headers.get("location")
 
 
-def wait_for_backtest(backtest_id: str, quiet=False):
+def wait_for_backtest(backtest_id: str, quiet: bool = False) -> bool:
     def get_state():
         response = requests.get(f"http://localhost:5000/api/backtests/{backtest_id}",
                                 auth=HTTPBasicAuth("admin", "password"))
@@ -84,20 +86,20 @@ def get_backtest_return(backtest_id) -> float | None:
 
 
 class Investment:
-    def __init__(self, symbol, start, end, entry, exit_value):
-        self.symbol = symbol
-        self.start = start
-        self.end = end
-        self.entry = entry
-        self.exit_value = exit_value
+    def __init__(self, symbol: str, start: date, end: date, entry: float, exit_value: float):
+        self.symbol: str = symbol
+        self.start: date = start
+        self.end: date = end
+        self.entry: float = entry
+        self.exit_value: float = exit_value
 
     @staticmethod
-    def from_position(position, start, end):
+    def from_position(position: PositionResponse, start: date, end: date) -> Investment:
         return Investment(position.symbol, start, end, position.averageEntryPrice * position.quantity,
                           position.marketValue)
 
 
-def get_investments(assets_states):
+def get_investments(assets_states: list[AssetsStateResponse]) -> list[Investment]:
     def get_last_positions(assets_states):
         result = []
         for before, after in zip(assets_states[:-1], assets_states[1:]):
@@ -140,17 +142,17 @@ def get_investments(assets_states):
 
 
 class BacktestAnalysis:
-    def __init__(self, total_return, investments_count, avg_investment_length, positive_investment_ratio, investments,
-                 portfolio_states):
-        self.total_return = total_return
-        self.investments_count = investments_count
-        self.avg_investment_length = avg_investment_length
-        self.positive_investment_ratio = positive_investment_ratio
-        self.investments = investments
-        self.portfolio_states = portfolio_states
+    def __init__(self, total_return: float, investments_count: int, avg_investment_length: float,
+                 positive_investment_ratio: float, investments: list[Investment], portfolio_states: list[AssetsStateResponse]):
+        self.total_return: float = total_return
+        self.investments_count: int = investments_count
+        self.avg_investment_length: float = avg_investment_length
+        self.positive_investment_ratio: float = positive_investment_ratio
+        self.investments: list[Investment] = investments
+        self.portfolio_states: list[AssetsStateResponse] = portfolio_states
 
 
-def analyze_backtest(backtest_id):
+def analyze_backtest(backtest_id: str) -> BacktestAnalysis:
     portfolio_states = fetch_portfolio_states(backtest_id)
     investments = get_investments(portfolio_states)
     test_return = portfolio_states[-1].assets.equityValue / portfolio_states[0].assets.equityValue - 1
@@ -167,7 +169,7 @@ def analyze_backtest(backtest_id):
     )
 
 
-def get_backtest_ids():
+def get_backtest_ids() -> dict[str, str]:
     response = requests.get(f"http://localhost:5000/api/backtests",
                             auth=HTTPBasicAuth("admin", "password"))
     response.raise_for_status()

@@ -1,10 +1,12 @@
+from typing import Any
 from sklearn.metrics import make_scorer
 from skopt import BayesSearchCV
-from strategy import *
-from backtests import *
+from skopt.space import Dimension
+from backtests import BacktestRequest, start_backtest, wait_for_backtest, get_backtest_return
+from strategy import set_strategy_parameters
 
 
-def run_backtests_with_cv(strategy, avg_error, folds, symbols_per_fold):
+def run_backtests_with_cv(strategy: str, avg_error: float, folds: int, symbols_per_fold: int) -> float:
     def make_request(fold):
         return BacktestRequest(
             strategy=strategy,
@@ -28,13 +30,13 @@ def run_backtests_with_cv(strategy, avg_error, folds, symbols_per_fold):
 
 
 class SearchWrapper:
-    _folds = 5
-    _symbols = 200
-    _strategy_name = None
-    _predictor_error = 0
+    _folds: int = 5
+    _symbols: int = 200
+    _strategy_name: str | None = None
+    _predictor_error: float = 0
 
     @classmethod
-    def set_backtest_config(cls, *, symbols, folds, strategy_name, predictor_error):
+    def set_backtest_config(cls, *, symbols: int, folds: int, strategy_name: str, predictor_error: float) -> None:
         cls._folds = folds
         cls._symbols = symbols
         cls._strategy_name = strategy_name
@@ -77,7 +79,9 @@ class NullFoldGenerator:
         return self.n_splits
 
 
-def perform_bayes_search(strategy_name, spaces_dict, iterations, *, prediction_error=0, symbols=1000, folds=0):
+def perform_bayes_search(strategy_name: str, spaces_dict: dict[str, Dimension], iterations: int, *,
+                         prediction_error: float = 0, symbols: int = 1000, folds: int = 0)\
+        -> tuple[dict[str, Any], float]:
 
     SearchWrapper.set_backtest_config(
         strategy_name=strategy_name,

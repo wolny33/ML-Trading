@@ -469,7 +469,8 @@ public sealed class MarketDataSource : IMarketDataSource, IAsyncDisposable
 
             if (HasInvalidFearGreedIndexValue(d))
             {
-                _logger.Warning("Market data entry is invalid - fear greed index is not correct: {Entry}", d);
+                _logger.Warning("Market data entry for {Symbol} is invalid - fear greed index is not correct",
+                    symbol.Value);
                 return false;
             }
         }
