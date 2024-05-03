@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using Microsoft.Extensions.Caching.Memory;
 using TradingBot.Models;
 
 namespace TradingBot.Services;
@@ -11,12 +13,14 @@ public interface IMarketDataCache
 
     IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForLastValidDay(DateOnly day);
     IEnumerable<TradingSymbol> GetMostActiveCachedSymbolsForDay(DateOnly day);
+    IReadOnlyDictionary<DateOnly, double>? TryGetFearGreedIndexes(DateOnly start, DateOnly end);
 
     decimal? GetLastCachedPrice(TradingSymbol symbol, DateOnly day);
 
     void CacheDailySymbolData(TradingSymbol symbol, IReadOnlyList<DailyTradingData> data, DateOnly start, DateOnly end);
 
     void CacheValidSymbols(IReadOnlyList<TradingSymbol> symbols);
+    void CacheFearGreedIndexes(IReadOnlyDictionary<DateOnly, double> values);
 
     MemoryCacheStatistics GetCacheStats();
 }
@@ -24,6 +28,7 @@ public interface IMarketDataCache
 public sealed class MarketDataCache : IMarketDataCache
 {
     private readonly IMemoryCache _cache;
+    private readonly ConcurrentDictionary<DateOnly, double> _fearGreedIndexes = new();
     private IReadOnlyList<TradingSymbol>? _validSymbols;
 
     public MarketDataCache(IMemoryCache cache)
@@ -55,10 +60,7 @@ public sealed class MarketDataCache : IMarketDataCache
         do
         {
             var symbols = GetMostActiveCachedSymbolsForDay(currentDay).ToList();
-            if (symbols.Any())
-            {
-                return symbols;
-            }
+            if (symbols.Any()) return symbols;
 
             currentDay = currentDay.AddDays(-1);
         } while (currentDay > day.AddDays(-5));
@@ -76,6 +78,15 @@ public sealed class MarketDataCache : IMarketDataCache
                    .OrderByDescending(d => d.Data!.Volume)
                    .Select(d => d.Symbol)
                ?? throw new InvalidOperationException("Valid symbols were not cached");
+    }
+
+    public IReadOnlyDictionary<DateOnly, double>? TryGetFearGreedIndexes(DateOnly start, DateOnly end)
+    {
+        for (var day = start; day <= end; day = day.AddDays(1))
+            if (!_fearGreedIndexes.ContainsKey(day))
+                return null;
+
+        return _fearGreedIndexes.ToArray().ToImmutableDictionary();
     }
 
     public decimal? GetLastCachedPrice(TradingSymbol symbol, DateOnly day)
@@ -102,6 +113,11 @@ public sealed class MarketDataCache : IMarketDataCache
     public void CacheValidSymbols(IReadOnlyList<TradingSymbol> symbols)
     {
         _validSymbols = symbols;
+    }
+
+    public void CacheFearGreedIndexes(IReadOnlyDictionary<DateOnly, double> values)
+    {
+        foreach (var (day, value) in values) _fearGreedIndexes[day] = value;
     }
 
     public MemoryCacheStatistics GetCacheStats()

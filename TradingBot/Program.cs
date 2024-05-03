@@ -196,6 +196,7 @@ public sealed class Program
 
         services.AddSingleton<IBacktestExecutor, BacktestExecutor>();
         services.AddSingleton<IBacktestAssets, BacktestAssets>();
+        services.AddSingleton<IExcludedBacktestSymbols, ExcludedBacktestSymbols>();
         services.AddSingleton<IStrategySelectionService, StrategySelectionService>();
         services.AddSingleton<IPcaDecompositionCreator, PcaDecompositionCreator>();
     }

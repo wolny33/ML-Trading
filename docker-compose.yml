@@ -10,6 +10,7 @@ services:
       - predictor
     volumes:
       - ./TradingBot/Data:/app/Data
+      - ./TradingBot/Logs:/app/Logs
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
       interval: 10s

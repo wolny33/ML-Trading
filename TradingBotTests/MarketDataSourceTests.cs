@@ -27,6 +27,9 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         clientFactory.CreateMarketDataClientAsync(Arg.Any<CancellationToken>()).Returns(_dataClient);
 
         _marketDataCache = Substitute.For<IMarketDataCache>();
+        _marketDataCache.TryGetFearGreedIndexes(Arg.Any<DateOnly>(), Arg.Any<DateOnly>()).ReturnsForAnyArgs(call =>
+            MakeFearGreedDictionary(call.ArgAt<DateOnly>(0), call.ArgAt<DateOnly>(1)));
+
         _assetsDataSource = Substitute.For<IAssetsDataSource>();
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
@@ -38,12 +41,20 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _backtestAssets = Substitute.For<IBacktestAssets>();
 
         _marketDataSource = new MarketDataSource(clientFactory, _assetsDataSource, logger, _marketDataCache, callQueue,
-            _tradingTask, _backtestAssets);
+            _tradingTask, new ExcludedBacktestSymbols(), _backtestAssets);
     }
 
     public ValueTask DisposeAsync()
     {
         return _marketDataSource.DisposeAsync();
+    }
+
+    private static IReadOnlyDictionary<DateOnly, double> MakeFearGreedDictionary(DateOnly start, DateOnly end)
+    {
+        var result = new Dictionary<DateOnly, double>();
+        for (var day = start; day <= end; day = day.AddDays(1)) result[day] = 50;
+
+        return result;
     }
 
     [Fact]
@@ -89,7 +100,6 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
             Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2010, 12, 19));
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN2"),
             Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2010, 12, 19));
-
     }
 
     [Fact]
@@ -270,7 +280,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
                 High = 24m,
                 Low = 21m,
                 Volume = 200m,
-                FearGreedIndex = 50M,
+                FearGreedIndex = 50m
             }
         });
 
@@ -311,7 +321,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         SetUpResponses();
 
         await _marketDataSource.InitializeBacktestDataAsync(DateOnly.MinValue, new DateOnly(2010, 12, 19),
-            new BacktestSymbolSlice(0, -1));
+            new BacktestSymbolSlice(0, -1), Guid.NewGuid());
 
         _marketDataCache.Received(1).CacheValidSymbols(Arg.Is<IReadOnlyList<TradingSymbol>>(symbols =>
             symbols.Contains(new TradingSymbol("TKN1")) && symbols.Contains(new TradingSymbol("TKN2")) &&
@@ -337,7 +347,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN4"),
             Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2010, 12, 19));
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN5"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue,  new DateOnly(2010, 12, 19));
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2010, 12, 19));
     }
 
     private void SetUpResponses()
