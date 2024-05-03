@@ -27,6 +27,9 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         clientFactory.CreateMarketDataClientAsync(Arg.Any<CancellationToken>()).Returns(_dataClient);
 
         _marketDataCache = Substitute.For<IMarketDataCache>();
+        _marketDataCache.TryGetFearGreedIndexes(Arg.Any<DateOnly>(), Arg.Any<DateOnly>()).ReturnsForAnyArgs(call =>
+            MakeFearGreedDictionary(call.ArgAt<DateOnly>(0), call.ArgAt<DateOnly>(1)));
+
         _assetsDataSource = Substitute.For<IAssetsDataSource>();
         var logger = Substitute.For<ILogger>();
         var callQueue = new CallQueueMock();
@@ -44,6 +47,14 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
     public ValueTask DisposeAsync()
     {
         return _marketDataSource.DisposeAsync();
+    }
+
+    private static IReadOnlyDictionary<DateOnly, double> MakeFearGreedDictionary(DateOnly start, DateOnly end)
+    {
+        var result = new Dictionary<DateOnly, double>();
+        for (var day = start; day <= end; day = day.AddDays(1)) result[day] = 50;
+
+        return result;
     }
 
     [Fact]
@@ -269,7 +280,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
                 High = 24m,
                 Low = 21m,
                 Volume = 200m,
-                FearGreedIndex = 50M,
+                FearGreedIndex = 50m
             }
         });
 
@@ -336,7 +347,7 @@ public sealed class MarketDataSourceTests : IAsyncDisposable
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN4"),
             Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2010, 12, 19));
         _marketDataCache.Received(1).CacheDailySymbolData(new TradingSymbol("TKN5"),
-            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue,  new DateOnly(2010, 12, 19));
+            Arg.Any<IReadOnlyList<DailyTradingData>>(), DateOnly.MinValue, new DateOnly(2010, 12, 19));
     }
 
     private void SetUpResponses()
