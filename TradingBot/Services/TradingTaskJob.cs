@@ -23,7 +23,7 @@ public sealed class TradingTaskJob : IJob
         options.AddTrigger(opts =>
             opts.ForJob(jobKey).WithIdentity($"{nameof(TradingTaskJob)}Trigger")
                 .WithDailyTimeIntervalSchedule(schedule =>
-                    schedule.OnEveryDay().StartingDailyAt(TimeOfDay.HourAndMinuteOfDay(12, 0)).WithRepeatCount(0))
+                    schedule.OnEveryDay().StartingDailyAt(TimeOfDay.HourAndMinuteOfDay(12, 0)).WithRepeatCount(-1))
                 .StartNow());
     }
 }
